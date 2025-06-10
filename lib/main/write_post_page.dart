@@ -16,7 +16,7 @@ class _WritePostPageState extends State<WritePostPage> {
   bool isPublic = true;
 
   final List<String> tags = [
-    '#단순한착장', '#긴팔', '#셔츠/블라우스', '#조끼', // 상의
+    '#간편복', '#긴팔', '#셔츠/블라우스', '#조끼', // 상의
     '#청바지', '#트레이닝', '#숏팬츠', '#레깅스', // 하의
     '#자켓', '#가디건', '#패딩', '#코트', // 아우터
     '#원피스/치마', '#기모', '#모자/악세서리', // 기타
