@@ -30,9 +30,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('로그인'),
-      ),
+      appBar: AppBar(title: Text('로그인')),
       body: Padding(
         padding: EdgeInsets.all(16),
         child: Form(
@@ -44,9 +42,7 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: InputDecoration(labelText: '이메일'),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '이메일을 입력해주세요.';
-                  }
+                  if (value == null || value.isEmpty) return '이메일을 입력해주세요.';
                   if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                     return '올바른 이메일 형식이 아닙니다.';
                   }
@@ -59,12 +55,8 @@ class _LoginPageState extends State<LoginPage> {
                 decoration: InputDecoration(labelText: '비밀번호'),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '비밀번호를 입력해주세요.';
-                  }
-                  if (value.length < 4) {
-                    return '비밀번호는 4자리 이상이어야 합니다.';
-                  }
+                  if (value == null || value.isEmpty) return '비밀번호를 입력해주세요.';
+                  if (value.length < 4) return '비밀번호는 4자리 이상이어야 합니다.';
                   return null;
                 },
                 onSaved: (newValue) => password = newValue ?? '',

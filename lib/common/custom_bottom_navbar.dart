@@ -17,42 +17,63 @@ class CustomBottomNavBar extends StatefulWidget {
 class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: widget.currentIndex,
-      onTap: widget.onTap,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor:  Color.fromRGBO(255, 111, 97, 1.0),
-      unselectedItemColor: Colors.white,
-      backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
-      items: [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: '홈',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search),
-          label: '검색',
-        ),
-        BottomNavigationBarItem(
-          icon: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.blue, width: 2),
-              borderRadius: BorderRadius.circular(8),
+    final bottomNavTheme = Theme.of(context).bottomNavigationBarTheme;
+    final backgroundColor = bottomNavTheme.backgroundColor ?? Theme.of(context).primaryColor;
+    final selectedItemColor = bottomNavTheme.selectedItemColor ?? Colors.white;
+    final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
+    final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor ?? Colors.white70;
+    // Column(
+    //   mainAxisSize: MainAxisSize.min,
+    //   children: [
+    //   Container(
+    //   height: 7,               // 배경색 줄 두께 (원하는 만큼 조절)
+    //   width: double.infinity,
+    //   color: backgroundColor, // 예: 연한 회색 배경색
+    // ),
+    // Container(
+    // height: 3,              // 흰색 선 높이
+    // width: double.infinity,
+    // color: scaffoldBackgroundColor,    // 흰색 선
+    // ),
+    //        ),],
+    return
+        BottomNavigationBar(
+          currentIndex: widget.currentIndex,
+          onTap: widget.onTap,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: backgroundColor,
+          selectedItemColor: selectedItemColor,
+          unselectedItemColor: unselectedItemColor,
+          items: [
+
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: '홈',
             ),
-            padding: EdgeInsets.all(4),
-            child: Icon(Icons.add),
-          ),
-          label: '추가',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.wb_sunny), // 날씨 아이콘 느낌
-          label: '날씨',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: '마이페이지',
-        ),
-      ],
+            BottomNavigationBarItem(
+              icon: Icon(Icons.search),
+              label: '검색',
+            ),
+            BottomNavigationBarItem(
+              icon: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.blue, width: 2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: EdgeInsets.all(4),
+                child: Icon(Icons.add,),
+              ),
+              label: '추가',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.wb_sunny), // 날씨 아이콘
+              label: '날씨',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: '마이페이지',
+            ),
+          ],
     );
   }
 }

@@ -76,7 +76,13 @@ class _MyPageTabState extends State<MyPageTab> with SingleTickerProviderStateMix
                     Row(
                       children: [
                         Text(nickname, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        SizedBox(width: 8),
+                      ],
+                    ),
+                    SizedBox(height: 6),
+                    Text(intro),
+                    SizedBox(height: 4),
+                    Row(
+                      children: [
                         ...tags.map((tag) => Container(
                           margin: EdgeInsets.only(right: 6),
                           padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -87,9 +93,8 @@ class _MyPageTabState extends State<MyPageTab> with SingleTickerProviderStateMix
                           child: Text(tag, style: TextStyle(fontSize: 12, color: Colors.blue.shade700)),
                         )),
                       ],
-                    ),
-                    SizedBox(height: 8),
-                    Text(intro),
+                    )
+
                   ],
                 ),
               ),

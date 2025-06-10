@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'splash_screen.dart';
+import 'provider/theme_provider.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  // const 제거 (hot reload 문제 방지)
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       title: 'Splash & Login Demo',
-      home: SplashScreen(),
+      theme: themeProvider.currentTheme,
       debugShowCheckedModeBanner: false,
+      home: SplashScreen(),
     );
   }
 }
