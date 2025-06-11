@@ -34,6 +34,7 @@ class _WritePostPageState extends State<WritePostPage> {
     });
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

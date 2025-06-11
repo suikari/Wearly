@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../common/custom_app_bar.dart';
+
 class SearchResultPage extends StatefulWidget {
   final String keyword;
 
@@ -34,9 +36,10 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('검색 결과'),
-      ),
+      appBar:  CustomAppBar(title: '검색 결과'),
+      // AppBar(
+      //   title: Text('검색 결과'),
+      // ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
