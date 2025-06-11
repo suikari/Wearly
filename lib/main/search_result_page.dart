@@ -135,8 +135,7 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
                         title : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("작성자: ${doc["imageUrl"]} "),
-                            Text(" 내용 ${doc["itemName"]}"),
+                            Text("작성자: ${doc["test"]} "),
                           ],
                         ),
                         trailing: Row(
