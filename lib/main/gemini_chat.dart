@@ -48,7 +48,7 @@ class _GeminiTextGeneratePageState extends State<GeminiTextGeneratePage> {
             TextField(
               controller: _ctrl,
               decoration: const InputDecoration(
-                labelText: '프롬프트 입력',
+                labelText: '질문 입력',
                 border: OutlineInputBorder(),
               ),
             ),
