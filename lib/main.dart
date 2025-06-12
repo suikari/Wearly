@@ -27,6 +27,7 @@ Future<void> main() async {
       create: (_) => ThemeProvider(),
       child: MyApp(),
     ),
+
   );
 }
 

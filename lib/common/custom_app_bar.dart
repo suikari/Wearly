@@ -63,23 +63,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           tooltip: '색상 테마 변경',
           color: iconColor,
           onPressed: () {
-            final newTheme = themeProvider.colorTheme == ColorTheme.defaultTheme
-                ? ColorTheme.blueTheme
-                : ColorTheme.defaultTheme;
+            final current = themeProvider.colorTheme;
+            ColorTheme newTheme;
+            if (current == ColorTheme.defaultTheme) {
+              newTheme = ColorTheme.blueTheme;
+            } else if (current == ColorTheme.blueTheme) {
+              newTheme = ColorTheme.blackTheme;
+            } else {
+              newTheme = ColorTheme.defaultTheme;
+            }
             themeProvider.setColorTheme(newTheme);
-          },
-        ),
-        IconButton(
-          icon: Icon(themeProvider.brightness == Brightness.dark
-              ? Icons.nightlight_round
-              : Icons.wb_sunny_outlined),
-          tooltip: '다크 모드 토글',
-          color: iconColor,
-          onPressed: () {
-            final newBrightness = themeProvider.brightness == Brightness.dark
-                ? Brightness.light
-                : Brightness.dark;
-            themeProvider.setBrightness(newBrightness);
           },
         ),
       ],
