@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'custom_colors.dart';
+
 enum ColorTheme { defaultTheme, blueTheme, blackTheme }
 
 class ThemeProvider extends ChangeNotifier {
@@ -49,12 +51,20 @@ class ThemeProvider extends ChangeNotifier {
             selectedItemColor: Colors.white,
             unselectedItemColor: Colors.white70,
           ),
+          extensions: <ThemeExtension<dynamic>>[
+            const CustomColors(
+              mainColor: Color(0xFF4058A6),
+              pointColor: Color(0xFF33B9E3),
+              subColor: Color(0xFFEAF4FF),
+              highlightColor: Color(0xFFFFC87B),
+            ),
+          ],
         );
 
       case ColorTheme.blackTheme:
         return ThemeData.dark().copyWith(
           primaryColor: Colors.grey[900],
-          scaffoldBackgroundColor: Color.fromRGBO(51,51,51, 1.0),
+          scaffoldBackgroundColor: Color.fromRGBO(51, 51, 51, 1.0),
           appBarTheme: AppBarTheme(
             backgroundColor: Colors.grey[900],
             iconTheme: IconThemeData(color: Colors.white),
@@ -83,6 +93,14 @@ class ThemeProvider extends ChangeNotifier {
             selectedItemColor: Color.fromRGBO(255, 111, 97, 1.0),
             unselectedItemColor: Colors.white,
           ),
+          extensions: <ThemeExtension<dynamic>>[
+            const CustomColors(
+              mainColor: Color(0xFFFFC1CC),
+              pointColor: Color(0xFFFF6F61),
+              subColor: Color(0xFFFFF0F4),
+              highlightColor: Color(0xFFFDE97C),
+            ),
+          ],
         );
     }
   }
