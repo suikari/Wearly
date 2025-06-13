@@ -18,23 +18,20 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final FirebaseFirestore fs = FirebaseFirestore.instance;
-
   int _selectedIndex = 0;
-
-  static final List<Widget> _pages = [
-    HomeContent(),
-    SearchTab(),
-    WritePostPage(),
-    WeatherTab(),
-    MyPageTab(),
-  ];
+  Key _myPageKey = ValueKey('initial');
 
   void _onItemTapped(int index) {
     setState(() {
+      if (index == 4) {
+        _myPageKey = ValueKey(DateTime.now().millisecondsSinceEpoch);
+      }
       _selectedIndex = index;
     });
   }
+
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+
 
   void _goToGeminiPage() {
     Navigator.push(
@@ -45,6 +42,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+  final List<Widget> _pages = [
+    HomeContent(),
+    SearchTab(),
+    WritePostPage(),
+    WeatherTab(),
+    MyPageTab(key: _myPageKey), // ✅ key가 동적으로 반영됨
+  ];
+
     return Scaffold(
       appBar: CustomAppBar(),
       body: IndexedStack(
