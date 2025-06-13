@@ -1,6 +1,7 @@
 // lib/pages/home_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'main/FeedListPage.dart';
 import 'main/gemini_chat.dart'; // ⬅ 추가
 import 'common/custom_app_bar.dart';
 import 'common/custom_bottom_navbar.dart';
@@ -46,7 +47,8 @@ class _HomePageState extends State<HomePage> {
     HomeContent(),
     SearchTab(),
     WritePostPage(),
-    WeatherTab(),
+    FeedListPage(),
+    //WeatherTab(),
     MyPageTab(key: _myPageKey), // ✅ key가 동적으로 반영됨
   ];
 
@@ -60,11 +62,11 @@ class _HomePageState extends State<HomePage> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _goToGeminiPage,
-        child: const Icon(Icons.headset_mic),
-        tooltip: 'Gemini 테스트',
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: _goToGeminiPage,
+      //   child: const Icon(Icons.headset_mic),
+      //   tooltip: 'Gemini 테스트',
+      // ),
     );
   }
 }
