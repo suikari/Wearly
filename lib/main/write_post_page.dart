@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_editor_plus/image_editor_plus.dart';
@@ -16,11 +17,7 @@ class WritePostPage extends StatefulWidget {
 }
 
 class _WritePostPageState extends State<WritePostPage> {
-
   FirebaseFirestore fs = FirebaseFirestore.instance;
-
-
-
   final TextEditingController titleController = TextEditingController();
   final TextEditingController contentController = TextEditingController();
   final List<String> categories = ['#상의', '#하의', '#아우터', '#기타', '#분위기'];
@@ -38,7 +35,6 @@ class _WritePostPageState extends State<WritePostPage> {
   };
 
   List<String> selectedTags = [];
-
   final List<File> selectedImages = [];
   final int maxImageCount = 10;
   int currentPageIndex = 0;
@@ -89,6 +85,20 @@ class _WritePostPageState extends State<WritePostPage> {
     }
   }
 
+  Future<List<String>> uploadImages(List<File> images) async {
+    List<String> downloadUrls = [];
+
+    for (var image in images) {
+      final fileName = const Uuid().v4();
+      final ref = FirebaseStorage.instance.ref().child('feed_images/$fileName.jpg');
+      final uploadTask = await ref.putFile(image);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      downloadUrls.add(downloadUrl);
+    }
+
+    return downloadUrls;
+  }
+
   void resetForm() {
     setState(() {
       titleController.clear();
@@ -100,7 +110,6 @@ class _WritePostPageState extends State<WritePostPage> {
       isPublic = true;
       currentPageIndex = 0;
     });
-
   }
 
   @override
@@ -309,43 +318,41 @@ class _WritePostPageState extends State<WritePostPage> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    debugPrint("제목: ${titleController.text}");
-                    debugPrint("내용: ${contentController.text}");
-                    debugPrint("태그: ${selectedTags.toString()}");
-                    debugPrint("날씨: $selectedWeather");
-                    debugPrint("온도: $selectedTemperature");
-                    debugPrint("공개: $isPublic");
-                    debugPrint("느낌: $selectedFeeling");
-                    debugPrint("이미지 수: ${selectedImages.length}");
-
-                    if (titleController.text.trim().isEmpty && contentController.text.trim().isEmpty) {
+                    if (titleController.text.trim().isEmpty &&
+                        contentController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('제목과 내용을 모두 입력해주세요.'),
                           backgroundColor: Colors.redAccent,
-                          duration: Duration(seconds: 2),
                         ),
                       );
-                      return; // 이후 코드 실행 방지
+                      return;
                     }
+
+                    List<String> imageUrls = [];
+                    if (selectedImages.isNotEmpty) {
+                      imageUrls = await uploadImages(selectedImages);
+                    }
+
                     await fs.collection("feeds").add({
-                      "title" : titleController.text,
-                      "content" : contentController.text,
-                      "cdatetime" : Timestamp.now(),
-                      "isPublic" : isPublic,
-                      "temperature" : selectedTemperature,
-                      "feeling" : selectedFeeling
+                      "title": titleController.text,
+                      "content": contentController.text,
+                      "cdatetime": Timestamp.now(),
+                      "isPublic": isPublic,
+                      "temperature": selectedTemperature,
+                      "feeling": selectedFeeling,
+                      "imageUrls": imageUrls,
+                      "tags": selectedTags,
+                      "weather": selectedWeather,
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('등록되었습니다.'),
                         backgroundColor: Colors.green,
-                        duration: Duration(seconds: 2),
                       ),
                     );
                     resetForm();
-
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink,
