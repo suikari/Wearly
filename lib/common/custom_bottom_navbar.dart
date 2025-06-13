@@ -66,18 +66,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
               label: '추가',
             ),
             BottomNavigationBarItem(
-              icon: Container(
-                width: 32,
-                height: 32,
-                child: Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Image.asset(
-                    'assets/common/menu.png',
-                    color: unselectedItemColor,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ), // 날씨 아이콘
+              icon: Icon(Icons.article),
               label: '코디',
             ),
             BottomNavigationBarItem(

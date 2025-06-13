@@ -20,14 +20,25 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+  String? _selectedUserId;
+
   Key _myPageKey = ValueKey('initial');
 
   void _onItemTapped(int index) {
     setState(() {
       if (index == 4) {
-        _myPageKey = ValueKey(DateTime.now().millisecondsSinceEpoch);
+        _selectedUserId = null; // 기본 내 마이페이지
+        _myPageKey = ValueKey(DateTime.now().millisecondsSinceEpoch.toString());
       }
       _selectedIndex = index;
+    });
+  }
+
+  void openUserPage(String userId) {
+    setState(() {
+      _selectedUserId = userId;
+      _myPageKey = ValueKey(userId + DateTime.now().millisecondsSinceEpoch.toString());
+      _selectedIndex = 4; // MyPageTab 탭으로 전환
     });
   }
 
@@ -41,15 +52,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget buildMyPageTab({String? userId}) {
+    return MyPageTab(
+      key: ValueKey(userId ?? _myPageKey),
+      userId: userId,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
   final List<Widget> _pages = [
-    HomeContent(),
-    SearchTab(),
+    HomeContent(),  // 콜백 전달
+    SearchTab(onUserTap: openUserPage),    // 콜백 전달
     WritePostPage(),
-    FeedListPage(),
+    FeedListPage(onUserTap: openUserPage), // 콜백 전달
     //WeatherTab(),
-    MyPageTab(key: _myPageKey), // ✅ key가 동적으로 반영됨
+    buildMyPageTab(userId: _selectedUserId),
   ];
 
     return Scaffold(

@@ -21,6 +21,8 @@ class Feed {
   final String hashtags;
   final String location;
   final String date;
+  final String mood;
+  final String temperature;
   final List<Comment> comments;
 
   Feed({
@@ -30,13 +32,20 @@ class Feed {
     required this.hashtags,
     required this.location,
     required this.date,
+    required this.mood,
+    required this.temperature,
     List<Comment>? comments,
   }) : comments = comments ?? [];
 }
 
 // Feed 전체 리스트 페이지
 class FeedListPage extends StatefulWidget {
-  const FeedListPage({Key? key}) : super(key: key);
+  final void Function(String userId) onUserTap;
+
+  const FeedListPage({
+    Key? key,
+    required this.onUserTap,
+  }) : super(key: key);
 
   @override
   State<FeedListPage> createState() => _FeedListPageState();
@@ -57,6 +66,8 @@ class _FeedListPageState extends State<FeedListPage> {
         hashtags: "#빈티지 #청바지 #셔츠 #블라우스",
         location: "모던 부림1동",
         date: "2025.05.16",
+        temperature : "20℃",
+        mood : "더워요",
         comments: [
           Comment(
             userName: "이두나",
@@ -76,6 +87,8 @@ class _FeedListPageState extends State<FeedListPage> {
         hashtags: "#봄패션 #캐주얼 #편안함",
         location: "강남구 역삼동",
         date: "2025.06.10",
+        temperature : "24℃",
+        mood : "적당핸요",
         comments: [
           Comment(userName: "김철수", comment: "완전 편해 보여요!"),
         ],
@@ -91,12 +104,17 @@ class _FeedListPageState extends State<FeedListPage> {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.grey.shade400,
-                child: Text(
-                  comment.userName.isNotEmpty ? comment.userName[0] : '',
-                  style: TextStyle(color: Colors.white),
+              GestureDetector(
+                onTap: () {
+                  widget.onUserTap('user456');  // userId 전달해서 페이지 열기
+                },
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.grey.shade400,
+                  child: Text(
+                    comment.userName.isNotEmpty ? comment.userName[0] : '',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
               SizedBox(width: 8),
@@ -164,16 +182,21 @@ class _FeedListPageState extends State<FeedListPage> {
                       ],
                     ),
 
-                    SizedBox(height: 8),
+                    SizedBox(height: 4),
 
-                    // 타이틀 아래 해시태그
-                    Text(
-                      feed.hashtags,
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                    Row(
+                      children: [
+                        Icon(Icons.mood, size: 18, color: Colors.orangeAccent),
+                        SizedBox(width: 4),
+                        Text(feed.mood, style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w600)),
+                        SizedBox(width: 16),
+                        Icon(Icons.thermostat, size: 18, color: Colors.redAccent),
+                        SizedBox(width: 4),
+                        Text(feed.temperature, style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600)),
+                      ],
                     ),
 
                     SizedBox(height: 12),
-
                     // 이미지 (중앙, 카드 너비 90%, 좌하단+우상단 라운드)
                     Stack(
                       children: [
@@ -194,30 +217,24 @@ class _FeedListPageState extends State<FeedListPage> {
                             ),
                           ),
                         ),
-
-                        // 이미지 상단 오른쪽 좋아요, 공유 아이콘
-                        Positioned(
-                          right: MediaQuery.of(context).size.width * 0.05,
-                          top: 8,
-                          child: Row(
-                            children: [
-                              Icon(Icons.favorite_border, color: Colors.white, size: 28),
-                              SizedBox(width: 12),
-                              Icon(Icons.share_outlined, color: Colors.white, size: 28),
-                            ],
-                          ),
-                        ),
-
                         // 이미지 하단 왼쪽 좋아요, 공유 아이콘 (반복 의도인지 한쪽만 하단 넣음)
                         Positioned(
                           left: MediaQuery.of(context).size.width * 0.05,
                           bottom: 8,
-                          child: Row(
-                            children: [
-                              Icon(Icons.favorite_border, color: Colors.white70, size: 28),
-                              SizedBox(width: 12),
-                              Icon(Icons.share_outlined, color: Colors.white70, size: 28),
-                            ],
+                          child: Icon(
+                            Icons.favorite_border,
+                            color: Colors.white70,
+                            size: 28,
+                          ),
+                        ),
+                        // 공유 아이콘 - 오른쪽 하단
+                        Positioned(
+                          right: MediaQuery.of(context).size.width * 0.05,
+                          bottom: 8,
+                          child: Icon(
+                            Icons.share_outlined,
+                            color: Colors.white70,
+                            size: 28,
                           ),
                         ),
                       ],
@@ -228,7 +245,11 @@ class _FeedListPageState extends State<FeedListPage> {
                     // 설명
                     Text(feed.description, style: TextStyle(fontSize: 16)),
                     SizedBox(height: 12),
-
+                    Text(
+                      feed.hashtags,
+                      style: TextStyle(color: Colors.grey.shade500, fontSize: 14,),
+                    ),
+                    SizedBox(height: 6),
                     // 위치, 날짜
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
