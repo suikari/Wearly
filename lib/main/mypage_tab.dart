@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'detail_page.dart';
+import 'package:intl/intl.dart';
 
 class MyPageTab extends StatefulWidget {
   final String? userId;
 
-  const MyPageTab({Key? key, this.userId}) : super(key: key);
+  const MyPageTab({Key? key, this.userId, required Function onUserTap}) : super(key: key);
 
   @override
   State<MyPageTab> createState() => _MyPageWidgetState();
@@ -14,22 +15,17 @@ class MyPageTab extends StatefulWidget {
 class _MyPageWidgetState extends State<MyPageTab> {
   bool isExpanded = true;
   bool showDetail = false;
-  String? selectedImagePath;
+  String? selectedFeedId;
+  bool isLoading = true;
 
   String currentUserId = 'user123';
-
   final FirebaseFirestore fs = FirebaseFirestore.instance;
-
 
   final List<Map<String, dynamic>> userProfiles = [
     {
       "userId": "user123",
       "name": "윤사나",
-      "profileImages": [
-        'assets/w1.jpg',
-        'assets/w3.jpg',
-        'assets/w5.jfif',
-      ],
+      "profileImages": ['assets/w1.jpg', 'assets/w3.jpg', 'assets/w5.jfif'],
       "bio": "안녕하세요. 윤사나 입니다.",
       "hashtags": "#캐주얼 #반팔",
       "mainProfileImage": "assets/w2.jpg"
@@ -37,27 +33,58 @@ class _MyPageWidgetState extends State<MyPageTab> {
     {
       "userId": "user456",
       "name": "김지은",
-      "profileImages": [
-        'assets/w7.jfif',
-        'assets/w8.jfif',
-      ],
+      "profileImages": ['assets/w7.jfif', 'assets/w8.jfif'],
       "bio": "반가워요. 지은이에요!",
       "hashtags": "#댄디 #봄코디",
       "mainProfileImage": "assets/w9.jfif"
     },
   ];
 
-  final List<Map<String, dynamic>> feedItems = [
-    {"imagePath": "assets/w11.webp", "label": "#추웠어\n20℃"},
-    {"imagePath": "assets/w3.jpg", "label": "#더웠어\n25℃"},
-    {"imagePath": "assets/w12.jpg", "label": "#적당했어\n23℃"},
-    {"imagePath": "assets/w13.webp", "label": "#더웠어\n23℃"},
-    {"imagePath": "assets/noimg.jpg", "label": ""},
-    {"imagePath": "assets/noimg.jpg", "label": ""},
-    {"imagePath": "assets/noimg.jpg", "label": ""},
-  ];
-
   final PageController _pageController = PageController(viewportFraction: 0.85);
+
+  // 월별로 그룹화된 피드 아이템
+  Map<String, List<Map<String, dynamic>>> feedItemsByMonth = {};
+
+  Future<void> fetchFeeds() async {
+    try {
+      final snapshot = await fs.collection('feeds').orderBy('cdatetime', descending: true).get();
+      final items = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+
+        if (data['cdatetime'] is Timestamp) {
+          DateTime date = (data['cdatetime'] as Timestamp).toDate();
+          String monthKey = DateFormat('yyyy년 M월').format(date);
+
+          feedItemsByMonth[monthKey] ??= [];
+          feedItemsByMonth[monthKey]!.add(data);
+        }
+
+        return data;
+      }).toList();
+
+      // 최신 월부터 내림차순 정렬
+      feedItemsByMonth = Map.fromEntries(
+        feedItemsByMonth.entries.toList()
+          ..sort((a, b) => b.key.compareTo(a.key)),
+      );
+
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error fetching feeds: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchFeeds();
+  }
 
   @override
   void dispose() {
@@ -65,12 +92,13 @@ class _MyPageWidgetState extends State<MyPageTab> {
     super.dispose();
   }
 
-  void openDetail(String imagePath) {
+  void openDetail(String feedId) {
     setState(() {
-      selectedImagePath = imagePath;
+      selectedFeedId = feedId;
       showDetail = true;
     });
   }
+
 
   void closeDetail() {
     setState(() {
@@ -91,9 +119,10 @@ class _MyPageWidgetState extends State<MyPageTab> {
     final bool isOwnPage = viewedUserId == currentUserId;
     final Map<String, dynamic> profile = getUserProfile(viewedUserId);
 
-    final bottomNavTheme = Theme.of(context).bottomNavigationBarTheme;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor ?? Theme.of(context).primaryColor;
-    final navBackgroundColor = bottomNavTheme.backgroundColor ?? Theme.of(context).primaryColor;
+    final theme = Theme.of(context);
+    final bottomNavTheme = theme.bottomNavigationBarTheme;
+    final backgroundColor = theme.scaffoldBackgroundColor;
+    final navBackgroundColor = bottomNavTheme.backgroundColor ?? theme.primaryColor;
     final selectedItemColor = bottomNavTheme.selectedItemColor ?? Colors.white;
     final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -103,6 +132,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
       body: SafeArea(
         child: Column(
           children: [
+            // 상단 프로필 UI (생략 안함)
             AnimatedContainer(
               duration: Duration(milliseconds: 200),
               width: screenWidth,
@@ -132,10 +162,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                           backgroundImage: AssetImage(profile["mainProfileImage"]),
                         ),
                         SizedBox(width: 12),
-                        Text(
-                          profile["name"],
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: selectedItemColor),
-                        ),
+                        Text(profile["name"], style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: selectedItemColor)),
                       ],
                     )
                         : Column(
@@ -146,10 +173,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                           backgroundImage: AssetImage(profile["mainProfileImage"]),
                         ),
                         SizedBox(height: 8),
-                        Text(
-                          profile["name"],
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: selectedItemColor),
-                        ),
+                        Text(profile["name"], style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: selectedItemColor)),
                         AnimatedCrossFade(
                           duration: Duration(milliseconds: 300),
                           crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
@@ -166,10 +190,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                       padding: EdgeInsets.symmetric(horizontal: 8),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(12),
-                                        child: Image.asset(
-                                          profile["profileImages"][index],
-                                          fit: BoxFit.cover,
-                                        ),
+                                        child: Image.asset(profile["profileImages"][index], fit: BoxFit.cover),
                                       ),
                                     );
                                   },
@@ -184,11 +205,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                         ),
                         TextButton(
                           onPressed: () => setState(() => isExpanded = !isExpanded),
-                          child: Icon(
-                            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                            size: 32,
-                            color: selectedItemColor,
-                          ),
+                          child: Icon(isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 32, color: selectedItemColor),
                         ),
                       ],
                     ),
@@ -198,20 +215,13 @@ class _MyPageWidgetState extends State<MyPageTab> {
                     right: 8,
                     child: isOwnPage
                         ? Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildIconBtn('assets/common/person_edit.png', () {
-                          // 프로필 편집
-                        }),
-                        _buildIconBtn(Icons.settings, () {
-                          // 설정
-                        }),
+                        _buildIconBtn('assets/common/person_edit.png', () {}),
+                        _buildIconBtn(Icons.settings, () {}),
                       ],
                     )
                         : ElevatedButton(
-                      onPressed: () {
-                        // 팔로우 기능
-                      },
+                      onPressed: () {},
                       child: Text("팔로우"),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.pink[200],
@@ -224,102 +234,150 @@ class _MyPageWidgetState extends State<MyPageTab> {
                 ],
               ),
             ),
+
+            // 피드 목록
             Expanded(
               child: IndexedStack(
                 index: showDetail ? 1 : 0,
                 children: [
-                  SingleChildScrollView(
+                  isLoading
+                      ? Center(child: CircularProgressIndicator())
+                      : SingleChildScrollView(
                     child: Column(
-                      children: [
-                        SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text("5월", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: selectedItemColor)),
-                            ],
-                          ),
-                        ),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.all(16),
-                          itemCount: feedItems.length,
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                            childAspectRatio: 0.8,
-                          ),
-                          itemBuilder: (context, index) {
-                            final item = feedItems[index];
-                            return GestureDetector(
-                              onTap: () => openDetail(item["imagePath"]),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  image: DecorationImage(
-                                    image: AssetImage(item["imagePath"]),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    if (item["label"].toString().isNotEmpty)
-                                      Container(
-                                        width: double.infinity,
-                                        color: Colors.white70,
-                                        padding: EdgeInsets.symmetric(vertical: 2),
-                                        child: Text(
-                                          item["label"],
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
+                      children: feedItemsByMonth.entries.map((entry) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: Text(
+                                entry.key,
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: selectedItemColor),
                               ),
-                            );
-                          },
-                        ),
-                        SingleChildScrollView(
-                          child: StreamBuilder(
-                            stream: fs.collection("feeds").snapshots(),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-                              if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+                            ),
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: entry.value.length,
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 0.8,
+                              ),
+                              itemBuilder: (context, index) {
+                                final item = entry.value[index];
+                                final imageUrl = item["imageUrls"] != null &&
+                                    item["imageUrls"].isNotEmpty
+                                    ? item["imageUrls"][0]
+                                    : '';
 
-                              final docs = snapshot.data!.docs;
-                              return Column(
-                                children: List.generate(docs.length, (index) {
-                                  final doc = docs[index];
-                                  return ListTile(
-                                    title: Text("작성자: ${doc["content"]}"),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                return GestureDetector(
+                                  onTap: () => openDetail(item['id']),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color: Colors.grey[300],
+                                    ),
+                                    child: Stack(
+                                      fit: StackFit.expand,
                                       children: [
-                                        IconButton(onPressed: () {}, icon: Icon(Icons.edit)),
-                                        IconButton(onPressed: () {}, icon: Icon(Icons.delete)),
+                                        // 배경 이미지
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                              8),
+                                          child: imageUrl != ''
+                                              ? Image.network(
+                                              imageUrl, fit: BoxFit.cover)
+                                              : Image.asset('assets/noimg.jpg',
+                                              fit: BoxFit.cover),
+                                        ),
+
+                                        // 우상단 온도 & 좌하단 기분 텍스트
+                                        if ((item["feeling"]
+                                            ?.toString()
+                                            .isNotEmpty ?? false) ||
+                                            (item["temperature"]
+                                                ?.toString()
+                                                .isNotEmpty ?? false))
+                                          Positioned.fill(
+                                            child: Padding(
+                                              padding: EdgeInsets.all(6),
+                                              child: Stack(
+                                                children: [
+                                                  if (item["temperature"]
+                                                      ?.toString()
+                                                      .isNotEmpty ?? false)
+                                                    Positioned(
+                                                      top: 0,
+                                                      right: 0,
+                                                      child: Container(
+                                                        padding: EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.black45,
+                                                          borderRadius: BorderRadius
+                                                              .circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          '${item["temperature"]?.toString()}℃',
+                                                          style: TextStyle(
+                                                              color: Colors
+                                                                  .white,
+                                                              fontSize: 12),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (item["feeling"]
+                                                      ?.toString()
+                                                      .isNotEmpty ?? false)
+                                                    Positioned(
+                                                      bottom: 0,
+                                                      left: 0,
+                                                      child: Container(
+                                                        padding: EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.black45,
+                                                          borderRadius: BorderRadius
+                                                              .circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          item["feeling"],
+                                                          style: TextStyle(
+                                                              color: Colors
+                                                                  .white,
+                                                              fontSize: 12),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
                                       ],
                                     ),
-                                  );
-                                }),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        );
+                      }).toList(),
                     ),
                   ),
-                  DetailPage(
-                    key: ValueKey(selectedImagePath),
-                    imagePath: selectedImagePath ?? 'assets/noimg.jpg',
-                    onBack: closeDetail,
-                  ),
+                  if (selectedFeedId != null)
+                    DetailPage(
+                      key: ValueKey(selectedFeedId),
+                      feedId: selectedFeedId!,
+                      currentUserId : currentUserId,
+                      onBack: closeDetail,
+                    ),
                 ],
               ),
             ),
@@ -341,10 +399,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
           shape: BoxShape.circle,
         ),
         child: icon is String
-            ? Padding(
-          padding: EdgeInsets.all(4),
-          child: Image.asset(icon, color: Colors.black),
-        )
+            ? Padding(padding: EdgeInsets.all(4), child: Image.asset(icon, color: Colors.black))
             : Icon(icon, size: 20, color: Colors.black),
       ),
     );

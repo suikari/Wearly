@@ -52,10 +52,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget buildMyPageTab({String? userId}) {
+  Widget buildMyPageTab({String? userId, required Function onUserTap }) {
     return MyPageTab(
       key: ValueKey(userId ?? _myPageKey),
       userId: userId,
+      onUserTap : onUserTap ,
     );
   }
 
@@ -67,7 +68,7 @@ class _HomePageState extends State<HomePage> {
     WritePostPage(),
     FeedListPage(onUserTap: openUserPage), // 콜백 전달
     //WeatherTab(),
-    buildMyPageTab(userId: _selectedUserId),
+    buildMyPageTab(userId: _selectedUserId,  onUserTap: openUserPage),
   ];
 
     return Scaffold(
