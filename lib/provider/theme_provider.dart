@@ -57,6 +57,8 @@ class ThemeProvider extends ChangeNotifier {
               pointColor: Color(0xFF33B9E3),
               subColor: Color(0xFFEAF4FF),
               highlightColor: Color(0xFFFFC87B),
+              textColor: Colors.grey,
+              pointTextColor: Colors.white
             ),
           ],
         );
@@ -99,6 +101,8 @@ class ThemeProvider extends ChangeNotifier {
               pointColor: Color(0xFFFF6F61),
               subColor: Color(0xFFFFF0F4),
               highlightColor: Color(0xFFFDE97C),
+              textColor: Colors.grey,
+              pointTextColor: Colors.white
             ),
           ],
         );

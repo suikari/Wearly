@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import '/provider/custom_colors.dart';
 
-void showDialogMessage(
-  BuildContext context,
-  String message, {
+Future<bool?> showDialogMessage(
+    BuildContext context,
+    String message, {
       bool confirmCancel = false,
       VoidCallback? onConfirm,
       VoidCallback? onCancel,
-}) {
+    }) async {
   final customColors = Theme.of(context).extension<CustomColors>();
   final pointColor = customColors?.pointColor ?? Colors.black;
   final subColor = customColors?.subColor ?? Colors.white;
 
-  showDialog(
+  return showDialog<bool>(
     context: context,
     builder: (context) {
       return Dialog(
@@ -28,7 +28,7 @@ void showDialogMessage(
               children: [
                 // 좌측 포인트 라인
                 ClipRRect(
-                  borderRadius: BorderRadius.only(
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     bottomLeft: Radius.circular(12),
                   ),
@@ -40,47 +40,46 @@ void showDialogMessage(
 
                 // 내용 영역
                 ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: 250),
+                  constraints: const BoxConstraints(maxWidth: 250),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           message,
-                          style: TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: 16),
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                         Align(
                           alignment: Alignment.centerRight,
                           child: confirmCancel
-                            ? Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(false);
-                                    if (onCancel != null) onCancel();
-                                  },
-                                  child: Text("취소"),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(true);
-                                    if (onConfirm != null) onConfirm();
-                                  },
-                                  child: Text("확인"),
-                                ),
-                              ],
+                              ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(false);
+                                  if (onCancel != null) onCancel();
+                                },
+                                child: const Text("취소"),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(true);
+                                  if (onConfirm != null) onConfirm();
+                                },
+                                child: const Text("확인"),
+                              ),
+                            ],
                           )
                               : TextButton(
                             onPressed: () {
                               Navigator.of(context).pop(true);
                               if (onConfirm != null) onConfirm();
                             },
-                            child: Text("확인"),
+                            child: const Text("확인"),
                           ),
                         ),
                       ],
