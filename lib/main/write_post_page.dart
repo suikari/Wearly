@@ -9,6 +9,7 @@ import 'package:image_editor_plus/image_editor_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+
 class WritePostPage extends StatefulWidget {
   const WritePostPage({super.key});
 
@@ -22,7 +23,7 @@ class _WritePostPageState extends State<WritePostPage> {
   final TextEditingController contentController = TextEditingController();
   final List<String> categories = ['#상의', '#하의', '#아우터', '#기타', '#분위기'];
   String selectedWeather = '맑음';
-  String selectedTemperature = '20℃';
+  double selectedTemperature = 20;
   String selectedFeeling = '적당해요';
   bool isPublic = true;
 
@@ -106,7 +107,7 @@ class _WritePostPageState extends State<WritePostPage> {
       selectedTags.clear();
       selectedImages.clear();
       selectedWeather = '맑음';
-      selectedTemperature = '20℃';
+      selectedTemperature = 20;
       isPublic = true;
       currentPageIndex = 0;
     });
@@ -280,10 +281,10 @@ class _WritePostPageState extends State<WritePostPage> {
                   ),
                 ]),
                 Row(children: [
-                  DropdownButton<String>(
+                  DropdownButton<double>(
                     value: selectedTemperature,
-                    items: ['10℃', '15℃', '20℃', '25℃', '30℃']
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    items: [10.0, 15.0, 20.0, 25.0, 30.0]
+                        .map((t) => DropdownMenuItem(value: t, child: Text('${t.toDouble()}℃')))
                         .toList(),
                     onChanged: (val) => setState(() => selectedTemperature = val!),
                   ),
