@@ -68,11 +68,12 @@ class _LoginPageState extends State<LoginPage> {
     Color subColor = customColors?.subColor ?? Colors.white;
     Color pointColor = customColors?.pointColor ?? Colors.white70;
     Color highlightColor = customColors?.highlightColor ?? Colors.orange;
-    Color textColor = customColors?.textColor ?? Colors.grey;
-    Color pointTextColor = customColors?.pointTextColor ?? Colors.white;
+    Color Gray = customColors?.textGray ?? Colors.grey;
+    Color White = customColors?.textWhite ?? Colors.white;
+    Color Black = customColors?.textBlack ?? Colors.black;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: White,
       appBar: AppBar(
         backgroundColor: mainColor,
         elevation: 0,
@@ -84,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               children: [
                 Expanded(flex: 8, child: Center()),
-                Container(height: 3, color: Colors.white),
+                Container(height: 3, color: White),
                 SizedBox(height: 5, child: Center()),
               ],
             ),
@@ -97,7 +98,7 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           children: [
             SizedBox(height: 5, child: Center()),        // 고정된 10픽셀 높이 공간
-            Container(height: 3, color: Colors.white),
+            Container(height: 3, color: White),
             Expanded(flex: 8, child: Center()),
           ],
         ),
@@ -142,10 +143,10 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: TextFormField(
-                      style: TextStyle(color: subColor),
+                      style: TextStyle(color: Black),
                       decoration: InputDecoration(
                         hintText: '이메일',
-                        hintStyle: TextStyle(color: textColor,fontSize: 14),
+                        hintStyle: TextStyle(color: Gray,fontSize: 14),
                         border: InputBorder.none,
                       ),
                       keyboardType: TextInputType.emailAddress,
@@ -173,7 +174,7 @@ class _LoginPageState extends State<LoginPage> {
                       obscureText: true,
                       decoration: InputDecoration(
                         hintText: '비밀번호',
-                        hintStyle: TextStyle(color: textColor,fontSize: 14),
+                        hintStyle: TextStyle(color: Gray,fontSize: 14),
                         border: InputBorder.none,
                       ),
                       validator: (value) {
@@ -198,7 +199,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       onPressed: _tryLogin,
-                      child: Text('로그인', style: TextStyle(color: pointTextColor, fontSize: 20, fontWeight: FontWeight.bold),),
+                      child: Text('로그인', style: TextStyle(color: White, fontSize: 20, fontWeight: FontWeight.bold),),
                     ),
                   ),
                   SizedBox(height: 30),
@@ -214,61 +215,45 @@ class _LoginPageState extends State<LoginPage> {
 
                   // 하단 링크
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Expanded(
-                        flex: 1,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
+                      // 왼쪽 텍스트들
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
                             "아직 wearly 회원이 아니신가요?",
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                            style: TextStyle(color: Gray, fontSize: 12),
                           ),
-                        ),
+                          SizedBox(height: 5),
+                          Text(
+                            "이메일/비밀번호를 잊으셨나요?",
+                            style: TextStyle(color: Gray, fontSize: 12),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        flex: 1,
-                        child: GestureDetector(
-                          onTap: _goToSignup,
-                          child: Align(
-                            alignment: Alignment.center, // 가운데 정렬
+
+                      // 오른쪽 텍스트들
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          GestureDetector(
+                            onTap: _goToSignup,
                             child: Text(
                               "회원가입하기",
                               style: TextStyle(color: pointColor, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 5),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "이메일/비밀번호를 잊으셨나요?",
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: GestureDetector(
-                          onTap: _goToFindidpass,
-                          child: Align(
-                            alignment: Alignment.center,
+                          SizedBox(height: 5),
+                          GestureDetector(
+                            onTap: _goToFindidpass,
                             child: Text(
                               "이메일/비밀번호 찾기",
-                              style: TextStyle(
-                                color: pointColor,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(color: pointColor, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
