@@ -42,7 +42,7 @@ class _SearchResultPageState extends State<SearchResultPage>
         return 'temperature';
       case '최신순':
       default:
-        return 'createdAt';
+        return 'cdatetime';
     }
   }
 
@@ -161,6 +161,10 @@ class _SearchResultPageState extends State<SearchResultPage>
                           if (_selectedIndex == 0) ...[
                             Text("태그 내용: ${data['content'] ?? '없음'}"),
                             Text("카테고리: ${data['category'] ?? '없음'}"),
+                            Text("제목: ${data['title'] ?? '없음'}"),
+                            Text("제목: ${data['content'] ?? '없음'}"),
+                            Text("글쓴 시간: ${data['cdatetime'] ?? '없음'}"),
+                            Text("data :$data")
                           ] else if (_selectedIndex == 1) ...[
                             Text("지역: ${data['location'] ?? '없음'}"),
                           ] else if (_selectedIndex == 2) ...[
