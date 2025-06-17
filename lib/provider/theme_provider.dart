@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'custom_colors.dart';
+
 enum ColorTheme { defaultTheme, blueTheme, blackTheme }
 
 class ThemeProvider extends ChangeNotifier {
@@ -50,12 +52,23 @@ class ThemeProvider extends ChangeNotifier {
             selectedItemColor: Colors.white,
             unselectedItemColor: Colors.white70,
           ),
+          extensions: <ThemeExtension<dynamic>>[
+            const CustomColors(
+              mainColor: Color(0xFF4058A6),
+              pointColor: Color(0xFF33B9E3),
+              subColor: Color(0xFFEAF4FF),
+              highlightColor: Color(0xFFFFC87B),
+              textGray: Colors.grey,
+              textWhite: Colors.white,
+              textBlack: Color(0xFF333333)
+            ),
+          ],
         );
       case ColorTheme.blackTheme:
         return ThemeData.dark().copyWith(
           textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'reko'),
           primaryColor: Colors.grey[900],
-          scaffoldBackgroundColor: Color.fromRGBO(51,51,51, 1.0),
+          scaffoldBackgroundColor: Color.fromRGBO(51, 51, 51, 1.0),
           appBarTheme: AppBarTheme(
             backgroundColor: Colors.grey[900],
             iconTheme: IconThemeData(color: Colors.white),
@@ -99,24 +112,18 @@ class ThemeProvider extends ChangeNotifier {
           selectedLabelStyle: TextStyle(fontFamily: 'reko'), // 네비게이션 선택 항목 폰트
           unselectedLabelStyle: TextStyle(fontFamily: 'reko'),
         ),
-      );
-
-        // return ThemeData(
-        //   fontFamily: 'reko',
-        //   brightness: Brightness.light,
-        //   primarySwatch: defaultSwatch,
-        //   scaffoldBackgroundColor : Colors.white,
-        //   appBarTheme: AppBarTheme(
-        //     backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
-        //     iconTheme: IconThemeData(color: Colors.white),
-        //     titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
-        //   ),
-        //   bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        //     backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
-        //     selectedItemColor: Color.fromRGBO(255, 111, 97, 1.0),
-        //     unselectedItemColor: Colors.white,
-        //   ),
-        // );
+          extensions: <ThemeExtension<dynamic>>[
+            const CustomColors(
+              mainColor: Color(0xFFFFC1CC),
+              pointColor: Color(0xFFFF6F61),
+              subColor: Color(0xFFFFF0F4),
+              highlightColor: Color(0xFFFDE97C),
+              textGray: Colors.grey,
+              textWhite: Colors.white,
+              textBlack: Color(0xFF333333)
+            ),
+          ],
+        );
     }
   }
 
