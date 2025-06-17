@@ -36,6 +36,11 @@ dependencies:
   provider:
   app_links:
   qr_flutter:
+  geolocator:
+  http:
+  intl:
+  geocoding:
+  xml:
   google_generative_ai: ^0.4.7
   image_picker:
   wave:
@@ -67,6 +72,16 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - assets/logo.png
+    - assets/weather_sun.gif
+    - assets/ad_banner1.jpg
+    - assets/ad_banner2.jpg
+    - assets/ad_banner3.jpg
+    - assets/ad_banner4.jpg
+    - assets/ad_banner5.jpg
+    - assets/profile1.jpg
+    - assets/profile2.jpg
+    - assets/profile3.jpg
     - assets/
     - assets/common/
 
