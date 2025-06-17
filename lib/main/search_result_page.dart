@@ -12,7 +12,10 @@ class SearchResultPage extends StatefulWidget {
 }
 
 class _SearchResultPageState extends State<SearchResultPage> with SingleTickerProviderStateMixin {
+
   int _selectedIndex = 0;
+
+
   late TabController _tabController;
 
   final List<String> tabs = ['태그', '지역', '내용', '유저'];
@@ -27,6 +30,7 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+
     final FirebaseFirestore fs = FirebaseFirestore.instance;
 
     return Scaffold(
@@ -93,6 +97,7 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
             ),
           ),
           Expanded(
+           
             child: StreamBuilder<QuerySnapshot>(
               stream: fs.collection("feeds").snapshots(),
               builder: (context, snapshot) {
@@ -153,4 +158,79 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
       ),
     );
   }
+
+            child: TabBarView(
+              controller: _tabController,
+              children: tabs.map((tab) => _buildTabContent(tab)).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabContent(String category) {
+    final FirebaseFirestore fs = FirebaseFirestore.instance;
+
+    // 정렬 필드 설정
+    String orderByField;
+    switch (selectedSort) {
+      case '좋아요순':
+        orderByField = 'likes';
+        break;
+      case '조회수순':
+        orderByField = 'views';
+        break;
+      case '온도순':
+        orderByField = 'temperature';
+        break;
+      case '최신순':
+      default:
+        orderByField = 'createdAt';
+    }
+
+    // 탭별 필터링
+    Query<Map<String, dynamic>> query = fs.collection("feeds");
+
+    if (category == '태그') {
+      query = query.where("imageUrls", arrayContains: widget.keyword);
+    } else if (category == '지역') {
+      query = query.where("temperature", isEqualTo: widget.keyword);
+    } else if (category == '내용') {
+      query = query.where("content", isGreaterThanOrEqualTo: widget.keyword);
+    } else if (category == '유저') {
+      query = query.where("feeling", isEqualTo: widget.keyword);
+    }
+
+    query = query.orderBy(orderByField, descending: true);
+
+    return StreamBuilder(
+      stream: query.snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('에러 발생: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        final docs = snapshot.data!.docs;
+        if (docs.isEmpty) {
+          return Center(child: Text('검색 결과가 없습니다.'));
+        }
+
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            return ListTile(
+              title: Text(doc['title'] ?? '제목 없음'),
+              subtitle: Text('작성자: ${doc['cdatetime'] ?? '알 수 없음'}'),
+            );
+          },
+        );
+      },
+    );
+  }
+
 }
