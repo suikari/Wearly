@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:w2wproject/main/widget/settings_page.dart';
 import 'detail_page.dart';
 import 'package:intl/intl.dart';
 
@@ -113,6 +114,15 @@ class _MyPageWidgetState extends State<MyPageTab> {
     );
   }
 
+  void openSettingsPage(BuildContext context) {
+    print('test=3=3');
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsPage()),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final String viewedUserId = widget.userId ?? currentUserId;
@@ -217,7 +227,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                         ? Row(
                       children: [
                         _buildIconBtn('assets/common/person_edit.png', () {}),
-                        _buildIconBtn(Icons.settings, () {}),
+                        _buildIconBtn(Icons.settings, (){}),
                       ],
                     )
                         : ElevatedButton(

@@ -74,6 +74,9 @@ flutter:
     - family: reko
       fonts:
         - asset: assets/font/reko.otf
+    - family: cho
+      fonts:
+        - asset: assets/font/cho.otf
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

@@ -71,22 +71,53 @@ class ThemeProvider extends ChangeNotifier {
 
       case ColorTheme.defaultTheme:
       default:
-        return ThemeData(
-          fontFamily: 'reko',
-          brightness: Brightness.light,
-          primarySwatch: defaultSwatch,
-          scaffoldBackgroundColor : Colors.white,
-          appBarTheme: AppBarTheme(
-            backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
-            iconTheme: IconThemeData(color: Colors.white),
-            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+      return ThemeData(
+        primarySwatch: defaultSwatch,
+        scaffoldBackgroundColor: Colors.white,
+        fontFamily: 'cho', // 기본 본문 폰트
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(fontFamily: 'cho', fontSize: 16),
+          bodyMedium: TextStyle(fontFamily: 'cho'),
+          bodySmall: TextStyle(fontFamily: 'cho'),
+          labelLarge: TextStyle(fontFamily: 'cho', fontSize: 16),
+          labelMedium: TextStyle(fontFamily: 'cho'),
+          labelSmall: TextStyle(fontFamily: 'cho'),
+          headlineSmall: TextStyle(fontFamily: 'reko', fontSize: 20),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
+          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(
+            fontFamily: 'reko', // 헤더용 폰트
+            color: Colors.white,
+            fontSize: 20,
           ),
-          bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
-            selectedItemColor: Color.fromRGBO(255, 111, 97, 1.0),
-            unselectedItemColor: Colors.white,
-          ),
-        );
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
+          selectedItemColor: Color.fromRGBO(255, 111, 97, 1.0),
+          unselectedItemColor: Colors.white,
+          selectedLabelStyle: TextStyle(fontFamily: 'reko'), // 네비게이션 선택 항목 폰트
+          unselectedLabelStyle: TextStyle(fontFamily: 'reko'),
+        ),
+      );
+
+        // return ThemeData(
+        //   fontFamily: 'reko',
+        //   brightness: Brightness.light,
+        //   primarySwatch: defaultSwatch,
+        //   scaffoldBackgroundColor : Colors.white,
+        //   appBarTheme: AppBarTheme(
+        //     backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
+        //     iconTheme: IconThemeData(color: Colors.white),
+        //     titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+        //   ),
+        //   bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        //     backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
+        //     selectedItemColor: Color.fromRGBO(255, 111, 97, 1.0),
+        //     unselectedItemColor: Colors.white,
+        //   ),
+        // );
     }
   }
 
