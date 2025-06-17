@@ -36,6 +36,11 @@ dependencies:
   provider:
   app_links:
   qr_flutter:
+  geolocator:
+  http:
+  intl:
+  geocoding:
+  xml:
   google_generative_ai: ^0.4.7
   image_picker:
   wave:
@@ -43,12 +48,16 @@ dependencies:
   image_editor_plus:
   uuid:
   path_provider:
+  firebase_auth:
+  firebase_storage:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  smooth_page_indicator:
   firebase_storage:
   firebase_auth:
   firebase_app_check:
+
 
 dev_dependencies:
   flutter_test:
@@ -67,7 +76,26 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - assets/logo.png
+    - assets/weather_sun.gif
+    - assets/ad_banner1.jpg
+    - assets/ad_banner2.jpg
+    - assets/ad_banner3.jpg
+    - assets/ad_banner4.jpg
+    - assets/ad_banner5.jpg
+    - assets/profile1.jpg
+    - assets/profile2.jpg
+    - assets/profile3.jpg
     - assets/
+    - assets/common/
+
+  fonts:
+    - family: reko
+      fonts:
+        - asset: assets/font/reko.otf
+    - family: cho
+      fonts:
+        - asset: assets/font/cho.otf
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -84,22 +112,22 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
-  # To add custom fonts to your application, add a fonts section here,
+  # To add custom font to your application, add a font section here,
   # in this "flutter" section. Each entry in this list should have a
-  # "family" key with the font family name, and a "fonts" key with a
+  # "family" key with the font family name, and a "font" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
   # fonts:
   #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
+  #     font:
+  #       - asset: font/Schyler-Regular.ttf
+  #       - asset: font/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
+  #     font:
+  #       - asset: font/TrajanPro.ttf
+  #       - asset: font/TrajanPro_Bold.ttf
   #         weight: 700
   #
-  # For details regarding fonts from package dependencies,
+  # For details regarding font from package dependencies,
   # see https://flutter.dev/to/font-from-package

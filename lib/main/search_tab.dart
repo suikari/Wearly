@@ -3,6 +3,10 @@ import 'search_result_page.dart';
 
 
 class SearchTab extends StatefulWidget {
+  final void Function(String userId) onUserTap;
+
+  const SearchTab({Key? key, required this.onUserTap}) : super(key: key);
+
   @override
   _SearchTabState createState() => _SearchTabState();
 }
