@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../provider/theme_provider.dart'; // ThemeProvider 파일 경로 맞게 수정하세요.
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -11,10 +13,59 @@ class _SettingsPageState extends State<SettingsPage> {
   TimeOfDay selectedTime = const TimeOfDay(hour: 7, minute: 0);
   bool isAlarmOn = true;
   bool isPrivate = false;
-  int selectedThemeIndex = 0;
   bool dmAllowed = true;
 
-  List<Color> themeColors = [Colors.black, Colors.indigo, Colors.pink];
+  int selectedThemeIndex = 0;
+
+  List<Color> themeColors = [Colors.pink, Colors.indigo, Colors.black];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    // ThemeProvider.colorTheme에 맞춰 selectedThemeIndex 초기화
+    switch (themeProvider.colorTheme) {
+      case ColorTheme.defaultTheme:
+        selectedThemeIndex = 0;
+        break;
+      case ColorTheme.blueTheme:
+        selectedThemeIndex = 1;
+        break;
+      case ColorTheme.blackTheme:
+        selectedThemeIndex = 2;
+        break;
+    }
+  }
+
+
+
+  void _onThemeSelected(int index) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    ColorTheme newTheme;
+
+    setState(() {
+      selectedThemeIndex = index;
+
+    switch (index) {
+      case 0:
+        newTheme = ColorTheme.defaultTheme;
+        themeProvider.setColorTheme(newTheme);
+
+        break;
+      case 1:
+        newTheme = ColorTheme.blueTheme;
+        themeProvider.setColorTheme(newTheme);
+
+        break;
+      case 2:
+        newTheme = ColorTheme.blackTheme;
+        themeProvider.setColorTheme(newTheme);
+
+        break;
+    }
+
+    });
+  }
 
   void _selectTime() async {
     TimeOfDay? picked = await showTimePicker(
@@ -31,11 +82,10 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      // backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.pink[100],
+        // backgroundColor: Colors.pink[100],
         elevation: 0,
-        automaticallyImplyLeading: false,
         title: const Text('설정', style: TextStyle(color: Colors.white)),
         actions: const [
           Icon(Icons.message, color: Colors.white),
@@ -57,7 +107,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.purple[100],
                   ),
-                  child: Text('${selectedTime.hourOfPeriod.toString().padLeft(2, '0')} : ${selectedTime.minute.toString().padLeft(2, '0')} ${selectedTime.period == DayPeriod.am ? 'AM' : 'PM'}'),
+                  child: Text(
+                      '${selectedTime.hourOfPeriod.toString().padLeft(2, '0')} : ${selectedTime.minute.toString().padLeft(2, '0')} ${selectedTime.period == DayPeriod.am ? 'AM' : 'PM'}'),
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton(
@@ -85,20 +136,11 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const Divider(height: 32),
-            _buildSectionTitle(Icons.person, '계정 비공개'),
-            Row(
-              children: [
-                _toggleButton('공개', !isPrivate, () => setState(() => isPrivate = false)),
-                const SizedBox(width: 8),
-                _toggleButton('비공개', isPrivate, () => setState(() => isPrivate = true)),
-              ],
-            ),
-            const Divider(height: 32),
             _buildSectionTitle(Icons.color_lens, '테마 설정'),
             Row(
               children: List.generate(themeColors.length, (index) {
                 return GestureDetector(
-                  onTap: () => setState(() => selectedThemeIndex = index),
+                  onTap: () => _onThemeSelected(index),
                   child: Container(
                     margin: const EdgeInsets.only(right: 12),
                     width: 36,

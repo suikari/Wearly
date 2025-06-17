@@ -1,7 +1,7 @@
 // lib/pages/home_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'main/FeedListPage.dart';
+import 'main/feed_list_page.dart';
 import 'main/gemini_chat.dart'; // ⬅ 추가
 import 'common/custom_app_bar.dart';
 import 'common/custom_bottom_navbar.dart';

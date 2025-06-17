@@ -126,9 +126,6 @@ class _HomeContentState extends State<HomeContent> {
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lon);
       Placemark place = placemarks.first;
 
-      print("test==>>>>${placemarks.toList()}");
-      print("test==>>>>${placemarks[1]}");
-
       String sidoRaw = place.administrativeArea ?? '서울';
       String sido = RegExp(r'^[a-zA-Z]').hasMatch(sidoRaw) ? convertEngSidoToKor(sidoRaw) : sidoRaw;
       String sigunguRaw = place.locality ?? place.subLocality ?? '강남구';
@@ -233,8 +230,6 @@ class _HomeContentState extends State<HomeContent> {
 
       final airApiKey = apiKey;
       final airQuality = await fetchAirQuality(sido, sigungu, airApiKey);
-
-      print("test===>$locationName");
 
       setState(() {
         weatherData = {
