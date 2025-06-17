@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum ColorTheme { defaultTheme, blueTheme }
+enum ColorTheme { defaultTheme, blueTheme, blackTheme }
 
 class ThemeProvider extends ChangeNotifier {
-  // 테마 상태 변수
-  Brightness _brightness = Brightness.light;
+  // 테마 상태 변수 (Brightness 제거)
   ColorTheme _colorTheme = ColorTheme.defaultTheme;
 
   // 키값 (SharedPreferences)
-  static const _brightnessKey = 'brightness';
   static const _colorThemeKey = 'colorTheme';
 
   // 기본색상 커스텀 스와치
@@ -32,18 +30,9 @@ class ThemeProvider extends ChangeNotifier {
     _loadThemeFromPrefs();
   }
 
-  Brightness get brightness => _brightness;
   ColorTheme get colorTheme => _colorTheme;
 
   ThemeData get currentTheme {
-    if (_brightness == Brightness.dark) {
-      return _buildDarkTheme();
-    } else {
-      return _buildLightTheme();
-    }
-  }
-
-  ThemeData _buildLightTheme() {
     switch (_colorTheme) {
       case ColorTheme.blueTheme:
         return ThemeData(
@@ -61,11 +50,29 @@ class ThemeProvider extends ChangeNotifier {
             unselectedItemColor: Colors.white70,
           ),
         );
+
+      case ColorTheme.blackTheme:
+        return ThemeData.dark().copyWith(
+          primaryColor: Colors.grey[900],
+          scaffoldBackgroundColor: Color.fromRGBO(51,51,51, 1.0),
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.grey[900],
+            iconTheme: IconThemeData(color: Colors.white),
+            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+          ),
+          bottomNavigationBarTheme: BottomNavigationBarThemeData(
+            backgroundColor: Colors.grey[900],
+            selectedItemColor: Color.fromRGBO(85,85,85, 1.0),
+            unselectedItemColor: Colors.white70,
+          ),
+        );
+
       case ColorTheme.defaultTheme:
       default:
         return ThemeData(
           brightness: Brightness.light,
           primarySwatch: defaultSwatch,
+          scaffoldBackgroundColor : Colors.white,
           appBarTheme: AppBarTheme(
             backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
             iconTheme: IconThemeData(color: Colors.white),
@@ -80,51 +87,7 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  ThemeData _buildDarkTheme() {
-    switch (_colorTheme) {
-      case ColorTheme.blueTheme:
-        return ThemeData.dark().copyWith(
-          primaryColor: Colors.blue[700],
-          scaffoldBackgroundColor: Colors.blueGrey[900],
-          appBarTheme: AppBarTheme(
-            backgroundColor: Colors.blue[900],
-            iconTheme: IconThemeData(color: Colors.white),
-            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
-          ),
-          bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: Colors.blue[900],
-            selectedItemColor: Colors.lightBlueAccent,
-            unselectedItemColor: Colors.white70,
-          ),
-        );
-      case ColorTheme.defaultTheme:
-      default:
-        return ThemeData.dark().copyWith(
-          primaryColor: Color.fromRGBO(255, 111, 97, 1.0),
-          scaffoldBackgroundColor: Colors.grey[900],
-          appBarTheme: AppBarTheme(
-            backgroundColor: Color.fromRGBO(255,154,172, 1.0),
-            iconTheme: IconThemeData(color: Colors.white),
-            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
-          ),
-          bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: Color.fromRGBO(255,154,172, 1.0),
-            selectedItemColor: Color.fromRGBO(255, 111, 97, 1.0),
-            unselectedItemColor: Colors.white70,
-          ),
-        );
-    }
-  }
-
-  // 밝기 변경 (light <-> dark)
-  void setBrightness(Brightness brightness) async {
-    _brightness = brightness;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_brightnessKey, brightness == Brightness.dark ? 'dark' : 'light');
-  }
-
-  // 색상 테마 변경 (default, blue)
+  // 색상 테마 변경 (default, blue, black)
   void setColorTheme(ColorTheme theme) async {
     _colorTheme = theme;
     notifyListeners();
@@ -135,12 +98,7 @@ class ThemeProvider extends ChangeNotifier {
   // 앱 시작 시 SharedPreferences에서 저장된 값 불러오기
   void _loadThemeFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    final brightnessString = prefs.getString(_brightnessKey);
     final colorThemeString = prefs.getString(_colorThemeKey);
-
-    if (brightnessString != null) {
-      _brightness = brightnessString == 'dark' ? Brightness.dark : Brightness.light;
-    }
 
     if (colorThemeString != null) {
       _colorTheme = ColorTheme.values.firstWhere(
