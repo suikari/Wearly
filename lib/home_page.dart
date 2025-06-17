@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
   final List<Widget> _pages = [
-    HomeContent(),  // 콜백 전달
+    HomeContent(key: ValueKey(DateTime.now().millisecondsSinceEpoch)),  // 콜백 전달
     SearchTab(onUserTap: openUserPage),    // 콜백 전달
     WritePostPage(),
     FeedListPage(onUserTap: openUserPage), // 콜백 전달
