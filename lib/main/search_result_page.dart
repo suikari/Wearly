@@ -1,9 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import '../common/custom_app_bar.dart';
-import '../firebase_options.dart';
-
 
 class SearchResultPage extends StatefulWidget {
   final String keyword;
@@ -15,10 +12,6 @@ class SearchResultPage extends StatefulWidget {
 }
 
 class _SearchResultPageState extends State<SearchResultPage> with SingleTickerProviderStateMixin {
-  int _selectedIndex = 0;
-
-
-
   late TabController _tabController;
   String selectedSort = '최신순';
 
@@ -31,31 +24,17 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
     _tabController = TabController(length: tabs.length, vsync: this);
   }
 
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-
-    final FirebaseFirestore fs = FirebaseFirestore.instance;
-
     return Scaffold(
-      appBar:  CustomAppBar(title: '검색 결과'),
-      // AppBar(
-      //   title: Text('검색 결과'),
-      // ),
+      appBar: CustomAppBar(title: '검색 결과'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 검색어 안내
           Padding(
             padding: const EdgeInsets.all(12.0),
-            child:
-            Text(
+            child: Text(
               '"${widget.keyword}"에 대한 검색 결과입니다.',
               style: const TextStyle(fontSize: 16),
             ),
@@ -113,68 +92,77 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
 
           // 탭 콘텐츠
           Expanded(
-              child: StreamBuilder(
-                stream: fs.collection("adItems").snapshots(),
-                builder: (context, snapshot) {
-
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error==: ${snapshot.error}'));
-                  }
-                  if(!snapshot.hasData) {
-
-                    return Center(child: CircularProgressIndicator(),);
-                  }
-                  final docs = snapshot.data!.docs;
-                  // print("테스트================> + ${docs}");
-                  return ListView.builder(
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      final doc = docs[index];
-
-                      return ListTile(
-                        title : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("작성자: ${doc["test"]} "),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize : MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              onPressed: ()=>{},
-                              icon: Icon(Icons.edit),
-                            ),
-                            IconButton(
-                              onPressed: ()=> {},
-                              icon: Icon(Icons.delete),
-                            )
-                          ],
-                        ),
-                      );
-
-                    },
-                  );
-                },
-              )
-          )
-          // Expanded(
-          //   child: TabBarView(
-          //     controller: _tabController,
-          //     children: tabs.map((tab) => _buildTabContent(tab)).toList(),
-          //   ),
-          // ),
+            child: TabBarView(
+              controller: _tabController,
+              children: tabs.map((tab) => _buildTabContent(tab)).toList(),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildTabContent(String category) {
-    return Center(
-      child: Text(
-        '$category 결과 (${selectedSort} 기준)',
-        style: const TextStyle(fontSize: 16),
-      ),
+    final FirebaseFirestore fs = FirebaseFirestore.instance;
+
+    // 정렬 필드 설정
+    String orderByField;
+    switch (selectedSort) {
+      case '좋아요순':
+        orderByField = 'likes';
+        break;
+      case '조회수순':
+        orderByField = 'views';
+        break;
+      case '온도순':
+        orderByField = 'temperature';
+        break;
+      case '최신순':
+      default:
+        orderByField = 'createdAt';
+    }
+
+    // 탭별 필터링
+    Query<Map<String, dynamic>> query = fs.collection("feeds");
+
+    if (category == '태그') {
+      query = query.where("imageUrls", arrayContains: widget.keyword);
+    } else if (category == '지역') {
+      query = query.where("temperature", isEqualTo: widget.keyword);
+    } else if (category == '내용') {
+      query = query.where("content", isGreaterThanOrEqualTo: widget.keyword);
+    } else if (category == '유저') {
+      query = query.where("feeling", isEqualTo: widget.keyword);
+    }
+
+    query = query.orderBy(orderByField, descending: true);
+
+    return StreamBuilder(
+      stream: query.snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('에러 발생: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        final docs = snapshot.data!.docs;
+        if (docs.isEmpty) {
+          return Center(child: Text('검색 결과가 없습니다.'));
+        }
+
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            return ListTile(
+              title: Text(doc['title'] ?? '제목 없음'),
+              subtitle: Text('작성자: ${doc['cdatetime'] ?? '알 수 없음'}'),
+            );
+          },
+        );
+      },
     );
   }
 }
