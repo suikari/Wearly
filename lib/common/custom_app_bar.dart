@@ -58,23 +58,23 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               },
           color: iconColor,
         ),
-        IconButton(
-          icon: Icon(Icons.color_lens_outlined),
-          tooltip: '색상 테마 변경',
-          color: iconColor,
-          onPressed: () {
-            final current = themeProvider.colorTheme;
-            ColorTheme newTheme;
-            if (current == ColorTheme.defaultTheme) {
-              newTheme = ColorTheme.blueTheme;
-            } else if (current == ColorTheme.blueTheme) {
-              newTheme = ColorTheme.blackTheme;
-            } else {
-              newTheme = ColorTheme.defaultTheme;
-            }
-            themeProvider.setColorTheme(newTheme);
-          },
-        ),
+        // IconButton(
+        //   icon: Icon(Icons.color_lens_outlined),
+        //   tooltip: '색상 테마 변경',
+        //   color: iconColor,
+        //   onPressed: () {
+        //     final current = themeProvider.colorTheme;
+        //     ColorTheme newTheme;
+        //     if (current == ColorTheme.defaultTheme) {
+        //       newTheme = ColorTheme.blueTheme;
+        //     } else if (current == ColorTheme.blueTheme) {
+        //       newTheme = ColorTheme.blackTheme;
+        //     } else {
+        //       newTheme = ColorTheme.defaultTheme;
+        //     }
+        //     themeProvider.setColorTheme(newTheme);
+        //   },
+        // ),
       ],
     );
   }

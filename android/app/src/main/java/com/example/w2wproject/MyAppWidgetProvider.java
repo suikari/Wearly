@@ -45,13 +45,14 @@ public class MyAppWidgetProvider extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(ctx.getPackageName(), R.layout.widget_layout);
 
 
-        Intent intent = new Intent(context, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-                context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-        views.setOnClickPendingIntent(R.id.widget_root_layout, pendingIntent);
+//        Intent intent = new Intent(ctx, MainActivity.class);
+//        PendingIntent pendingIntent = PendingIntent.getActivity(
+//                ctx, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+//        );
+//
+//        views.setOnClickPendingIntent(R.id.widget_root_layout, pendingIntent);
 
-        views.setTextViewText(R.id.weatherText, "날씨: " + weather);
+        views.setTextViewText(R.id.weatherText, "ㅅ날씨: " + weather);
         views.setTextViewText(R.id.tempText, temp);
 
         Intent refreshIntent = new Intent(ctx, MyAppWidgetProvider.class);
