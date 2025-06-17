@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'dart:math';
 
 import 'wearly_weather_card.dart';
-import 'feed_widget.dart'; // 광고 배너와 WeeklyBestWidget이 이 파일에 있음
+import 'feed_widget.dart';
 
 class HomeContent extends StatefulWidget {
   @override
@@ -18,8 +19,8 @@ class _HomeContentState extends State<HomeContent> {
   bool loading = true;
   String? errorMsg;
   bool isWeatherExpanded = true;
-
-  final List<String> tagList = ['#반팔', '#면바지'];
+  List<String> tagList = [];
+  bool showAllTags = false; // ★ 펼치기/접기 상태 변수
 
   @override
   void initState() {
@@ -29,23 +30,9 @@ class _HomeContentState extends State<HomeContent> {
 
   String convertEngSidoToKor(String sido) {
     final map = {
-      'Seoul': '서울',
-      'Incheon': '인천',
-      'Busan': '부산',
-      'Daegu': '대구',
-      'Daejeon': '대전',
-      'Gwangju': '광주',
-      'Ulsan': '울산',
-      'Sejong': '세종',
-      'Gyeonggi-do': '경기',
-      'Gangwon-do': '강원',
-      'Chungcheongbuk-do': '충북',
-      'Chungcheongnam-do': '충남',
-      'Jeollabuk-do': '전북',
-      'Jeollanam-do': '전남',
-      'Gyeongsangbuk-do': '경북',
-      'Gyeongsangnam-do': '경남',
-      'Jeju-do': '제주',
+      'Seoul': '서울', 'Incheon': '인천', 'Busan': '부산', 'Daegu': '대구', 'Daejeon': '대전', 'Gwangju': '광주', 'Ulsan': '울산', 'Sejong': '세종',
+      'Gyeonggi-do': '경기', 'Gangwon-do': '강원', 'Chungcheongbuk-do': '충북', 'Chungcheongnam-do': '충남',
+      'Jeollabuk-do': '전북', 'Jeollanam-do': '전남', 'Gyeongsangbuk-do': '경북', 'Gyeongsangnam-do': '경남', 'Jeju-do': '제주',
     };
     return map[sido] ?? sido;
   }
@@ -80,6 +67,25 @@ class _HomeContentState extends State<HomeContent> {
       }
     }
     return null;
+  }
+
+  // Firestore에서 온도별 추천 태그 가져오기
+  Future<void> fetchRecommendTags(int temp) async {
+    final firestore = FirebaseFirestore.instance;
+    final snapshot = await firestore.collection('temperature_tags').get();
+    List<String> foundTags = [];
+    for (var doc in snapshot.docs) {
+      int minT = doc['min_temperature'];
+      int maxT = doc['max_temperature'];
+      if (temp >= minT && temp <= maxT) {
+        List<dynamic> tags = doc['tags'];
+        foundTags = tags.map((e) => '#$e').toList();
+        break;
+      }
+    }
+    setState(() {
+      tagList = foundTags;
+    });
   }
 
   Future<void> fetchWeather() async {
@@ -134,7 +140,7 @@ class _HomeContentState extends State<HomeContent> {
 
       DateTime now = DateTime.now().toUtc().add(Duration(hours: 9));
       String today = "${now.year.toString().padLeft(4, '0')}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
-      String baseTime = "0500"; // 5시 기준이 가장 안전함 (최고/최저 포함)
+      String baseTime = "0500";
 
       String urlFcst = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?"
           "serviceKey=$apiKey"
@@ -151,7 +157,6 @@ class _HomeContentState extends State<HomeContent> {
 
       final List fcstItems = fcstData['response']['body']['items']['item'];
 
-      // 오늘 날짜의 TMN/TMX 중 가장 이른/늦은 시간값으로 추출
       final todayTmn = fcstItems.where((e) =>
       e['fcstDate'] == today && e['category'] == 'TMN'
       ).toList();
@@ -214,6 +219,9 @@ class _HomeContentState extends State<HomeContent> {
       tmx ??= curTemp;
       tmn ??= curTemp;
 
+      // Firestore에서 추천 태그 불러오기
+      await fetchRecommendTags(curTemp);
+
       final airApiKey = apiKey;
       final airQuality = await fetchAirQuality(sido, sigungu, airApiKey);
 
@@ -260,6 +268,9 @@ class _HomeContentState extends State<HomeContent> {
         ),
       );
     } else {
+      // 보여줄 태그 개수 제한
+      int tagShowLimit = 2;
+
       children.add(
         WearlyWeatherCard(
           data: weatherData!,
@@ -277,30 +288,68 @@ class _HomeContentState extends State<HomeContent> {
             elevation: 0,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "오늘의 추천 태그",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Colors.black87,
-                    ),
+                  // ★ 첫 줄: 제목 + 태그 일부 + 버튼
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        "오늘의 추천 태그",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      ...tagList.take(tagShowLimit).map((tag) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Text(
+                          tag,
+                          style: TextStyle(
+                            color: Colors.blueAccent,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      )),
+                      Spacer(), // ★ 이게 있어야 버튼이 항상 오른쪽!
+                      if (tagList.length > tagShowLimit)
+                        GestureDetector(
+                          onTap: () => setState(() => showAllTags = !showAllTags),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.pink[100],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Icon(
+                              showAllTags ? Icons.expand_less_rounded : Icons.add,
+                              size: 16,
+                              color: Colors.pink[700],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  SizedBox(width: 16),
-                  ...tagList.map((tag) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Text(
-                      tag,
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
+                  if (showAllTags && tagList.length > tagShowLimit)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 98.0, top: 3), // 적절히 조정
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: tagList.skip(tagShowLimit).map((tag) => Text(
+                          tag,
+                          style: TextStyle(
+                            color: Colors.blueAccent,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        )).toList(),
                       ),
                     ),
-                  )),
-                  Spacer(),
-                  Icon(Icons.add_box_rounded, color: Colors.pink[200], size: 22),
                 ],
               ),
             ),
