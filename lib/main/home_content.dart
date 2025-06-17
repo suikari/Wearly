@@ -11,6 +11,11 @@ import 'feed_widget.dart';
 
 class HomeContent extends StatefulWidget {
   @override
+  final Key key;
+
+  const HomeContent({required this.key}) : super(key: key);
+
+  @override
   State<HomeContent> createState() => _HomeContentState();
 }
 
@@ -30,7 +35,7 @@ class _HomeContentState extends State<HomeContent> {
 
   String convertEngSidoToKor(String sido) {
     final map = {
-      'Seoul': '서울', 'Incheon': '인천', 'Busan': '부산', 'Daegu': '대구', 'Daejeon': '대전', 'Gwangju': '광주', 'Ulsan': '울산', 'Sejong': '세종',
+      'Seoul': '서울', 'Incheon': '인천', '인천광역시' : '인천', 'Busan': '부산', 'Daegu': '대구', 'Daejeon': '대전', 'Gwangju': '광주', 'Ulsan': '울산', 'Sejong': '세종',
       'Gyeonggi-do': '경기', 'Gangwon-do': '강원', 'Chungcheongbuk-do': '충북', 'Chungcheongnam-do': '충남',
       'Jeollabuk-do': '전북', 'Jeollanam-do': '전남', 'Gyeongsangbuk-do': '경북', 'Gyeongsangnam-do': '경남', 'Jeju-do': '제주',
     };
@@ -120,6 +125,10 @@ class _HomeContentState extends State<HomeContent> {
 
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lon);
       Placemark place = placemarks.first;
+
+      print("test==>>>>${placemarks.toList()}");
+      print("test==>>>>${placemarks[1]}");
+
       String sidoRaw = place.administrativeArea ?? '서울';
       String sido = RegExp(r'^[a-zA-Z]').hasMatch(sidoRaw) ? convertEngSidoToKor(sidoRaw) : sidoRaw;
       String sigunguRaw = place.locality ?? place.subLocality ?? '강남구';
@@ -224,6 +233,8 @@ class _HomeContentState extends State<HomeContent> {
 
       final airApiKey = apiKey;
       final airQuality = await fetchAirQuality(sido, sigungu, airApiKey);
+
+      print("test===>$locationName");
 
       setState(() {
         weatherData = {

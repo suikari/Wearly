@@ -12,11 +12,15 @@ class SearchResultPage extends StatefulWidget {
 }
 
 class _SearchResultPageState extends State<SearchResultPage> with SingleTickerProviderStateMixin {
+
+  int _selectedIndex = 0;
+
+
   late TabController _tabController;
-  String selectedSort = '최신순';
 
   final List<String> tabs = ['태그', '지역', '내용', '유저'];
   final List<String> sortOptions = ['최신순', '좋아요순', '조회수순', '온도순'];
+  String selectedSort = '최신순';
 
   @override
   void initState() {
@@ -26,12 +30,14 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+
+    final FirebaseFirestore fs = FirebaseFirestore.instance;
+
     return Scaffold(
       appBar: CustomAppBar(title: '검색 결과'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 검색어 안내
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Text(
@@ -39,8 +45,6 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
               style: const TextStyle(fontSize: 16),
             ),
           ),
-
-          // 탭바
           Container(
             decoration: BoxDecoration(
               border: Border(
@@ -53,11 +57,14 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
               labelColor: Colors.redAccent,
               unselectedLabelColor: Colors.black87,
               indicatorColor: Colors.redAccent,
+              onTap: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
               tabs: tabs.map((tab) => Tab(text: tab)).toList(),
             ),
           ),
-
-          // 정렬 버튼
           Padding(
             padding: const EdgeInsets.only(right: 12.0, top: 6),
             child: Align(
@@ -89,9 +96,69 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
               ),
             ),
           ),
-
-          // 탭 콘텐츠
           Expanded(
+           
+            child: StreamBuilder<QuerySnapshot>(
+              stream: fs.collection("feeds").snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('에러 발생: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                // 제목에 키워드 포함 필터링
+                final docs = snapshot.data!.docs.where((doc) {
+                  final title = doc['title']?.toString().toLowerCase() ?? '';
+                  return title.contains(widget.keyword.toLowerCase());
+                }).toList();
+
+                if (docs.isEmpty) {
+                  return const Center(child: Text('검색 결과가 없습니다.'));
+                }
+
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
+
+                    return ListTile(
+                      title: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("작성자: ${doc["content"] ?? "알 수 없음"}"),
+                          Text("제목: ${doc["title"] ?? "없음"}"),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: () {
+                              // 수정 기능 추가 예정
+                            },
+                            icon: const Icon(Icons.edit),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              // 삭제 기능 추가 예정
+                            },
+                            icon: const Icon(Icons.delete),
+                          )
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
             child: TabBarView(
               controller: _tabController,
               children: tabs.map((tab) => _buildTabContent(tab)).toList(),
@@ -165,4 +232,5 @@ class _SearchResultPageState extends State<SearchResultPage> with SingleTickerPr
       },
     );
   }
+
 }
