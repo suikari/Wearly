@@ -54,8 +54,6 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   smooth_page_indicator:
-  firebase_storage:
-  firebase_auth:
   firebase_app_check:
 
 
