@@ -51,7 +51,6 @@ class ThemeProvider extends ChangeNotifier {
             unselectedItemColor: Colors.white70,
           ),
         );
-
       case ColorTheme.blackTheme:
         return ThemeData.dark().copyWith(
           textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'reko'),
