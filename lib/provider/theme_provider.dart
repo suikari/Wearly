@@ -25,8 +25,22 @@ class ThemeProvider extends ChangeNotifier {
     800: Color.fromRGBO(255, 111, 97, 0.9),
     900: Color.fromRGBO(255, 111, 97, 1.0),
   };
+  static final Map<int, Color> _blueColorMap = {
+    50: Color.fromRGBO(64, 88, 166, 0.1),
+    100: Color.fromRGBO(64, 88, 166, 0.2),
+    200: Color.fromRGBO(64, 88, 166, 0.3),
+    300: Color.fromRGBO(64, 88, 166, 0.4),
+    400: Color.fromRGBO(64, 88, 166, 0.5),
+    500: Color.fromRGBO(64, 88, 166, 0.6),
+    600: Color.fromRGBO(64, 88, 166, 0.7),
+    700: Color.fromRGBO(64, 88, 166, 0.8),
+    800: Color.fromRGBO(64, 88, 166, 0.9),
+    900: Color.fromRGBO(64, 88, 166, 1.0),
+  };
   static final MaterialColor defaultSwatch =
   MaterialColor(0xFFFF6F61, _defaultColorMap);
+  static final MaterialColor bluetSwatch =
+  MaterialColor(0xFFFF6F61, _blueColorMap);
 
   ThemeProvider() {
     _loadThemeFromPrefs();
@@ -40,15 +54,15 @@ class ThemeProvider extends ChangeNotifier {
         return ThemeData(
           fontFamily: 'reko',
           brightness: Brightness.light,
-          primarySwatch: Colors.blue,
-          scaffoldBackgroundColor: Colors.blue[50],
+          primarySwatch: bluetSwatch,
+          scaffoldBackgroundColor: Colors.white,
           appBarTheme: AppBarTheme(
-            backgroundColor: Colors.blue,
+            backgroundColor: Color(0xFF4058A6),
             iconTheme: IconThemeData(color: Colors.white),
             titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
           ),
           bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: Colors.blue,
+            backgroundColor: Color(0xFF4058A6),
             selectedItemColor: Colors.white,
             unselectedItemColor: Colors.white70,
           ),
@@ -58,7 +72,7 @@ class ThemeProvider extends ChangeNotifier {
               pointColor: Color(0xFF33B9E3),
               subColor: Color(0xFFEAF4FF),
               highlightColor: Color(0xFFFFC87B),
-              textGray: Colors.grey,
+              textGrey: Colors.grey,
               textWhite: Colors.white,
               textBlack: Color(0xFF333333)
             ),
@@ -79,6 +93,17 @@ class ThemeProvider extends ChangeNotifier {
             selectedItemColor: Color.fromRGBO(85,85,85, 1.0),
             unselectedItemColor: Colors.white70,
           ),
+          extensions: <ThemeExtension<dynamic>>[
+            const CustomColors(
+                mainColor: Color(0xCC000000),
+                pointColor: Color(0xFFFFFFFF),
+                subColor: Color(0xFF555555),
+                highlightColor: Color(0xFFEEEEEE),
+                textGrey: Colors.grey,
+                textWhite: Colors.white,
+                textBlack: Color(0xCC000000)
+            ),
+          ],
         );
 
       case ColorTheme.defaultTheme:
@@ -118,7 +143,7 @@ class ThemeProvider extends ChangeNotifier {
               pointColor: Color(0xFFFF6F61),
               subColor: Color(0xFFFFF0F4),
               highlightColor: Color(0xFFFDE97C),
-              textGray: Colors.grey,
+              textGrey: Colors.grey,
               textWhite: Colors.white,
               textBlack: Color(0xFF333333)
             ),

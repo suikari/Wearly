@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 
 import '../page/signup_page.dart';
 import '../provider/custom_colors.dart';
+import '../provider/theme_provider.dart';
 
 class TermsModel {
   final String id;
@@ -65,11 +67,17 @@ class _TermsPageState extends State<TermsPage> {
     _termsFuture = fetchTerms();
   }
 
-  void _showTermsContent(TermsModel term) {
+  void _showTermsContent(
+      TermsModel term,
+      Color Grey,
+      Color White,
+      Color Black,
+      final isBlackTheme
+    ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: isBlackTheme ? Color(0xFF333333) : Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => DraggableScrollableSheet(
@@ -87,14 +95,14 @@ class _TermsPageState extends State<TermsPage> {
                   height: 5,
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: isBlackTheme ? Grey : Colors.grey[300],
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
                 Text(
                   term.title,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold, color: isBlackTheme ? White : Black),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
@@ -102,7 +110,7 @@ class _TermsPageState extends State<TermsPage> {
                     controller: scrollController,
                     child: Text(
                       term.content,
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, color: Grey),
                     ),
                   ),
                 ),
@@ -137,152 +145,160 @@ class _TermsPageState extends State<TermsPage> {
     Color subColor = customColors?.subColor ?? Colors.white;
     Color pointColor = customColors?.pointColor ?? Colors.white70;
     Color highlightColor = customColors?.highlightColor ?? Colors.orange;
+    Color Grey = customColors?.textGrey ?? Colors.grey;
+    Color White = customColors?.textWhite ?? Colors.white;
+    Color Black = customColors?.textBlack ?? Colors.black;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isBlackTheme = themeProvider.colorTheme == ColorTheme.blackTheme;
+    final bgColor = isBlackTheme ? Color(0xFF333333) : Colors.white;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('약관 동의'),
       ),
-      body: FutureBuilder<List<TermsModel>>(
-        future: _termsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('약관 불러오기 실패: ${snapshot.error}'));
-          }
-          final terms = snapshot.data ?? [];
-          if (terms.isEmpty) {
-            return const Center(child: Text('등록된 약관이 없습니다.'));
-          }
+      body: SafeArea(
+        child: FutureBuilder<List<TermsModel>>(
+          future: _termsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('약관 불러오기 실패: ${snapshot.error}'));
+            }
+            final terms = snapshot.data ?? [];
+            if (terms.isEmpty) {
+              return const Center(child: Text('등록된 약관이 없습니다.'));
+            }
 
-          return Column(
-            children: [
-              // 상단 여백 + 감사 이미지 영역
-              Container(
-                height: 200,
-                width: double.infinity,
-                color: Colors.white,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.favorite, color: pointColor, size: 48),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Wearly에 오신 것을 환영합니다!',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+            return Column(
+              children: [
+                // 상단 여백 + 감사 이미지 영역
+                Container(
+                  height: 200,
+                  width: double.infinity,
+                  color: bgColor,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.favorite, color: pointColor, size: 48),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Wearly에 오신 것을 환영합니다!',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Divider(
-                thickness: 1,
-                height: 1,
-                color: mainColor,
-              ),
-              // 약관 리스트
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: terms.length,
-                  separatorBuilder: (_, __) => Divider(color: subColor),
-                  itemBuilder: (context, index) {
-                    final term = terms[index];
-                    final isChecked = _agreeMap[term.id] ?? false;
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          _agreeMap[term.id] = !isChecked;
-                          _agreeAll = _agreeMap.values.every((v) => v);
-                        });
-                      },
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Checkbox(
-                            value: isChecked,
-                            onChanged: (value) {
-                              setState(() {
-                                _agreeMap[term.id] = value ?? false;
-                                _agreeAll = _agreeMap.values.every((v) => v);
-                              });
-                            },
-                            activeColor: mainColor,
-                            checkColor: Colors.white,
-                            side: const BorderSide(color: Colors.grey), // gray tone
-                          ),
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    term.title,
-                                    style: const TextStyle(fontSize: 16),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                TextButton.icon(
-                                  onPressed: () => _showTermsContent(term),
-                                  icon: const Icon(Icons.expand_more),
-                                  label: const Text('전문보기'),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.grey,
-                                    padding: EdgeInsets.zero,
-                                    minimumSize: const Size(10, 30),
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                ),
-                              ],
+                Divider(
+                  thickness: 1,
+                  height: 1,
+                  color: mainColor,
+                ),
+                // 약관 리스트
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: terms.length,
+                    separatorBuilder: (_, __) => Divider(color: subColor),
+                    itemBuilder: (context, index) {
+                      final term = terms[index];
+                      final isChecked = _agreeMap[term.id] ?? false;
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _agreeMap[term.id] = !isChecked;
+                            _agreeAll = _agreeMap.values.every((v) => v);
+                          });
+                        },
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Checkbox(
+                              value: isChecked,
+                              onChanged: (value) {
+                                setState(() {
+                                  _agreeMap[term.id] = value ?? false;
+                                  _agreeAll = _agreeMap.values.every((v) => v);
+                                });
+                              },
+                              activeColor: mainColor,
+                              checkColor: Colors.white,
+                              side: const BorderSide(color: Colors.grey),
                             ),
-                          ),
-                        ],
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      term.title,
+                                      style: const TextStyle(fontSize: 16),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: () => _showTermsContent(term,Grey,White,Black,isBlackTheme),
+                                    icon: const Icon(Icons.expand_more),
+                                    label: const Text('전문보기'),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Grey,
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: const Size(10, 30),
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Divider(
+                  thickness: 1,
+                  height: 1,
+                  color: mainColor,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: CheckboxListTile(
+                    title: const Text('전체 약관에 동의합니다', style: TextStyle(fontWeight: FontWeight.bold)),
+                    value: _agreeAll,
+                    onChanged: _toggleAgreeAll,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    activeColor: mainColor,
+                    checkColor: Colors.white,
+                    side: const BorderSide(color: Colors.grey),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 35.0, top: 8.0), // 👈 하단 공간 줄이기
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _allAgreed ? _onContinue : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        foregroundColor: White,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                       ),
-                    );
-                  },
-                ),
-              ),
-              Divider(
-                thickness: 1,
-                height: 1,
-                color: mainColor,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: CheckboxListTile(
-                  title: const Text('전체 약관에 동의합니다', style: TextStyle(fontWeight: FontWeight.bold)),
-                  value: _agreeAll,
-                  onChanged: _toggleAgreeAll,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  activeColor: mainColor,
-                  checkColor: Colors.white,
-                  side: const BorderSide(color: Colors.grey),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 50.0, top: 8.0), // 👈 하단 공간 줄이기
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _allAgreed ? _onContinue : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: mainColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                    ),
-                    child: const Text('동의하고 회원가입으로 이동',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      child: const Text('동의하고 회원가입으로 이동',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
