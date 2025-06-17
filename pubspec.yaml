@@ -41,13 +41,12 @@ dependencies:
   intl:
   geocoding:
   xml:
-  google_generative_ai: ^0.4.7
+  google_generative_ai:
   image_picker:
-  wave:
   file_picker:
   image_editor_plus:
-  uuid:
   path_provider:
+  firebase_auth:
   firebase_storage:
   firebase_auth:
   # The following adds the Cupertino Icons font to your application.
@@ -123,7 +122,7 @@ flutter:
   # "family" key with the font family name, and a "font" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # font:
+  # fonts:
   #   - family: Schyler
   #     font:
   #       - asset: font/Schyler-Regular.ttf
