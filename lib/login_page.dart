@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:w2wproject/main.dart';
+import 'package:w2wproject/provider/custom_colors.dart';
+import 'common/terms_page.dart';
 import 'page/find_account_page.dart';
-import 'page/signup_page.dart';
 import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -31,7 +33,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _goToSignup() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => SignupPage()),
+      MaterialPageRoute(builder: (_) => TermsPage()),
     );
   }
 
@@ -61,26 +63,29 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     // 🎨 테마 적용 색상 추출
-    final bottomNavTheme = Theme.of(context).bottomNavigationBarTheme;
-    final backgroundColor = Theme.of(context).scaffoldBackgroundColor ?? Theme.of(context).primaryColor;
-    final navbackgroundColor = bottomNavTheme.backgroundColor ?? Theme.of(context).primaryColor;
-    final selectedItemColor = bottomNavTheme.selectedItemColor ?? Colors.white;
-    final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white70;
+    Color highlightColor = customColors?.highlightColor ?? Colors.orange;
+    Color Gray = customColors?.textGray ?? Colors.grey;
+    Color White = customColors?.textWhite ?? Colors.white;
+    Color Black = customColors?.textBlack ?? Colors.black;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: White,
       appBar: AppBar(
-        backgroundColor: navbackgroundColor,
+        backgroundColor: mainColor,
         elevation: 0,
         toolbarHeight: 30, // 높이 30으로 유지
         flexibleSpace: SafeArea(
           bottom: false,
           child: Container(
-            color: navbackgroundColor,
+            color: mainColor,
             child: Column(
               children: [
                 Expanded(flex: 8, child: Center()),
-                Container(height: 3, color: Colors.white),
+                Container(height: 3, color: White),
                 SizedBox(height: 5, child: Center()),
               ],
             ),
@@ -89,11 +94,11 @@ class _LoginPageState extends State<LoginPage> {
       ),
       bottomNavigationBar: Container(
         height: 55, // 높이 조절
-        color: navbackgroundColor,
+        color: mainColor,
         child: Column(
           children: [
             SizedBox(height: 5, child: Center()),        // 고정된 10픽셀 높이 공간
-            Container(height: 3, color: Colors.white),
+            Container(height: 3, color: White),
             Expanded(flex: 8, child: Center()),
           ],
         ),
@@ -115,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
                         style: TextStyle(
                           fontSize: 80,
                           fontWeight: FontWeight.bold,
-                          color: selectedItemColor,
+                          color: pointColor,
                         ),
                       ),
                       Text(
@@ -123,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: selectedItemColor,
+                          color: pointColor,
                         ),
                       ),
                     ],
@@ -133,15 +138,15 @@ class _LoginPageState extends State<LoginPage> {
                   // Email
                   Container(
                     decoration: BoxDecoration(
-                      color: navbackgroundColor,
+                      color: subColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: TextFormField(
-                      style: TextStyle(color: selectedItemColor),
+                      style: TextStyle(color: Black),
                       decoration: InputDecoration(
                         hintText: '이메일',
-                        hintStyle: TextStyle(color: unselectedItemColor),
+                        hintStyle: TextStyle(color: Gray,fontSize: 14),
                         border: InputBorder.none,
                       ),
                       keyboardType: TextInputType.emailAddress,
@@ -160,16 +165,16 @@ class _LoginPageState extends State<LoginPage> {
                   // Password
                   Container(
                     decoration: BoxDecoration(
-                      color: navbackgroundColor,
+                      color: subColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: TextFormField(
-                      style: TextStyle(color: selectedItemColor),
+                      style: TextStyle(color: subColor),
                       obscureText: true,
                       decoration: InputDecoration(
                         hintText: '비밀번호',
-                        hintStyle: TextStyle(color: unselectedItemColor),
+                        hintStyle: TextStyle(color: Gray,fontSize: 14),
                         border: InputBorder.none,
                       ),
                       validator: (value) {
@@ -188,18 +193,18 @@ class _LoginPageState extends State<LoginPage> {
                     height: 45,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedItemColor,
+                        backgroundColor: mainColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       onPressed: _tryLogin,
-                      child: Text('로그인', style: TextStyle(color: backgroundColor)),
+                      child: Text('로그인', style: TextStyle(color: White, fontSize: 20, fontWeight: FontWeight.bold),),
                     ),
                   ),
                   SizedBox(height: 30),
 
-                  Divider(height: 1, thickness: 1, color: selectedItemColor.withOpacity(0.3)),
+                  Divider(height: 1, thickness: 1, color: highlightColor),
                   SizedBox(height: 20),
 
                   // 소셜 로그인 버튼들
@@ -210,61 +215,45 @@ class _LoginPageState extends State<LoginPage> {
 
                   // 하단 링크
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Expanded(
-                        flex: 1,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
+                      // 왼쪽 텍스트들
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
                             "아직 wearly 회원이 아니신가요?",
-                            style: TextStyle(color: selectedItemColor, fontSize: 12),
+                            style: TextStyle(color: Gray, fontSize: 12),
                           ),
-                        ),
+                          SizedBox(height: 5),
+                          Text(
+                            "이메일/비밀번호를 잊으셨나요?",
+                            style: TextStyle(color: Gray, fontSize: 12),
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        flex: 1,
-                        child: GestureDetector(
-                          onTap: _goToSignup,
-                          child: Align(
-                            alignment: Alignment.center, // 가운데 정렬
+
+                      // 오른쪽 텍스트들
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          GestureDetector(
+                            onTap: _goToSignup,
                             child: Text(
                               "회원가입하기",
-                              style: TextStyle(color: selectedItemColor, fontSize: 12, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: pointColor, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 5),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            "이메일/비밀번호를 잊으셨나요?",
-                            style: TextStyle(color: selectedItemColor, fontSize: 12),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: GestureDetector(
-                          onTap: _goToFindidpass,
-                          child: Align(
-                            alignment: Alignment.center,
+                          SizedBox(height: 5),
+                          GestureDetector(
+                            onTap: _goToFindidpass,
                             child: Text(
                               "이메일/비밀번호 찾기",
-                              style: TextStyle(
-                                color: selectedItemColor,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: TextStyle(color: pointColor, fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
