@@ -41,13 +41,12 @@ dependencies:
   intl:
   geocoding:
   xml:
-  google_generative_ai: ^0.4.7
+  google_generative_ai:
   image_picker:
-  wave:
   file_picker:
   image_editor_plus:
-  uuid:
   path_provider:
+
   firebase_auth:
   firebase_storage:
   # The following adds the Cupertino Icons font to your application.
