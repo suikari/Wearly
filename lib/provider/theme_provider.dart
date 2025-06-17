@@ -86,14 +86,14 @@ class ThemeProvider extends ChangeNotifier {
       return ThemeData(
         primarySwatch: defaultSwatch,
         scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'cho', // 기본 본문 폰트
+        fontFamily: 'seoul', // 기본 본문 폰트
         textTheme: TextTheme(
-          bodyLarge: TextStyle(fontFamily: 'cho', fontSize: 16),
-          bodyMedium: TextStyle(fontFamily: 'cho'),
-          bodySmall: TextStyle(fontFamily: 'cho'),
-          labelLarge: TextStyle(fontFamily: 'cho', fontSize: 16),
-          labelMedium: TextStyle(fontFamily: 'cho'),
-          labelSmall: TextStyle(fontFamily: 'cho'),
+          bodyLarge: TextStyle(fontFamily: 'seoul', fontSize: 16),
+          bodyMedium: TextStyle(fontFamily: 'seoul'),
+          bodySmall: TextStyle(fontFamily: 'seoul'),
+          labelLarge: TextStyle(fontFamily: 'seoul', fontSize: 16),
+          labelMedium: TextStyle(fontFamily: 'seoul'),
+          labelSmall: TextStyle(fontFamily: 'seoul'),
           headlineSmall: TextStyle(fontFamily: 'reko', fontSize: 20),
         ),
         appBarTheme: AppBarTheme(
