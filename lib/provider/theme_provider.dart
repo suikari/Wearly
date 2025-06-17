@@ -36,6 +36,7 @@ class ThemeProvider extends ChangeNotifier {
     switch (_colorTheme) {
       case ColorTheme.blueTheme:
         return ThemeData(
+          fontFamily: 'reko',
           brightness: Brightness.light,
           primarySwatch: Colors.blue,
           scaffoldBackgroundColor: Colors.blue[50],
@@ -53,6 +54,7 @@ class ThemeProvider extends ChangeNotifier {
 
       case ColorTheme.blackTheme:
         return ThemeData.dark().copyWith(
+          textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'reko'),
           primaryColor: Colors.grey[900],
           scaffoldBackgroundColor: Color.fromRGBO(51,51,51, 1.0),
           appBarTheme: AppBarTheme(
@@ -70,6 +72,7 @@ class ThemeProvider extends ChangeNotifier {
       case ColorTheme.defaultTheme:
       default:
         return ThemeData(
+          fontFamily: 'reko',
           brightness: Brightness.light,
           primarySwatch: defaultSwatch,
           scaffoldBackgroundColor : Colors.white,
