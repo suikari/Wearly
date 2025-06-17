@@ -6,16 +6,18 @@ class CustomColors extends ThemeExtension<CustomColors> {
   final Color pointColor;
   final Color subColor;
   final Color highlightColor;
-  final Color textColor;
-  final Color pointTextColor;
+  final Color textBlack;
+  final Color textWhite;
+  final Color textGray;
 
   const CustomColors({
     required this.mainColor,
     required this.pointColor,
     required this.subColor,
     required this.highlightColor,
-    required this.textColor,
-    required this.pointTextColor,
+    required this.textBlack,
+    required this.textWhite,
+    required this.textGray,
   });
 
   @override
@@ -24,16 +26,18 @@ class CustomColors extends ThemeExtension<CustomColors> {
     Color? pointColor,
     Color? subColor,
     Color? highlightColor,
-    Color? textColor,
-    Color? pointTextColor,
+    Color? textBlack,
+    Color? textWhite,
+    Color? textGray,
   }) {
     return CustomColors(
       mainColor: mainColor ?? this.mainColor,
       pointColor: pointColor ?? this.pointColor,
       subColor: subColor ?? this.subColor,
       highlightColor: highlightColor ?? this.highlightColor,
-      textColor: textColor ?? this.textColor,
-      pointTextColor: pointTextColor ?? this.pointTextColor,
+      textBlack: textBlack ?? this.textBlack,
+      textWhite: textWhite ?? this.textWhite,
+      textGray: textGray ?? this.textGray,
     );
   }
 
@@ -45,8 +49,9 @@ class CustomColors extends ThemeExtension<CustomColors> {
       pointColor: Color.lerp(pointColor, other.pointColor, t)!,
       subColor: Color.lerp(subColor, other.subColor, t)!,
       highlightColor: Color.lerp(highlightColor, other.highlightColor, t)!,
-      textColor: Color.lerp(textColor, other.textColor, t)!,
-      pointTextColor: Color.lerp(pointTextColor, other.pointTextColor, t)!,
+      textBlack: Color.lerp(textBlack, other.textBlack, t)!,
+      textWhite: Color.lerp(textWhite, other.textWhite, t)!,
+      textGray: Color.lerp(textGray, other.textGray, t)!,
     );
   }
 }
