@@ -46,7 +46,6 @@ dependencies:
   file_picker:
   image_editor_plus:
   path_provider:
-
   firebase_auth:
   firebase_storage:
   # The following adds the Cupertino Icons font to your application.
@@ -91,6 +90,16 @@ flutter:
     - family: cho
       fonts:
         - asset: assets/font/cho.otf
+    - family: seoul
+      fonts:
+        - asset: assets/font/SeoulAlrim-Medium.otf
+          weight: 500
+        - asset: assets/font/SeoulAlrim-Bold.otf
+          weight: 700
+        - asset: assets/font/SeoulAlrim-ExtraBold.otf
+          weight: 800
+        - asset: assets/font/SeoulAlrim-Heavy.otf
+          weight: 900
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

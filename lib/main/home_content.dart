@@ -277,7 +277,6 @@ class _HomeContentState extends State<HomeContent> {
       );
       double lat = position.latitude;
       double lon = position.longitude;
-
       String locationNameForAPI = await getSidoFromLatLng(position);
       String fullAddress = await getFullAddressFromLatLng(position);
 
