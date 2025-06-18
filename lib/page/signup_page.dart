@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:path/path.dart' as path;
 import '../common/location_helper.dart';
 import '../login_page.dart';
 import '/provider/custom_colors.dart';
@@ -179,6 +181,25 @@ class _SignupPageState extends State<SignupPage> {
     });
   }
 
+  Future<String?> uploadProfileImage(File imageFile, String userId) async {
+    try {
+      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}${path.extension(imageFile.path)}';
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_images')
+          .child(userId)
+          .child(fileName);
+
+      final uploadTask = await storageRef.putFile(imageFile);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+      return downloadUrl; // 이 URL을 Firestore에 저장
+    } catch (e) {
+      print('🔥 이미지 업로드 실패: $e');
+      return null;
+    }
+  }
+
   Future<void> registerUser({
     required BuildContext context,
     required String email,
@@ -263,6 +284,12 @@ class _SignupPageState extends State<SignupPage> {
         }
       }
 
+      String? profileImageUrl;
+
+      if (_profileImage != null) {
+        profileImageUrl = await uploadProfileImage(_profileImage!, user.uid);
+      }
+
       // 3. Firestore에 사용자 정보 저장 (패스워드는 저장 안함!)
       await firestore.collection('users').doc(user.uid).set({
         'email': email,
@@ -276,6 +303,9 @@ class _SignupPageState extends State<SignupPage> {
         'interest': interests,
         'follower': '',
         'following': '',
+        'location': _currentAddress ?? '',
+        'profileImage': profileImageUrl ?? '',
+        'mainCoordiId': '',
       });
       // 가입 완료 메시지
       await showDialogMessage(context, '회원가입이 완료되었습니다.');
@@ -435,13 +465,25 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    nicknameController.dispose();
+    bioController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final customColors = Theme.of(context).extension<CustomColors>();
     Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
     Color subColor = customColors?.subColor ?? Colors.white;
     Color pointColor = customColors?.pointColor ?? Colors.white70;
     Color highlightColor = customColors?.highlightColor ?? Colors.orange;
-
+    Color Grey = customColors?.textGrey ?? Colors.grey;
+    Color White = customColors?.textWhite ?? Colors.white;
+    Color Black = customColors?.textBlack ?? Colors.black;
 
     return Scaffold(
       appBar: AppBar(title: Text('회원가입')),
@@ -619,7 +661,7 @@ class _SignupPageState extends State<SignupPage> {
                                     selectedColor: mainColor,
                                     showCheckmark: false,  // 체크 아이콘 숨김
                                     shape: StadiumBorder(
-                                      side: BorderSide(color: mainColor),
+                                      side: BorderSide(color: subColor),
                                     ),
                                     onSelected: (selected) {
                                       setState(() {

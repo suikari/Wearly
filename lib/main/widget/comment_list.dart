@@ -142,8 +142,7 @@ class _CommentSectionState extends State<CommentSection> {
         ElevatedButton(
           onPressed: () {
               if (replycommentController.text != '') {
-              replyingToId = null;
-              _addComment(replycommentController.text);
+                _addComment(replycommentController.text);
               }
           },
           child: Text("등록"),
@@ -363,7 +362,7 @@ class _CommentSectionState extends State<CommentSection> {
                 userName: data['userName'] ?? '익명',
                 comment: data['comment'] ?? '',
                 cdatetime: (data['cdatetime'] as Timestamp).toDate(),
-                parentId: data['parentId'],
+                parentId: (data['parentId'].toString()),
               );
             }).toList();
 

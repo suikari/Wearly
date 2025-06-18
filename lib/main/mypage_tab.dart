@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main/widget/settings_page.dart';
 import 'package:w2wproject/main/widget/user_edit_page.dart';
 import 'detail_page.dart';
@@ -14,11 +15,20 @@ class MyPageTab extends StatefulWidget {
   State<MyPageTab> createState() => _MyPageWidgetState();
 }
 
+Future<String?> getSavedUserId() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  return prefs.getString('userId');
+}
+
+
 class _MyPageWidgetState extends State<MyPageTab> {
   bool isExpanded = true;
   bool showDetail = false;
   String? selectedFeedId;
   bool isLoading = true;
+
+
+
 
   String currentUserId = 'XHIEfJKfSqhT7SqfZXoX';
   final FirebaseFirestore fs = FirebaseFirestore.instance;
@@ -86,6 +96,15 @@ class _MyPageWidgetState extends State<MyPageTab> {
   void initState() {
     super.initState();
     fetchFeeds();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    String? userId = await getSavedUserId();
+    setState(() {
+      currentUserId = userId!;
+      print("currentUserId====>$currentUserId");
+    });
   }
 
   @override

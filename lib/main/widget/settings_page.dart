@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../provider/theme_provider.dart'; // ThemeProvider 파일 경로 맞게 수정하세요.
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../provider/theme_provider.dart'; // ThemeProvider 경로 맞게 수정
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -12,12 +13,37 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   TimeOfDay selectedTime = const TimeOfDay(hour: 7, minute: 0);
   bool isAlarmOn = true;
-  bool isPrivate = false;
   bool dmAllowed = true;
 
   int selectedThemeIndex = 0;
-
   List<Color> themeColors = [Colors.pink, Colors.indigo, Colors.black];
+
+  static const String keyIsAlarmOn = 'isAlarmOn';
+  static const String keyDmAllowed = 'dmAllowed';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isAlarmOn = prefs.getBool(keyIsAlarmOn) ?? true;
+      dmAllowed = prefs.getBool(keyDmAllowed) ?? true;
+    });
+  }
+
+  Future<void> _saveIsAlarmOn(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(keyIsAlarmOn, value);
+  }
+
+  Future<void> _saveDmAllowed(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(keyDmAllowed, value);
+  }
 
   @override
   void didChangeDependencies() {
@@ -37,8 +63,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-
-
   void _onThemeSelected(int index) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     ColorTheme newTheme;
@@ -46,24 +70,20 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       selectedThemeIndex = index;
 
-    switch (index) {
-      case 0:
-        newTheme = ColorTheme.defaultTheme;
-        themeProvider.setColorTheme(newTheme);
-
-        break;
-      case 1:
-        newTheme = ColorTheme.blueTheme;
-        themeProvider.setColorTheme(newTheme);
-
-        break;
-      case 2:
-        newTheme = ColorTheme.blackTheme;
-        themeProvider.setColorTheme(newTheme);
-
-        break;
-    }
-
+      switch (index) {
+        case 0:
+          newTheme = ColorTheme.defaultTheme;
+          themeProvider.setColorTheme(newTheme);
+          break;
+        case 1:
+          newTheme = ColorTheme.blueTheme;
+          themeProvider.setColorTheme(newTheme);
+          break;
+        case 2:
+          newTheme = ColorTheme.blackTheme;
+          themeProvider.setColorTheme(newTheme);
+          break;
+      }
     });
   }
 
@@ -82,9 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: Colors.white,
       appBar: AppBar(
-        // backgroundColor: Colors.pink[100],
         elevation: 0,
         title: const Text('설정', style: TextStyle(color: Colors.white)),
         actions: const [
@@ -112,7 +130,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton(
-                  onPressed: () => setState(() => isAlarmOn = true),
+                  onPressed: () {
+                    setState(() {
+                      isAlarmOn = true;
+                    });
+                    _saveIsAlarmOn(true);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isAlarmOn ? Colors.pink : Colors.grey[300],
                   ),
@@ -120,7 +143,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () => setState(() => isAlarmOn = false),
+                  onPressed: () {
+                    setState(() {
+                      isAlarmOn = false;
+                    });
+                    _saveIsAlarmOn(false);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: !isAlarmOn ? Colors.pink : Colors.grey[300],
                   ),
@@ -161,9 +189,15 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildSectionTitle(Icons.mark_chat_unread, 'DM 설정'),
             Row(
               children: [
-                _toggleButton('수신 설정', dmAllowed, () => setState(() => dmAllowed = true)),
+                _toggleButton('수신 설정', dmAllowed, () {
+                  setState(() => dmAllowed = true);
+                  _saveDmAllowed(true);
+                }),
                 const SizedBox(width: 8),
-                _toggleButton('수신 거부', !dmAllowed, () => setState(() => dmAllowed = false)),
+                _toggleButton('수신 거부', !dmAllowed, () {
+                  setState(() => dmAllowed = false);
+                  _saveDmAllowed(false);
+                }),
               ],
             ),
           ],
