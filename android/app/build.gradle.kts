@@ -38,7 +38,7 @@ android {
         implementation("com.squareup.okhttp3:okhttp:4.12.0")
         implementation("androidx.work:work-runtime:2.8.1")
         implementation("com.google.guava:guava:31.1-android")
-
+        implementation("com.google.android.gms:play-services-location:21.0.1")
         // 예: kotlin stdlib
         implementation(kotlin("stdlib"))
 

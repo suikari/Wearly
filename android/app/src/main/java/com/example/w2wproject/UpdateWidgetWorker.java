@@ -3,6 +3,8 @@ package com.example.w2wproject;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.SharedPreferences;
+
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -56,7 +58,7 @@ public class UpdateWidgetWorker extends Worker {
 
         try {
             String json = fetchWeatherJson();
-            Log.d(TAG, "API 응답 JSON: " + json);
+            //Log.d(TAG, "API 응답 JSON: " + json);
 
             JSONObject obj = new JSONObject(json);
             JSONObject response = obj.getJSONObject("response");
@@ -86,8 +88,12 @@ public class UpdateWidgetWorker extends Worker {
             return Result.retry();
         }
 
+        SharedPreferences prefs = getApplicationContext().getSharedPreferences("location_prefs", Context.MODE_PRIVATE);
+        String locationName = prefs.getString("location_name", "위치 정보 없음");
+
+
         for (int appId : ids) {
-            MyAppWidgetProvider.updateAppWidget(context, mgr, appId, weather, temp);
+            MyAppWidgetProvider.updateAppWidget(context, mgr, appId, weather, temp, locationName);
         }
         Log.d(TAG, "위젯 업데이트 완료");
 
@@ -95,13 +101,17 @@ public class UpdateWidgetWorker extends Worker {
     }
 
     private String fetchWeatherJson() throws IOException {
+        SharedPreferences prefs = getApplicationContext().getSharedPreferences("location_prefs", Context.MODE_PRIVATE);
+        int nx = prefs.getInt("nx", 62);  // 기본값: 서울
+        int ny = prefs.getInt("ny", 125);
+
         HttpUrl url = HttpUrl.parse(API_URL).newBuilder()
                 .addQueryParameter("serviceKey", SERVICE_KEY)
                 .addQueryParameter("dataType", "JSON")
                 .addQueryParameter("base_date", getBaseDate())
                 .addQueryParameter("base_time", getBaseTime())
-                .addQueryParameter("nx", "62")
-                .addQueryParameter("ny", "125")
+                .addQueryParameter("nx", String.valueOf(nx))
+                .addQueryParameter("ny", String.valueOf(ny))
                 .addQueryParameter("numOfRows", "100")
                 .build();
 
