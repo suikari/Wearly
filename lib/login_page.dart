@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
@@ -120,10 +121,36 @@ class _LoginPageState extends State<LoginPage> {
       if (uid != null) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('userId', uid);
-      }
+        // ✅ Firestore 유저 문서 확인
+        final firestore = FirebaseFirestore.instance;
+        final docRef = firestore.collection('users').doc(uid);
+        final doc = await docRef.get();
 
-      // 로그인 성공 → 홈으로 이동
-      if (uid != null) {
+        if (!doc.exists) {
+          // ✅ 최초 로그인: Firestore에 유저 정보 저장
+          final email = userCredential.user?.email ?? '';
+          final displayName = '${userCredential.user?.displayName}_google' ?? '';
+          final photoUrl = userCredential.user?.photoURL ?? '';
+
+          await docRef.set({
+            'email': email,
+            'nickname': displayName,
+            'bio': '',
+            'agreeTerm': true,
+            'allowNotification': true,
+            'cdatetime': FieldValue.serverTimestamp(),
+            'isPublic': true,
+            'socialAccount': 'google',
+            'interest': [],
+            'follower': [],
+            'following': [],
+            'location': '',
+            'profileImage': photoUrl,
+            'mainCoordiId': '',
+          });
+        }
+
+        // ✅ 홈 화면으로 이동
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => HomePage()),
         );
@@ -144,11 +171,12 @@ class _LoginPageState extends State<LoginPage> {
       final user = await UserApi.instance.me();
       final uid = 'kakao:${user.id}';
       final email = user.kakaoAccount?.email ?? '';
-      final nickname = user.kakaoAccount?.profile?.nickname ?? '';
+      final nickname = '${user.kakaoAccount?.profile?.nickname}_kakao' ?? '';
+      final profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl ?? '';
 
       // Firebase Functions에 요청
       final res = await http.post(
-        Uri.parse('https://'),
+        Uri.parse('https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'uid': uid,
@@ -164,11 +192,32 @@ class _LoginPageState extends State<LoginPage> {
       String? authUid = userCredential.user?.uid;
 
       if (authUid != null) {
+        // Firestore 저장
+        final firestore = FirebaseFirestore.instance;
+        final doc = await firestore.collection('users').doc(authUid).get();
+        if (!doc.exists) {
+          // 위에 set 코드 실행
+          await firestore.collection('users').doc(authUid).set({
+            'email': email,
+            'nickname': nickname,
+            'bio': '', // 처음 가입 시 bio는 공백으로
+            'agreeTerm': true,
+            'allowNotification': true,
+            'cdatetime': FieldValue.serverTimestamp(),
+            'isPublic': true, // 기본 공개 여부, 수정 가능
+            'socialAccount': 'kakao',
+            'interest': [], // 사용자가 선택한 관심사 리스트
+            'follower': '', // 기본값 또는 []
+            'following': '',
+            'location': '',
+            'profileImage': profileImageUrl ?? '',
+            'mainCoordiId': '',
+          }, SetOptions(merge: true)); // merge: true로 하면 추후 덮어쓰기 방지
+        }
+
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('userId', authUid);
-      }
 
-      if (authUid != null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => HomePage()),
         );
@@ -179,7 +228,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<Map<String, dynamic>?> signInWithNaver() async {
-    final clientId = 'YOUR_NAVER_CLIENT_ID';
+    final clientId = 'G0sonEyPthLnRvkvNR7j';
     final redirectUri = 'your.app://callback';
     final state = DateTime.now().millisecondsSinceEpoch.toString();
 
