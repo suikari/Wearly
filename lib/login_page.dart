@@ -465,10 +465,10 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       onPressed: _isLoading ? null : _tryLogin,
                       child: _isLoading
-                        ? CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
-                        : Text('로그인', style: TextStyle(color: White, fontSize: 20, fontWeight: FontWeight.bold),),
+                          ? CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      )
+                          : Text('로그인', style: TextStyle(color: White, fontSize: 20, fontWeight: FontWeight.bold),),
                     ),
                   ),
                   SizedBox(height: 30),

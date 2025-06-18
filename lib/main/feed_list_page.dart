@@ -1,0 +1,376 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:w2wproject/main/widget/comment_list.dart';
+
+// 댓글 모델 (대댓글 포함)
+class Comment {
+  final String userName;
+  final String comment;
+  final List<Comment> replies; // 대댓글 리스트
+
+  Comment({
+    required this.userName,
+    required this.comment,
+    List<Comment>? replies,
+  }) : replies = replies ?? [];
+}
+
+// Feed 모델
+class Feed {
+  final String imagePath;
+  final String title;
+  final String description;
+  final String hashtags;
+  final String location;
+  final String date;
+  final String mood;
+  final String temperature;
+  final List<Comment> comments;
+
+  Feed({
+    required this.imagePath,
+    required this.title,
+    required this.description,
+    required this.hashtags,
+    required this.location,
+    required this.date,
+    required this.mood,
+    required this.temperature,
+    List<Comment>? comments,
+  }) : comments = comments ?? [];
+}
+
+// Feed 전체 리스트 페이지
+class FeedListPage extends StatefulWidget {
+  final void Function(String userId) onUserTap;
+
+  const FeedListPage({
+    Key? key,
+    required this.onUserTap,
+  }) : super(key: key);
+
+  @override
+  State<FeedListPage> createState() => _FeedListPageState();
+}
+
+class _FeedListPageState extends State<FeedListPage> {
+  List<Map<String, dynamic>> feeds = [];
+
+  final FirebaseFirestore fs = FirebaseFirestore.instance;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchFeeds();
+  }
+
+  String _formatDate(dynamic timestamp) {
+    if (timestamp == null) return '';
+    try {
+      final dateTime = timestamp.toDate(); // Firestore Timestamp → DateTime
+      final year = dateTime.year % 100;
+      final month = dateTime.month.toString().padLeft(2, '0');
+      final day = dateTime.day.toString().padLeft(2, '0');
+      final hour = dateTime.hour.toString().padLeft(2, '0');
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+
+      return '$year-$month-$day $hour:$minute';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  Future<void> fetchFeeds() async {
+    try {
+      final snapshot = await fs
+          .collection('feeds')
+          .orderBy('cdatetime', descending: true)
+          .get();
+
+      final List<Map<String, dynamic>> items = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id; // 문서 ID를 feed의 id 필드로 추가
+        return data;
+      }).toList();
+
+      setState(() {
+        feeds = items;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error fetching feeds: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+
+    Widget _buildComment(Comment comment, {double leftPadding = 0}) {
+      return Padding(
+        padding: EdgeInsets.only(left: leftPadding, top: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    widget.onUserTap('user456'); // userId 전달해서 페이지 열기
+                  },
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Colors.grey.shade400,
+                    child: Text(
+                      comment.userName.isNotEmpty ? comment.userName[0] : '',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: "${comment.userName} ",
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              color: Colors.black),
+                        ),
+                        TextSpan(
+                          text: comment.comment,
+                          style: TextStyle(color: Colors.black),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (comment.replies.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Column(
+                  children: comment.replies
+                      .map((reply) =>
+                      _buildComment(reply, leftPadding: leftPadding + 20))
+                      .toList(),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        body: ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: feeds.length, // feeds -> feedItems
+          itemBuilder: (context, index) {
+            final feed = feeds[index];
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 타이틀 + 메뉴 점 세 개
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              feed['title'] ?? '',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 20),
+                            ),
+                          ),
+                          Icon(Icons.more_vert, color: Colors.grey),
+                        ],
+                      ),
+
+                      SizedBox(height: 4),
+
+                      Row(
+                        children: [
+                          Icon(
+                              Icons.mood, size: 18, color: Colors.orangeAccent),
+                          SizedBox(width: 4),
+                          Text(feed['feeling'] ?? '', style: TextStyle(
+                              color: Colors.orangeAccent,
+                              fontWeight: FontWeight.w600)),
+                          SizedBox(width: 16),
+                          Icon(Icons.thermostat, size: 18,
+                              color: Colors.redAccent),
+                          SizedBox(width: 4),
+                          Text(feed['temperature'].toString() ?? '', style: TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+
+                      SizedBox(height: 12),
+                      // 이미지 (중앙, 카드 너비 90%, 좌하단+우상단 라운드)
+                      Stack(
+                        children: [
+                          Center(
+                            child:
+                            feed!['imageUrls'] != null
+                                ? _buildImageCarousel(
+                              (feed!['imageUrls'] as List<dynamic>).map((e) => e.toString()).toList(),
+                            )
+                                : Container(height: 200, color: Colors.grey[300]),
+                          ),
+                          Positioned(
+                            left: MediaQuery
+                                .of(context)
+                                .size
+                                .width * 0.05,
+                            bottom: 8,
+                            child: Icon(
+                              Icons.favorite_border,
+                              color: Colors.white70,
+                              size: 28,
+                            ),
+                          ),
+                          Positioned(
+                            right: MediaQuery
+                                .of(context)
+                                .size
+                                .width * 0.05,
+                            bottom: 8,
+                            child: Icon(
+                              Icons.share_outlined,
+                              color: Colors.white70,
+                              size: 28,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // 설명
+                      Text(feed['content'] ?? '',
+                          style: TextStyle(fontSize: 16)),
+                      SizedBox(height: 12),
+                      feed['tags'] != null && feed['tags'] is List
+                          ? Wrap(
+                        spacing: 6.0,
+                        runSpacing: 2.0,
+                        children: (feed['tags'] as List)
+                            .map((tag) => Chip(
+                          label: Text(
+                            tag.toString(),
+                            style: TextStyle(
+                              // color: Colors.grey.shade700,
+                              fontSize: 12, // ⬅️ 폰트 크기 축소
+                            ),
+                          ),
+                          // backgroundColor: Colors.grey.shade200,
+                          shape: StadiumBorder(),
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 0), // ⬅️ 내부 여백 축소
+                          visualDensity: VisualDensity.compact, // ⬅️ 전체 크기 컴팩트하게
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, // ⬅️ 터치 영역 축소
+                        ))
+                            .toList(),
+                      )
+                          : SizedBox.shrink()
+                      ,
+                      SizedBox(height: 6),
+                      // 위치, 날짜
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(feed['location'] ?? '',
+                              style: TextStyle(color: Colors.grey.shade500)),
+                          Text(
+                            _formatDate(feed['cdatetime']),
+                            style: TextStyle(color: Colors.grey.shade500),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 16),
+
+                      Divider(color: Colors.grey.shade300),
+
+                      // 댓글 및 대댓글 -> CommentSection 위젯으로 교체
+                      CommentSection(
+                        key: ValueKey("comment_${feed['id']}"),
+                        feedId: feed['id'],
+                        currentUserId: '',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+  }
+
+
+
+// --- 이미지 슬라이더 UI 함수 --- //
+Widget _buildImageCarousel(List<String> imageUrls) {
+  if (imageUrls.isEmpty) {
+    return Container(
+      height: 480,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text('이미지가 없습니다'),
+    );
+  } else if (imageUrls.length == 1) {
+    return ClipRRect(
+      borderRadius: BorderRadius.only(
+        bottomLeft: Radius.circular(20),
+        topRight: Radius.circular(20),
+      ),
+      child: Image.network(
+        imageUrls[0],
+        height: 480,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      ),
+    );
+  } else {
+    return SizedBox(
+      height: 480,
+      child: PageView.builder(
+        itemCount: imageUrls.length,
+        itemBuilder: (context, index) {
+          return ClipRRect(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            child: Image.network(
+              imageUrls[index],
+              fit: BoxFit.cover,
+              width: double.infinity,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

@@ -1,14 +1,13 @@
 // lib/pages/home_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'main/FeedListPage.dart';
+import 'main/feed_list_page.dart';
 import 'main/gemini_chat.dart'; // ⬅ 추가
 import 'common/custom_app_bar.dart';
 import 'common/custom_bottom_navbar.dart';
 import 'main/home_content.dart';
 import 'main/mypage_tab.dart';
 import 'main/search_tab.dart';
-import 'main/weather_tab.dart';
 import 'main/write_post_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -63,7 +62,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
   final List<Widget> _pages = [
-    HomeContent(),  // 콜백 전달
+    HomeContent(key: ValueKey(DateTime.now().millisecondsSinceEpoch)),  // 콜백 전달
     SearchTab(onUserTap: openUserPage),    // 콜백 전달
     WritePostPage(),
     FeedListPage(onUserTap: openUserPage), // 콜백 전달

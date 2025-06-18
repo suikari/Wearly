@@ -6,10 +6,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'dart:math';
 
+import 'mypage_tab.dart';
 import 'wearly_weather_card.dart';
 import 'feed_widget.dart';
 
 class HomeContent extends StatefulWidget {
+  @override
+  final Key key;
+
+  const HomeContent({required this.key}) : super(key: key);
+
   @override
   State<HomeContent> createState() => _HomeContentState();
 }
@@ -20,7 +26,9 @@ class _HomeContentState extends State<HomeContent> {
   String? errorMsg;
   bool isWeatherExpanded = true;
   List<String> tagList = [];
-  bool showAllTags = false; // ★ 펼치기/접기 상태 변수
+  bool showAllTags = false;
+
+  String displayLocationName = "현재 위치";
 
   @override
   void initState() {
@@ -28,16 +36,57 @@ class _HomeContentState extends State<HomeContent> {
     fetchWeather();
   }
 
-  String convertEngSidoToKor(String sido) {
-    final map = {
-      'Seoul': '서울', 'Incheon': '인천', 'Busan': '부산', 'Daegu': '대구', 'Daejeon': '대전', 'Gwangju': '광주', 'Ulsan': '울산', 'Sejong': '세종',
-      'Gyeonggi-do': '경기', 'Gangwon-do': '강원', 'Chungcheongbuk-do': '충북', 'Chungcheongnam-do': '충남',
-      'Jeollabuk-do': '전북', 'Jeollanam-do': '전남', 'Gyeongsangbuk-do': '경북', 'Gyeongsangnam-do': '경남', 'Jeju-do': '제주',
-    };
-    return map[sido] ?? sido;
+  static Future<String> getSidoFromLatLng(Position position) async {
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+    if (placemarks.isNotEmpty) {
+      String? sido = placemarks.first.administrativeArea;
+      if (sido == null || sido.isEmpty) return "서울";
+      sido = sido.replaceAll(RegExp(r'(특별시|광역시|자치시|도|시)$'), '');
+      return sido.trim();
+    }
+    return "서울";
   }
 
-  Future<Map<String, dynamic>?> fetchAirQuality(String sido, String sigungu, String airApiKey) async {
+  static Future<String> getFullAddressFromLatLng(Position position) async {
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+    if (placemarks.isNotEmpty) {
+      final p = placemarks.first;
+      String area = p.administrativeArea ?? '';
+      String street = p.street ?? '';
+      String dong = '';
+
+      final match = RegExp(
+        r'([가-힣]+시|[가-힣]+도)[^\d가-힣]*([가-힣0-9]+동)',
+      ).firstMatch(street);
+
+      if (match != null) {
+        area = match.group(1) ?? area;
+        dong = match.group(2) ?? '';
+      } else {
+        dong = p.thoroughfare ?? p.locality ?? '';
+      }
+
+      String result =
+      [
+        area,
+        dong,
+      ].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
+      return result.isEmpty ? '위치 정보 없음' : result;
+    }
+    return '주소를 찾을 수 없습니다.';
+  }
+
+  Future<Map<String, dynamic>?> fetchAirQuality(
+      String sido,
+      String sigungu,
+      String airApiKey,
+      ) async {
     String url =
         'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty'
         '?serviceKey=$airApiKey'
@@ -55,7 +104,8 @@ class _HomeContentState extends State<HomeContent> {
               (e) =>
           (e['pm10Value'] != null && e['pm10Value'] != "-") &&
               (e['pm25Value'] != null && e['pm25Value'] != "-"),
-          orElse: () => items.firstWhere(
+          orElse:
+              () => items.firstWhere(
                 (e) => (e['pm10Value'] != null && e['pm10Value'] != "-"),
             orElse: () => items.first,
           ),
@@ -69,7 +119,6 @@ class _HomeContentState extends State<HomeContent> {
     return null;
   }
 
-  // Firestore에서 온도별 추천 태그 가져오기
   Future<void> fetchRecommendTags(int temp) async {
     final firestore = FirebaseFirestore.instance;
     final snapshot = await firestore.collection('temperature_tags').get();
@@ -86,6 +135,115 @@ class _HomeContentState extends State<HomeContent> {
     setState(() {
       tagList = foundTags;
     });
+  }
+
+  String getBaseTime(DateTime now) {
+    final times = [2, 5, 8, 11, 14, 17, 20, 23];
+    int hour = now.hour;
+    int baseHour = times.lastWhere((t) => hour >= t, orElse: () => 23);
+    return baseHour.toString().padLeft(2, '0') + "00";
+  }
+
+  Future<Map<String, int?>> fetchYesterdayTmxTmn(
+      int nx,
+      int ny,
+      String today,
+      String apiKey,
+      ) async {
+    DateTime now = DateTime.now().toUtc().add(Duration(hours: 9));
+    DateTime yesterdayDt = now.subtract(Duration(days: 1));
+    String yesterday =
+        "${yesterdayDt.year.toString().padLeft(4, '0')}${yesterdayDt.month.toString().padLeft(2, '0')}${yesterdayDt.day.toString().padLeft(2, '0')}";
+    String yesterdayBaseTime = getBaseTime(yesterdayDt);
+
+    String urlFcstYesterday =
+        "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?"
+        "serviceKey=$apiKey"
+        "&numOfRows=1000&pageNo=1&dataType=JSON"
+        "&base_date=$yesterday&base_time=$yesterdayBaseTime"
+        "&nx=$nx&ny=$ny";
+
+    final yesterFcstResponse = await http.get(Uri.parse(urlFcstYesterday));
+    int? tmx;
+    int? tmn;
+    if (yesterFcstResponse.statusCode == 200) {
+      final Map<String, dynamic> yesterFcstData = json.decode(
+        yesterFcstResponse.body,
+      );
+      if (yesterFcstData['response']['header']['resultMsg'] ==
+          "NORMAL_SERVICE") {
+        final List yesterFcstItems =
+        yesterFcstData['response']['body']['items']['item'];
+        final todayTmxList =
+        yesterFcstItems
+            .where((e) => e['fcstDate'] == today && e['category'] == 'TMX')
+            .toList();
+        final todayTmnList =
+        yesterFcstItems
+            .where((e) => e['fcstDate'] == today && e['category'] == 'TMN')
+            .toList();
+
+        tmx =
+        todayTmxList.isNotEmpty
+            ? double.tryParse(
+          todayTmxList.reduce(
+                (a, b) =>
+            a['fcstTime'].compareTo(b['fcstTime']) > 0 ? a : b,
+          )['fcstValue'] ??
+              '',
+        )?.round()
+            : null;
+        tmn =
+        todayTmnList.isNotEmpty
+            ? double.tryParse(
+          todayTmnList.reduce(
+                (a, b) =>
+            a['fcstTime'].compareTo(b['fcstTime']) < 0 ? a : b,
+          )['fcstValue'] ??
+              '',
+        )?.round()
+            : null;
+      }
+    }
+    return {'tmx': tmx, 'tmn': tmn};
+  }
+
+  // ★ 이 함수 추가: PTY/SKY 기반 상태 텍스트 반환
+  String getWeatherStatus(int? pty, int? sky) {
+    if (pty == null || pty == 0) {
+      switch (sky) {
+        case 1:
+          return '맑음';
+        case 3:
+          return '구름';
+        case 4:
+          return '흐림';
+        default:
+          return '맑음';
+      }
+    } else {
+      switch (pty) {
+        case 1:
+          return '비';
+        case 2:
+          return '비';
+        case 3:
+          return '눈';
+        case 4:
+          return '소나기';
+        default:
+          return '맑음';
+      }
+    }
+  }
+
+  // ★ 추가: 가장 가까운 시간값을 반환
+  String findClosestValue(List<Map<String, dynamic>> items, String targetTime) {
+    if (items.isEmpty) return '';
+    items.sort((a, b) =>
+        (int.parse(a['fcstTime']) - int.parse(targetTime)).abs().compareTo(
+            (int.parse(b['fcstTime']) - int.parse(targetTime)).abs()));
+    return items.first['fcstValue'] ?? '';
   }
 
   Future<void> fetchWeather() async {
@@ -114,35 +272,32 @@ class _HomeContentState extends State<HomeContent> {
         return;
       }
 
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
       double lat = position.latitude;
       double lon = position.longitude;
+      String locationNameForAPI = await getSidoFromLatLng(position);
+      String fullAddress = await getFullAddressFromLatLng(position);
 
-      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lon);
-      Placemark place = placemarks.first;
-      String sidoRaw = place.administrativeArea ?? '서울';
-      String sido = RegExp(r'^[a-zA-Z]').hasMatch(sidoRaw) ? convertEngSidoToKor(sidoRaw) : sidoRaw;
-      String sigunguRaw = place.locality ?? place.subLocality ?? '강남구';
-      String sigungu = sigunguRaw;
-
-      String locationName = [
-        sido,
-        sigungu,
-        place.thoroughfare
-      ].where((x) => x != null && x!.isNotEmpty).map((x) => x!).join(' ');
-      if (locationName.isEmpty) locationName = "현재 위치";
+      setState(() {
+        displayLocationName = fullAddress;
+      });
 
       Map<String, int> grid = convertGRID_GPS(lat, lon);
 
-      final apiKey = 'Wjb8zKkrrbUtY2pQXCNNv%2B5M2EqShPVq92B139bdclMwmJDylxQjPYUUF6cobHdRtf9Et%2Bq0MxDFn1Oh4tBLhg%3D%3D';
+      final apiKey =
+          'Wjb8zKkrrbUtY2pQXCNNv%2B5M2EqShPVq92B139bdclMwmJDylxQjPYUUF6cobHdRtf9Et%2Bq0MxDFn1Oh4tBLhg%3D%3D';
       final nx = grid['x']!;
       final ny = grid['y']!;
 
       DateTime now = DateTime.now().toUtc().add(Duration(hours: 9));
-      String today = "${now.year.toString().padLeft(4, '0')}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
-      String baseTime = "0500";
+      String today =
+          "${now.year.toString().padLeft(4, '0')}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+      String baseTime = getBaseTime(now);
 
-      String urlFcst = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?"
+      String urlFcst =
+          "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?"
           "serviceKey=$apiKey"
           "&numOfRows=1000&pageNo=1&dataType=JSON"
           "&base_date=$today&base_time=$baseTime"
@@ -157,24 +312,9 @@ class _HomeContentState extends State<HomeContent> {
 
       final List fcstItems = fcstData['response']['body']['items']['item'];
 
-      final todayTmn = fcstItems.where((e) =>
-      e['fcstDate'] == today && e['category'] == 'TMN'
-      ).toList();
-      final todayTmx = fcstItems.where((e) =>
-      e['fcstDate'] == today && e['category'] == 'TMX'
-      ).toList();
-
-      int? tmn = todayTmn.isNotEmpty
-          ? double.tryParse(
-          todayTmn.reduce((a, b) => a['fcstTime'].compareTo(b['fcstTime']) < 0 ? a : b)['fcstValue'] ?? ''
-      )?.round()
-          : null;
-
-      int? tmx = todayTmx.isNotEmpty
-          ? double.tryParse(
-          todayTmx.reduce((a, b) => a['fcstTime'].compareTo(b['fcstTime']) > 0 ? a : b)['fcstValue'] ?? ''
-      )?.round()
-          : null;
+      final tmxTmn = await fetchYesterdayTmxTmn(nx, ny, today, apiKey);
+      int? tmx = tmxTmn['tmx'];
+      int? tmn = tmxTmn['tmn'];
 
       int popMax = 0;
       int? curTemp;
@@ -182,8 +322,14 @@ class _HomeContentState extends State<HomeContent> {
       double? wind;
       String? baseDate;
       String? baseHour;
-
       String curHour = now.hour.toString().padLeft(2, '0') + "00";
+
+      int? pty; // 강수형태
+      int? sky; // 하늘상태
+
+      // ★ 습도/바람 시간별로 임시 리스트에 저장
+      List<Map<String, dynamic>> rehList = [];
+      List<Map<String, dynamic>> wsdList = [];
 
       for (var item in fcstItems) {
         if (item['fcstDate'] == today) {
@@ -200,34 +346,65 @@ class _HomeContentState extends State<HomeContent> {
               }
               break;
             case 'REH':
-              if (item['fcstTime'] == curHour) {
-                curHumidity = int.tryParse(item['fcstValue'] ?? '');
-              }
+              rehList.add(item);
               break;
             case 'WSD':
+              wsdList.add(item);
+              break;
+            case 'PTY':
               if (item['fcstTime'] == curHour) {
-                wind = double.tryParse(item['fcstValue'] ?? '');
+                pty = int.tryParse(item['fcstValue'] ?? '');
+              }
+              break;
+            case 'SKY':
+              if (item['fcstTime'] == curHour) {
+                sky = int.tryParse(item['fcstValue'] ?? '');
               }
               break;
           }
         }
       }
 
-      curTemp ??= tmx ?? 0;
+      // ★ curHour 값이 없으면 가장 가까운 시간값 사용
+      if (curHumidity == null) {
+        final match = rehList.firstWhere(
+              (e) => e['fcstTime'] == curHour,
+          orElse: () => {},
+        );
+        curHumidity = int.tryParse(
+            match.isNotEmpty
+                ? match['fcstValue']
+                : findClosestValue(rehList, curHour)
+        ) ?? 0;
+      }
+      if (wind == null) {
+        final match = wsdList.firstWhere(
+              (e) => e['fcstTime'] == curHour,
+          orElse: () => {},
+        );
+        wind = double.tryParse(
+            match.isNotEmpty
+                ? match['fcstValue']
+                : findClosestValue(wsdList, curHour)
+        ) ?? 0.0;
+      }
+
+      curTemp ??= tmx ?? tmn ?? 0;
       curHumidity ??= 0;
       wind ??= 0;
-      tmx ??= curTemp;
-      tmn ??= curTemp;
 
-      // Firestore에서 추천 태그 불러오기
       await fetchRecommendTags(curTemp);
 
       final airApiKey = apiKey;
-      final airQuality = await fetchAirQuality(sido, sigungu, airApiKey);
+      final airQuality = await fetchAirQuality(
+        locationNameForAPI,
+        '',
+        airApiKey,
+      );
 
       setState(() {
         weatherData = {
-          'location': locationName,
+          'location': displayLocationName,
           'temp': curTemp,
           'humidity': curHumidity,
           'wind': wind,
@@ -238,6 +415,7 @@ class _HomeContentState extends State<HomeContent> {
           'ultraFineDust': airQuality?['pm25'] ?? 0,
           'baseDate': baseDate ?? today,
           'baseTime': baseHour ?? curHour,
+          'weatherStatus': getWeatherStatus(pty, sky),
         };
         loading = false;
       });
@@ -268,7 +446,6 @@ class _HomeContentState extends State<HomeContent> {
         ),
       );
     } else {
-      // 보여줄 태그 개수 제한
       int tagShowLimit = 2;
 
       children.add(
@@ -284,14 +461,15 @@ class _HomeContentState extends State<HomeContent> {
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
           child: Card(
             color: Color(0xfffdeeee),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
             elevation: 0,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ★ 첫 줄: 제목 + 태그 일부 + 버튼
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -304,18 +482,34 @@ class _HomeContentState extends State<HomeContent> {
                         ),
                       ),
                       SizedBox(width: 6),
-                      ...tagList.take(tagShowLimit).map((tag) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Text(
-                          tag,
-                          style: TextStyle(
-                            color: Colors.blueAccent,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
+                      Expanded(
+                        child: Wrap(
+                          spacing: 8,
+                          children: tagList.take(tagShowLimit).map(
+                                (tag) => Text(
+                              tag,
+                              style: TextStyle(
+                                color: Colors.blueAccent,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ).toList(),
                         ),
-                      )),
-                      Spacer(), // ★ 이게 있어야 버튼이 항상 오른쪽!
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.checkroom_rounded, color: Colors.deepPurple),
+                        tooltip: '내 옷장',
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => MyPageTab(
+                                onUserTap: () {}, // 또는 실제로 쓸 함수
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                       if (tagList.length > tagShowLimit)
                         GestureDetector(
                           onTap: () => setState(() => showAllTags = !showAllTags),
@@ -336,18 +530,24 @@ class _HomeContentState extends State<HomeContent> {
                   ),
                   if (showAllTags && tagList.length > tagShowLimit)
                     Padding(
-                      padding: const EdgeInsets.only(left: 98.0, top: 3), // 적절히 조정
+                      padding: const EdgeInsets.only(left: 98.0, top: 3),
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 4,
-                        children: tagList.skip(tagShowLimit).map((tag) => Text(
-                          tag,
-                          style: TextStyle(
-                            color: Colors.blueAccent,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
+                        children:
+                        tagList
+                            .skip(tagShowLimit)
+                            .map(
+                              (tag) => Text(
+                            tag,
+                            style: TextStyle(
+                              color: Colors.blueAccent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
                           ),
-                        )).toList(),
+                        )
+                            .toList(),
                       ),
                     ),
                 ],
@@ -356,25 +556,25 @@ class _HomeContentState extends State<HomeContent> {
           ),
         ),
       );
-      children.add(
-        AdBannerSection(),
-      );
-      children.add(
-        WeeklyBestWidget(),
-      );
+      children.add(TodayFeedSection(tagList: tagList));
+      children.add(ZigzagBannerSection());
+      children.add(WeeklyBestWidget());
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        children: children,
-      ),
-    );
+    return SingleChildScrollView(child: Column(children: children));
   }
 }
 
 // 위경도 → 격자 변환
 Map<String, int> convertGRID_GPS(double lat, double lng) {
-  const double RE = 6371.00877, GRID = 5.0, SLAT1 = 30.0, SLAT2 = 60.0, OLON = 126.0, OLAT = 38.0, XO = 43, YO = 136;
+  const double RE = 6371.00877,
+      GRID = 5.0,
+      SLAT1 = 30.0,
+      SLAT2 = 60.0,
+      OLON = 126.0,
+      OLAT = 38.0,
+      XO = 43,
+      YO = 136;
   double DEGRAD = pi / 180.0;
   double re = RE / GRID;
   double slat1 = SLAT1 * DEGRAD;

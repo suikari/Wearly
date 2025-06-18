@@ -41,19 +41,26 @@ dependencies:
   intl:
   geocoding:
   xml:
-  google_generative_ai: ^0.4.7
+  google_generative_ai:
   image_picker:
-  wave:
   file_picker:
   image_editor_plus:
-  uuid:
   path_provider:
   firebase_auth:
   firebase_storage:
+  flutter_localizations:
+    sdk: flutter
+  google_sign_in:
+  kakao_flutter_sdk_user:
+  flutter_web_auth_2:
+
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   smooth_page_indicator:
+  firebase_app_check:
+
 
 dev_dependencies:
   flutter_test:
@@ -92,6 +99,16 @@ flutter:
     - family: cho
       fonts:
         - asset: assets/font/cho.otf
+    - family: seoul
+      fonts:
+        - asset: assets/font/SeoulAlrim-Medium.otf
+          weight: 500
+        - asset: assets/font/SeoulAlrim-Bold.otf
+          weight: 700
+        - asset: assets/font/SeoulAlrim-ExtraBold.otf
+          weight: 800
+        - asset: assets/font/SeoulAlrim-Heavy.otf
+          weight: 900
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

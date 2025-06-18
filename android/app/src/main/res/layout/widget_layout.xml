@@ -1,37 +1,56 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_container"
+    android:id="@+id/widget_root_layout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:background="@android:color/white"
     android:padding="8dp"
     android:gravity="center_vertical">
 
     <ImageView
         android:id="@+id/profileImage"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:src="@drawable/logo"
-        android:scaleType="centerCrop"
-        android:layout_marginEnd="12dp"
-        android:background="@android:color/transparent" />
+        android:layout_marginEnd="12dp" />
 
-    <TextView
-        android:id="@+id/weatherText"
+    <LinearLayout
+        android:id="@+id/weatherLocationLayout"
         android:layout_width="0dp"
         android:layout_weight="1"
         android:layout_height="wrap_content"
-        android:text="날씨: 맑음"
-        android:textSize="15sp"
-        android:textColor="@android:color/black" />
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/weatherText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="날씨: --"
+            android:textSize="16sp"
+            android:textColor="@android:color/black" />
+
+        <TextView
+            android:id="@+id/locationText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="위치명"
+            android:textSize="12sp"
+            android:textColor="#666666" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tempText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="26°C"
-        android:textSize="15sp"
+        android:text="--°C"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:textColor="@android:color/holo_blue_dark"
         android:layout_marginStart="8dp" />
+
+    <ImageButton
+        android:id="@+id/refreshButton"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/sample_cloud" />
 </LinearLayout>
