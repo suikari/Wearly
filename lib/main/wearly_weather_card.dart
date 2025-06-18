@@ -44,14 +44,29 @@ class WearlyWeatherCard extends StatelessWidget {
 
   // ★ 상태 텍스트 → GIF 파일명 변환 함수
   String getWeatherImageFile(String weatherStatus) {
+    final hour = DateTime.now().hour;
+    final isNight = hour >= 18 || hour < 6;
+
+    print('[디버깅] hour=$hour isNight=$isNight weatherStatus=$weatherStatus');
+
+    if (weatherStatus == '맑음') {
+      print('[디버깅] 맑음에서 분기: isNight=$isNight');
+      return isNight
+          ? 'assets/weather_moon.gif'
+          : 'assets/weather_sun.gif';
+    }
     switch (weatherStatus) {
-      case '맑음': return 'assets/weather_sun.gif';
-      case '구름': return 'assets/weather_cloud.gif';
-      case '흐림': return 'assets/weather_cloud.gif';
-      case '비': return 'assets/weather_rain.gif';
-      case '눈': return 'assets/weather_snow.gif';
-      case '소나기': return 'assets/weather_shower.gif';
-      default: return 'assets/weather_sun.gif';
+      case '구름':
+      case '흐림':
+        return 'assets/weather_cloud.gif';
+      case '비':
+        return 'assets/weather_rain.gif';
+      case '눈':
+        return 'assets/weather_snow.gif';
+      case '소나기':
+        return 'assets/weather_shower.gif';
+      default:
+        return 'assets/weather_sun.gif';
     }
   }
 
