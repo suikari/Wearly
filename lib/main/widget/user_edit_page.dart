@@ -153,9 +153,12 @@ class _UserEditPageState extends State<UserEditPage> {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundImage: _profileImageUrl != null
+                      backgroundImage: (_profileImageUrl != null && _profileImageUrl!.isNotEmpty)
                           ? NetworkImage(_profileImageUrl!)
-                          : const AssetImage('assets/default_profile.png') as ImageProvider,
+                          : null,  // 이미지 표시 안함 (빈 배경색)
+                      child: (_profileImageUrl == null || _profileImageUrl!.isEmpty)
+                          ? const Icon(Icons.person, size: 50, color: Colors.grey) // 기본 아이콘 표시
+                          : null,
                     ),
                     Positioned(
                       bottom: 0,

@@ -8,7 +8,7 @@ class CustomColors extends ThemeExtension<CustomColors> {
   final Color highlightColor;
   final Color textBlack;
   final Color textWhite;
-  final Color textGray;
+  final Color textGrey;
 
   const CustomColors({
     required this.mainColor,
@@ -17,7 +17,7 @@ class CustomColors extends ThemeExtension<CustomColors> {
     required this.highlightColor,
     required this.textBlack,
     required this.textWhite,
-    required this.textGray,
+    required this.textGrey,
   });
 
   @override
@@ -28,7 +28,7 @@ class CustomColors extends ThemeExtension<CustomColors> {
     Color? highlightColor,
     Color? textBlack,
     Color? textWhite,
-    Color? textGray,
+    Color? textGrey,
   }) {
     return CustomColors(
       mainColor: mainColor ?? this.mainColor,
@@ -37,7 +37,7 @@ class CustomColors extends ThemeExtension<CustomColors> {
       highlightColor: highlightColor ?? this.highlightColor,
       textBlack: textBlack ?? this.textBlack,
       textWhite: textWhite ?? this.textWhite,
-      textGray: textGray ?? this.textGray,
+      textGrey: textGrey ?? this.textGrey,
     );
   }
 
@@ -51,7 +51,7 @@ class CustomColors extends ThemeExtension<CustomColors> {
       highlightColor: Color.lerp(highlightColor, other.highlightColor, t)!,
       textBlack: Color.lerp(textBlack, other.textBlack, t)!,
       textWhite: Color.lerp(textWhite, other.textWhite, t)!,
-      textGray: Color.lerp(textGray, other.textGray, t)!,
+      textGrey: Color.lerp(textGrey, other.textGrey, t)!,
     );
   }
 }
