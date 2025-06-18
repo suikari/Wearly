@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatRoomPage extends StatefulWidget {
   final String roomId;
+  final String userEmail;
   final String userName;
-  final String profileUrl; // 상대 프로필 url(필요하면 추가)
+  final String profileUrl;
 
   const ChatRoomPage({
     Key? key,
     required this.roomId,
+    required this.userEmail,
     required this.userName,
-    this.profileUrl = 'assets/profile1.jpg', // 없으면 기본값
+    this.profileUrl = 'assets/profile1.jpg',
   }) : super(key: key);
 
   @override
@@ -21,42 +24,41 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // 예시용 내 ID
-  final String myId = '내_유저ID';
+  // 로그인한 내 이메일
+  String get myEmail => FirebaseAuth.instance.currentUser?.email ?? '';
 
   void sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
+    // 1. 메시지 저장
     await FirebaseFirestore.instance
         .collection('chatRooms')
         .doc(widget.roomId)
         .collection('message')
         .add({
-      'sender': myId,
+      'sender': myEmail,
       'text': text,
       'createdAt': FieldValue.serverTimestamp(),
-      'type': 'text', // 텍스트/이미지 구분용
+      'type': 'text',
+    });
+
+    // 2. chatRooms 문서 갱신 (★ 이게 있어야 리스트에 내용이 보임)
+    await FirebaseFirestore.instance
+        .collection('chatRooms')
+        .doc(widget.roomId)
+        .update({
+      'lastMessage': text,
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'lastMessageSender': myEmail,
+      // 예시로 미열람 수를 관리한다면 아래처럼 추가
+      // 'unreadCount_${widget.userEmail}': FieldValue.increment(1),
+      // 'unreadCount_$myEmail': 0, // 내가 보냈으니 내 미열람 카운트는 0으로
     });
 
     _controller.clear();
-    // 스크롤 맨 아래로
     Future.delayed(Duration(milliseconds: 200), () {
       _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-    });
-  }
-
-  // 이미지 보내기 예시 (실제 파일 업로드 로직은 생략)
-  void sendImage(String imageUrl) async {
-    await FirebaseFirestore.instance
-        .collection('chatRooms')
-        .doc(widget.roomId)
-        .collection('message')
-        .add({
-      'sender': myId,
-      'imageUrl': imageUrl,
-      'createdAt': FieldValue.serverTimestamp(),
-      'type': 'image',
     });
   }
 
@@ -78,7 +80,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             const SizedBox(width: 10),
             Text(
               '${widget.userName} 님',
-              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+              style: const TextStyle(
+                  color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ],
         ),
@@ -86,7 +89,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       ),
       body: Column(
         children: [
-          // 메시지 영역
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -108,14 +110,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                     final sender = data['sender'] ?? '알수없음';
                     final text = data['text'] ?? '';
                     final type = data['type'] ?? 'text';
-                    final imageUrl = data['imageUrl'];
 
-                    final isMe = sender == myId;
+                    final isMe = sender == myEmail;
 
                     return Container(
                       margin: EdgeInsets.symmetric(vertical: 6),
                       child: Row(
-                        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                        mainAxisAlignment:
+                        isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!isMe)
@@ -129,8 +131,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                               ),
                             ),
                           Flexible(
-                            child: type == 'text'
-                                ? Container(
+                            child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                               decoration: BoxDecoration(
                                 color: isMe ? Colors.pink[100] : Colors.pink[50],
@@ -147,16 +148,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                                   color: isMe ? Colors.black : Colors.black87,
                                 ),
                               ),
-                            )
-                                : Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.pink[50],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: imageUrl != null
-                                  ? Image.network(imageUrl, width: 120)
-                                  : const Text('이미지 오류'),
                             ),
                           ),
                         ],
@@ -167,7 +158,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               },
             ),
           ),
-          // 입력창
           Container(
             decoration: const BoxDecoration(
               border: Border(
@@ -178,14 +168,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               padding: const EdgeInsets.all(12.0),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.photo, color: Colors.pink),
-                    onPressed: () async {
-                      // TODO: 실제 이미지 업로드 구현 (예시: 파일 피커 등)
-                      // 여기선 임시로 이미지 url 보내기
-                      sendImage("https://i.imgur.com/OtY9b1E.png");
-                    },
-                  ),
                   Expanded(
                     child: TextField(
                       controller: _controller,

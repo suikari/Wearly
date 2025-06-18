@@ -36,7 +36,6 @@ class _HomeContentState extends State<HomeContent> {
     fetchWeather();
   }
 
-  // API용: 시/도명만 추출
   static Future<String> getSidoFromLatLng(Position position) async {
     List<Placemark> placemarks = await placemarkFromCoordinates(
       position.latitude,
@@ -74,20 +73,20 @@ class _HomeContentState extends State<HomeContent> {
       }
 
       String result =
-          [
-            area,
-            dong,
-          ].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
+      [
+        area,
+        dong,
+      ].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
       return result.isEmpty ? '위치 정보 없음' : result;
     }
     return '주소를 찾을 수 없습니다.';
   }
 
   Future<Map<String, dynamic>?> fetchAirQuality(
-    String sido,
-    String sigungu,
-    String airApiKey,
-  ) async {
+      String sido,
+      String sigungu,
+      String airApiKey,
+      ) async {
     String url =
         'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty'
         '?serviceKey=$airApiKey'
@@ -102,14 +101,14 @@ class _HomeContentState extends State<HomeContent> {
         final items = data['response']['body']['items'] as List;
         if (items.isEmpty) return null;
         final found = items.firstWhere(
-          (e) =>
-              (e['pm10Value'] != null && e['pm10Value'] != "-") &&
+              (e) =>
+          (e['pm10Value'] != null && e['pm10Value'] != "-") &&
               (e['pm25Value'] != null && e['pm25Value'] != "-"),
           orElse:
               () => items.firstWhere(
                 (e) => (e['pm10Value'] != null && e['pm10Value'] != "-"),
-                orElse: () => items.first,
-              ),
+            orElse: () => items.first,
+          ),
         );
         return {
           'pm10': int.tryParse(found['pm10Value'] ?? '0') ?? 0,
@@ -145,13 +144,12 @@ class _HomeContentState extends State<HomeContent> {
     return baseHour.toString().padLeft(2, '0') + "00";
   }
 
-  // 어제 예보에서 오늘의 TMX, TMN만 가져오기
   Future<Map<String, int?>> fetchYesterdayTmxTmn(
-    int nx,
-    int ny,
-    String today,
-    String apiKey,
-  ) async {
+      int nx,
+      int ny,
+      String today,
+      String apiKey,
+      ) async {
     DateTime now = DateTime.now().toUtc().add(Duration(hours: 9));
     DateTime yesterdayDt = now.subtract(Duration(days: 1));
     String yesterday =
@@ -175,40 +173,77 @@ class _HomeContentState extends State<HomeContent> {
       if (yesterFcstData['response']['header']['resultMsg'] ==
           "NORMAL_SERVICE") {
         final List yesterFcstItems =
-            yesterFcstData['response']['body']['items']['item'];
-        // 오늘자 예보(TMX/TMN)
+        yesterFcstData['response']['body']['items']['item'];
         final todayTmxList =
-            yesterFcstItems
-                .where((e) => e['fcstDate'] == today && e['category'] == 'TMX')
-                .toList();
+        yesterFcstItems
+            .where((e) => e['fcstDate'] == today && e['category'] == 'TMX')
+            .toList();
         final todayTmnList =
-            yesterFcstItems
-                .where((e) => e['fcstDate'] == today && e['category'] == 'TMN')
-                .toList();
+        yesterFcstItems
+            .where((e) => e['fcstDate'] == today && e['category'] == 'TMN')
+            .toList();
 
         tmx =
-            todayTmxList.isNotEmpty
-                ? double.tryParse(
-                  todayTmxList.reduce(
-                        (a, b) =>
-                            a['fcstTime'].compareTo(b['fcstTime']) > 0 ? a : b,
-                      )['fcstValue'] ??
-                      '',
-                )?.round()
-                : null;
+        todayTmxList.isNotEmpty
+            ? double.tryParse(
+          todayTmxList.reduce(
+                (a, b) =>
+            a['fcstTime'].compareTo(b['fcstTime']) > 0 ? a : b,
+          )['fcstValue'] ??
+              '',
+        )?.round()
+            : null;
         tmn =
-            todayTmnList.isNotEmpty
-                ? double.tryParse(
-                  todayTmnList.reduce(
-                        (a, b) =>
-                            a['fcstTime'].compareTo(b['fcstTime']) < 0 ? a : b,
-                      )['fcstValue'] ??
-                      '',
-                )?.round()
-                : null;
+        todayTmnList.isNotEmpty
+            ? double.tryParse(
+          todayTmnList.reduce(
+                (a, b) =>
+            a['fcstTime'].compareTo(b['fcstTime']) < 0 ? a : b,
+          )['fcstValue'] ??
+              '',
+        )?.round()
+            : null;
       }
     }
     return {'tmx': tmx, 'tmn': tmn};
+  }
+
+  // ★ 이 함수 추가: PTY/SKY 기반 상태 텍스트 반환
+  String getWeatherStatus(int? pty, int? sky) {
+    if (pty == null || pty == 0) {
+      switch (sky) {
+        case 1:
+          return '맑음';
+        case 3:
+          return '구름';
+        case 4:
+          return '흐림';
+        default:
+          return '맑음';
+      }
+    } else {
+      switch (pty) {
+        case 1:
+          return '비';
+        case 2:
+          return '비';
+        case 3:
+          return '눈';
+        case 4:
+          return '소나기';
+        default:
+          return '맑음';
+      }
+    }
+  }
+
+  // ★ 추가: 가장 가까운 시간값을 반환
+  String findClosestValue(List<Map<String, dynamic>> items, String targetTime) {
+    if (items.isEmpty) return '';
+    items.sort((a, b) =>
+        (int.parse(a['fcstTime']) - int.parse(targetTime)).abs().compareTo(
+            (int.parse(b['fcstTime']) - int.parse(targetTime)).abs()));
+    return items.first['fcstValue'] ?? '';
   }
 
   Future<void> fetchWeather() async {
@@ -262,7 +297,6 @@ class _HomeContentState extends State<HomeContent> {
           "${now.year.toString().padLeft(4, '0')}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
       String baseTime = getBaseTime(now);
 
-      // 예보 정보 호출 (오늘 예보)
       String urlFcst =
           "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?"
           "serviceKey=$apiKey"
@@ -279,7 +313,6 @@ class _HomeContentState extends State<HomeContent> {
 
       final List fcstItems = fcstData['response']['body']['items']['item'];
 
-      // 최고/최저 온도는 "어제 예보에서 오늘자 TMX/TMN"만 사용
       final tmxTmn = await fetchYesterdayTmxTmn(nx, ny, today, apiKey);
       int? tmx = tmxTmn['tmx'];
       int? tmn = tmxTmn['tmn'];
@@ -291,6 +324,13 @@ class _HomeContentState extends State<HomeContent> {
       String? baseDate;
       String? baseHour;
       String curHour = now.hour.toString().padLeft(2, '0') + "00";
+
+      int? pty; // 강수형태
+      int? sky; // 하늘상태
+
+      // ★ 습도/바람 시간별로 임시 리스트에 저장
+      List<Map<String, dynamic>> rehList = [];
+      List<Map<String, dynamic>> wsdList = [];
 
       for (var item in fcstItems) {
         if (item['fcstDate'] == today) {
@@ -307,17 +347,47 @@ class _HomeContentState extends State<HomeContent> {
               }
               break;
             case 'REH':
-              if (item['fcstTime'] == curHour) {
-                curHumidity = int.tryParse(item['fcstValue'] ?? '');
-              }
+              rehList.add(item);
               break;
             case 'WSD':
+              wsdList.add(item);
+              break;
+            case 'PTY':
               if (item['fcstTime'] == curHour) {
-                wind = double.tryParse(item['fcstValue'] ?? '');
+                pty = int.tryParse(item['fcstValue'] ?? '');
+              }
+              break;
+            case 'SKY':
+              if (item['fcstTime'] == curHour) {
+                sky = int.tryParse(item['fcstValue'] ?? '');
               }
               break;
           }
         }
+      }
+
+      // ★ curHour 값이 없으면 가장 가까운 시간값 사용
+      if (curHumidity == null) {
+        final match = rehList.firstWhere(
+              (e) => e['fcstTime'] == curHour,
+          orElse: () => {},
+        );
+        curHumidity = int.tryParse(
+            match.isNotEmpty
+                ? match['fcstValue']
+                : findClosestValue(rehList, curHour)
+        ) ?? 0;
+      }
+      if (wind == null) {
+        final match = wsdList.firstWhere(
+              (e) => e['fcstTime'] == curHour,
+          orElse: () => {},
+        );
+        wind = double.tryParse(
+            match.isNotEmpty
+                ? match['fcstValue']
+                : findClosestValue(wsdList, curHour)
+        ) ?? 0.0;
       }
 
       curTemp ??= tmx ?? tmn ?? 0;
@@ -346,6 +416,7 @@ class _HomeContentState extends State<HomeContent> {
           'ultraFineDust': airQuality?['pm25'] ?? 0,
           'baseDate': baseDate ?? today,
           'baseTime': baseHour ?? curHour,
+          'weatherStatus': getWeatherStatus(pty, sky),
         };
         loading = false;
       });
@@ -427,7 +498,6 @@ class _HomeContentState extends State<HomeContent> {
                           ).toList(),
                         ),
                       ),
-                      // 옷장 아이콘
                       IconButton(
                         icon: Icon(Icons.checkroom_rounded, color: Colors.deepPurple),
                         tooltip: '내 옷장',
@@ -466,19 +536,19 @@ class _HomeContentState extends State<HomeContent> {
                         spacing: 8,
                         runSpacing: 4,
                         children:
-                            tagList
-                                .skip(tagShowLimit)
-                                .map(
-                                  (tag) => Text(
-                                    tag,
-                                    style: TextStyle(
-                                      color: Colors.blueAccent,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                        tagList
+                            .skip(tagShowLimit)
+                            .map(
+                              (tag) => Text(
+                            tag,
+                            style: TextStyle(
+                              color: Colors.blueAccent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        )
+                            .toList(),
                       ),
                     ),
                 ],

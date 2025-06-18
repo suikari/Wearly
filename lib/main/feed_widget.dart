@@ -110,8 +110,9 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Color(0xFF58544A),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.grey[200]!, width: 1.4),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,21 +122,27 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                               padding: const EdgeInsets.only(top: 16, left: 14, bottom: 7),
                               child: Row(
                                 children: [
-                                  CircleAvatar(
-                                    backgroundColor: Colors.white,
-                                    radius: 15,
-                                    backgroundImage: profileImg == null
-                                        ? AssetImage('assets/default_profile.png')
-                                        : (profileImg.startsWith('http')
-                                        ? NetworkImage(profileImg)
-                                        : AssetImage(profileImg)) as ImageProvider,
-                                    onBackgroundImageError: (_, __) {}, // 이미지 못 찾으면 오류 방지
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.grey[300]!, width: 1.5),
+                                    ),
+                                    child: CircleAvatar(
+                                      backgroundColor: Colors.white,
+                                      radius: 15,
+                                      backgroundImage: profileImg == null
+                                          ? AssetImage('assets/profile1.jpg')
+                                          : (profileImg.startsWith('http')
+                                          ? NetworkImage(profileImg)
+                                          : AssetImage(profileImg)) as ImageProvider,
+                                      onBackgroundImageError: (_, __) {},
+                                    ),
                                   ),
                                   SizedBox(width: 8),
                                   Text(
                                     '$nickname 님',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.black87,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
@@ -172,7 +179,7 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                                 children: tags.take(3).map<Widget>((tag) => Text(
                                   '#$tag',
                                   style: TextStyle(
-                                    color: Colors.white.withOpacity(0.93),
+                                    color: Colors.black87, // ★ 밝은 배경일 땐 어두운 텍스트
                                     fontWeight: FontWeight.w500,
                                     fontSize: 12.7,
                                   ),
