@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:w2wproject/main/widget/settings_page.dart';
+import 'package:w2wproject/main/widget/user_edit_page.dart';
 import 'detail_page.dart';
 import 'package:intl/intl.dart';
 
@@ -19,12 +20,12 @@ class _MyPageWidgetState extends State<MyPageTab> {
   String? selectedFeedId;
   bool isLoading = true;
 
-  String currentUserId = 'user123';
+  String currentUserId = 'XHIEfJKfSqhT7SqfZXoX';
   final FirebaseFirestore fs = FirebaseFirestore.instance;
 
   final List<Map<String, dynamic>> userProfiles = [
     {
-      "userId": "user123",
+      "userId": "XHIEfJKfSqhT7SqfZXoX",
       "name": "윤사나",
       "profileImages": ['assets/w1.jpg', 'assets/w3.jpg', 'assets/w5.jfif'],
       "bio": "안녕하세요. 윤사나 입니다.",
@@ -115,13 +116,20 @@ class _MyPageWidgetState extends State<MyPageTab> {
   }
 
   void openSettingsPage(BuildContext context) {
-    print('test=3=3');
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsPage()),
     );
   }
 
+  void openUserEditPage(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UserEditPage(userId: currentUserId),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -226,8 +234,8 @@ class _MyPageWidgetState extends State<MyPageTab> {
                     child: isOwnPage
                         ? Row(
                       children: [
-                        _buildIconBtn('assets/common/person_edit.png', () {}),
-                        _buildIconBtn(Icons.settings, (){}),
+                        _buildIconBtn('assets/common/person_edit.png', () {openUserEditPage(context);}),
+                        _buildIconBtn(Icons.settings, (){ openSettingsPage(context);}),
                       ],
                     )
                         : ElevatedButton(

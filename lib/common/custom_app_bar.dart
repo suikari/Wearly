@@ -3,6 +3,7 @@ import 'package:provider/provider.dart'; // Provider 필요
 
 import '../main/chat_list_page.dart';
 import '../provider/theme_provider.dart';
+import '../main/NotificationPage.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
@@ -52,8 +53,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           icon: Icon(Icons.notifications),
           onPressed: onNotificationTap ??
                   () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('알림 아이콘 클릭됨')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => NotificationPage(userId: '',)), // ← 알림페이지로 이동
                 );
               },
           color: iconColor,

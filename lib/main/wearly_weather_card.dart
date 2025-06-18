@@ -42,6 +42,19 @@ class WearlyWeatherCard extends StatelessWidget {
     return "매우나쁨";
   }
 
+  // ★ 상태 텍스트 → GIF 파일명 변환 함수
+  String getWeatherImageFile(String weatherStatus) {
+    switch (weatherStatus) {
+      case '맑음': return 'assets/weather_sun.gif';
+      case '구름': return 'assets/weather_cloud.gif';
+      case '흐림': return 'assets/weather_cloud.gif';
+      case '비': return 'assets/weather_rain.gif';
+      case '눈': return 'assets/weather_snow.gif';
+      case '소나기': return 'assets/weather_shower.gif';
+      default: return 'assets/weather_sun.gif';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     int tempDiff = (data['maxTemp'] ?? 0) - (data['minTemp'] ?? 0);
@@ -60,7 +73,6 @@ class WearlyWeatherCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // 상단 Row (GIF+텍스트+위치)
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -73,7 +85,7 @@ class WearlyWeatherCard extends StatelessWidget {
                   ),
                   child: ClipOval(
                     child: Image.asset(
-                      'assets/weather_sun.gif',
+                      getWeatherImageFile(data['weatherStatus'] ?? '맑음'),
                       width: 38, height: 38,
                       fit: BoxFit.cover,
                     ),
@@ -112,7 +124,6 @@ class WearlyWeatherCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: expanded ? 18 : 10),
-            // 접힘/펼침에 따라 다른 Row
             expanded
                 ? Column(
               children: [
@@ -315,7 +326,6 @@ class WearlyWeatherCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          // 미세먼지/초미세먼지일 때만 수치도 함께 출력
           if (isDust && dustValue != null)
             Text(
               '$dustValue㎍/㎥',
