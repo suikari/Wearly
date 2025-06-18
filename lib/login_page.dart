@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main.dart';
 import 'package:w2wproject/provider/custom_colors.dart';
 import 'package:w2wproject/provider/theme_provider.dart';
@@ -42,6 +44,13 @@ class _LoginPageState extends State<LoginPage> {
           email: email,
           password: password,
         );
+
+        String? uid = userCredential.user?.uid;
+
+        if (uid != null) {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('userId', uid);
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('로그인 성공!')),
@@ -106,8 +115,15 @@ class _LoginPageState extends State<LoginPage> {
 
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
 
+      String? uid = userCredential.user?.uid;
+
+      if (uid != null) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userId', uid);
+      }
+
       // 로그인 성공 → 홈으로 이동
-      if (userCredential.user != null) {
+      if (uid != null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => HomePage()),
         );
@@ -145,7 +161,14 @@ class _LoginPageState extends State<LoginPage> {
       final customToken = json.decode(res.body)['token'];
       final UserCredential userCredential = await _auth.signInWithCustomToken(customToken);
 
-      if (userCredential.user != null) {
+      String? authUid = userCredential.user?.uid;
+
+      if (authUid != null) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userId', authUid);
+      }
+
+      if (authUid != null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => HomePage()),
         );
@@ -153,6 +176,62 @@ class _LoginPageState extends State<LoginPage> {
     } catch (e) {
       print('Kakao Login failed: $e');
     }
+  }
+
+  Future<Map<String, dynamic>?> signInWithNaver() async {
+    final clientId = 'YOUR_NAVER_CLIENT_ID';
+    final redirectUri = 'your.app://callback';
+    final state = DateTime.now().millisecondsSinceEpoch.toString();
+
+    final authUrl = Uri.parse(
+      'https://nid.naver.com/oauth2.0/authorize'
+          '?response_type=code'
+          '&client_id=$clientId'
+          '&redirect_uri=$redirectUri'
+          '&state=$state',
+    );
+
+    final result = await FlutterWebAuth2.authenticate(
+      url: authUrl.toString(),
+      callbackUrlScheme: 'your.app',
+    );
+
+    final code = Uri.parse(result).queryParameters['code'];
+    final receivedState = Uri.parse(result).queryParameters['state'];
+
+    if (code == null || receivedState != state) return null;
+
+    // 토큰 요청
+    final tokenRes = await http.post(
+      Uri.parse('https://nid.naver.com/oauth2.0/token'),
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {
+        'grant_type': 'authorization_code',
+        'client_id': clientId,
+        'client_secret': 'YOUR_NAVER_CLIENT_SECRET',
+        'code': code,
+        'state': state,
+      },
+    );
+
+    final tokenData = json.decode(tokenRes.body);
+    final accessToken = tokenData['access_token'];
+
+    // 사용자 정보 요청
+    final userInfoRes = await http.get(
+      Uri.parse('https://openapi.naver.com/v1/nid/me'),
+      headers: {'Authorization': 'Bearer $accessToken'},
+    );
+
+    final userInfo = json.decode(userInfoRes.body);
+    final naverUser = userInfo['response'];
+
+    return {
+      'id': naverUser['id'],
+      'email': naverUser['email'],
+      'nickname': naverUser['nickname'],
+    };
+
   }
 
   Widget _buildSocialButton(String text, Color bgColor, Color textColor, {
