@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -22,6 +24,14 @@ Future<void> main() async {
 
   // Firebase 초기화가 완료된 후 Firestore 인스턴스에 접근 가능
   FirebaseFirestore.instance;
+  // // (선택) App Check 초기화
+  // await FirebaseAppCheck.instance.activate(
+  //   androidProvider: AndroidProvider.debug,
+  //   appleProvider: AppleProvider.debug,
+  // );
+
+  // 익명 로그인
+  // await FirebaseAuth.instance.signInAnonymously();
 
   runApp(
     ChangeNotifierProvider(
