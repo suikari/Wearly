@@ -12,6 +12,7 @@ import 'package:w2wproject/provider/theme_provider.dart';
 import 'common/terms_page.dart';
 import 'page/find_account_page.dart';
 import 'home_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -42,6 +43,14 @@ class _LoginPageState extends State<LoginPage> {
           email: email,
           password: password,
         );
+
+        String? uid = userCredential.user?.uid;
+
+        if (uid != null) {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('userId', uid);
+        }
+
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('로그인 성공!')),

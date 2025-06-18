@@ -64,44 +64,22 @@ class _FeedListPageState extends State<FeedListPage> {
     super.initState();
     fetchFeeds();
   }
-    //   feeds = [
-    //     Feed(
-    //       imagePath: "assets/w1.jpg",
-    //       title: "오늘의 코디는 미니멀하게~",
-    //       description: "빈티지 스타일 청바지에 셔츠~",
-    //       hashtags: "#빈티지 #청바지 #셔츠 #블라우스",
-    //       location: "모던 부림1동",
-    //       date: "2025.05.16",
-    //       temperature : "20℃",
-    //       mood : "더워요",
-    //       comments: [
-    //         Comment(
-    //           userName: "이두나",
-    //           comment: "빈티지 하면 사나 사나하면 빈티지!",
-    //           replies: [
-    //             Comment(userName: "서세나", comment: "정말 공감해요!"),
-    //             Comment(userName: "박철수", comment: "멋진 코디네요~"),
-    //           ],
-    //         ),
-    //         Comment(userName: "서세나", comment: "빈티지 하면 사나 사나하면 빈티지!"),
-    //       ],
-    //     ),
-    //     Feed(
-    //       imagePath: "assets/w2.jpg",
-    //       title: "편안한 봄 패션 추천",
-    //       description: "가벼운 바람막이와 스니커즈 조합",
-    //       hashtags: "#봄패션 #캐주얼 #편안함",
-    //       location: "강남구 역삼동",
-    //       date: "2025.06.10",
-    //       temperature : "24℃",
-    //       mood : "적당핸요",
-    //       comments: [
-    //         Comment(userName: "김철수", comment: "완전 편해 보여요!"),
-    //       ],
-    //     ),
-    //   ];
-    // }
 
+  String _formatDate(dynamic timestamp) {
+    if (timestamp == null) return '';
+    try {
+      final dateTime = timestamp.toDate(); // Firestore Timestamp → DateTime
+      final year = dateTime.year % 100;
+      final month = dateTime.month.toString().padLeft(2, '0');
+      final day = dateTime.day.toString().padLeft(2, '0');
+      final hour = dateTime.hour.toString().padLeft(2, '0');
+      final minute = dateTime.minute.toString().padLeft(2, '0');
+
+      return '$year-$month-$day $hour:$minute';
+    } catch (e) {
+      return '';
+    }
+  }
 
   Future<void> fetchFeeds() async {
     try {
@@ -283,14 +261,32 @@ class _FeedListPageState extends State<FeedListPage> {
                       SizedBox(height: 16),
 
                       // 설명
-                      Text(feed['description'] ?? '',
+                      Text(feed['content'] ?? '',
                           style: TextStyle(fontSize: 16)),
                       SizedBox(height: 12),
-                      Text(
-                        feed['hashtags'] ?? '',
-                        style: TextStyle(color: Colors.grey.shade500,
-                            fontSize: 14),
-                      ),
+                      feed['tags'] != null && feed['tags'] is List
+                          ? Wrap(
+                        spacing: 6.0,
+                        runSpacing: 2.0,
+                        children: (feed['tags'] as List)
+                            .map((tag) => Chip(
+                          label: Text(
+                            tag.toString(),
+                            style: TextStyle(
+                              // color: Colors.grey.shade700,
+                              fontSize: 12, // ⬅️ 폰트 크기 축소
+                            ),
+                          ),
+                          // backgroundColor: Colors.grey.shade200,
+                          shape: StadiumBorder(),
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 0), // ⬅️ 내부 여백 축소
+                          visualDensity: VisualDensity.compact, // ⬅️ 전체 크기 컴팩트하게
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, // ⬅️ 터치 영역 축소
+                        ))
+                            .toList(),
+                      )
+                          : SizedBox.shrink()
+                      ,
                       SizedBox(height: 6),
                       // 위치, 날짜
                       Row(
@@ -298,8 +294,10 @@ class _FeedListPageState extends State<FeedListPage> {
                         children: [
                           Text(feed['location'] ?? '',
                               style: TextStyle(color: Colors.grey.shade500)),
-                          Text(feed['date'] ?? '',
-                              style: TextStyle(color: Colors.grey.shade500)),
+                          Text(
+                            _formatDate(feed['cdatetime']),
+                            style: TextStyle(color: Colors.grey.shade500),
+                          ),
                         ],
                       ),
 
