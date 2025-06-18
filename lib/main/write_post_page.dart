@@ -9,7 +9,6 @@ import 'package:image_editor_plus/image_editor_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
-
 class WritePostPage extends StatefulWidget {
   const WritePostPage({super.key});
 
@@ -21,24 +20,50 @@ class _WritePostPageState extends State<WritePostPage> {
   FirebaseFirestore fs = FirebaseFirestore.instance;
   final TextEditingController titleController = TextEditingController();
   final TextEditingController contentController = TextEditingController();
-  final List<String> categories = ['#상의', '#하의', '#아우터', '#기타', '#분위기'];
   String selectedWeather = '맑음';
   double selectedTemperature = 20;
   String selectedFeeling = '적당해요';
   bool isPublic = true;
 
-  final Map<String, List<String>> categoryTags = {
-    '#상의': ['#민소매/반팔', '#긴팔', '#셔츠/블라우스', '#스웨터/니트', '#맨투맨/후드'],
-    '#하의': ['#청바지', '#면바지', '#슬렉스', '#반바지'],
-    '#아우터': ['#자켓', '#가디건', '#패딩', '#코트', '#바람막이', '#집업'],
-    '#기타': ['#내의/스타킹', '#기모', '#모자/목도리'],
-    '#분위기': ['#스트릿', '#캐쥬얼', '#미니멀', '#빈티지', '#시크', '#클래식', '#보헤미안', '#스포티']
-  };
-
+  Map<String, List<String>> categoryTags = {};
   List<String> selectedTags = [];
   final List<File> selectedImages = [];
   final int maxImageCount = 10;
   int currentPageIndex = 0;
+  bool isLoadingTags = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTagsFromFirestore();
+  }
+
+  Future<void> fetchTagsFromFirestore() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('tags').get();
+      Map<String, List<String>> temp = {};
+
+      for (var doc in snapshot.docs) {
+        final category = doc['category'];
+        final content = doc['content'];
+
+        if (!temp.containsKey(category)) {
+          temp[category] = [];
+        }
+        temp[category]!.add(content);
+      }
+
+      setState(() {
+        categoryTags = temp;
+        isLoadingTags = false;
+      });
+    } catch (e) {
+      debugPrint('태그 로딩 중 오류 발생: $e');
+      setState(() {
+        isLoadingTags = false;
+      });
+    }
+  }
 
   Future<void> pickAndEditImages() async {
     if (selectedImages.length >= maxImageCount) {
@@ -124,7 +149,9 @@ class _WritePostPageState extends State<WritePostPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('글 쓰기')),
-      body: SingleChildScrollView(
+      body: isLoadingTags
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,8 +247,8 @@ class _WritePostPageState extends State<WritePostPage> {
               ),
             ),
             const SizedBox(height: 20),
-            for (var category in categories) ...[
-              Text(category, style: const TextStyle(fontWeight: FontWeight.bold)),
+            for (var category in categoryTags.keys) ...[
+              Text('#$category', style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
