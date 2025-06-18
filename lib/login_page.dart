@@ -3,7 +3,11 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_naver_login/flutter_naver_login.dart';
+import 'package:flutter_naver_login/interface/types/naver_account_result.dart';
+import 'package:flutter_naver_login/interface/types/naver_login_result.dart';
+import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
@@ -102,6 +106,30 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Future<bool> isNicknameTaken(String nickname) async {
+    final result = await FirebaseFirestore.instance
+        .collection('users')
+        .where('nickname', isEqualTo: nickname)
+        .get();
+
+    return result.docs.isNotEmpty;
+  }
+
+  String generateSocialNickname({
+    required String baseNickname,
+    required String provider, // 'google', 'kakao', 'naver' 등
+  }) {
+    final now = DateTime.now();
+    final timestamp = '${now.year}'
+        '${now.month.toString().padLeft(2, '0')}'
+        '${now.day.toString().padLeft(2, '0')}'
+        '${now.hour.toString().padLeft(2, '0')}'
+        '${now.minute.toString().padLeft(2, '0')}'
+        '${now.second.toString().padLeft(2, '0')}';
+
+    return '${baseNickname}_$provider$timestamp';
+  }
+
   Future<void> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
@@ -129,8 +157,16 @@ class _LoginPageState extends State<LoginPage> {
         if (!doc.exists) {
           // ✅ 최초 로그인: Firestore에 유저 정보 저장
           final email = userCredential.user?.email ?? '';
-          final displayName = '${userCredential.user?.displayName}_google' ?? '';
           final photoUrl = userCredential.user?.photoURL ?? '';
+          String displayName  = userCredential.user?.displayName ?? '';
+
+          bool taken = await isNicknameTaken(displayName);
+          if (taken || displayName.trim().isEmpty) {
+            displayName = generateSocialNickname(
+              baseNickname: displayName,
+              provider: 'google',
+            );
+          }
 
           await docRef.set({
             'email': email,
@@ -142,8 +178,8 @@ class _LoginPageState extends State<LoginPage> {
             'isPublic': true,
             'socialAccount': 'google',
             'interest': [],
-            'follower': [],
-            'following': [],
+            'follower': '',
+            'following': '',
             'location': '',
             'profileImage': photoUrl,
             'mainCoordiId': '',
@@ -161,19 +197,26 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> loginWithKakaoAndFirebase() async {
+  Future<void> loginWithKakao() async {
+    print('loginWithKakao started');
     try {
       bool installed = await isKakaoTalkInstalled();
+      print('isKakaoTalkInstalled: $installed');
+      if (!installed) {
+        print('Trying loginWithKakaoAccount');
+      }
       OAuthToken kakaoToken = installed
           ? await UserApi.instance.loginWithKakaoTalk()
           : await UserApi.instance.loginWithKakaoAccount();
-
+      print('login success, token: ${kakaoToken.accessToken}');
       final user = await UserApi.instance.me();
       final uid = 'kakao:${user.id}';
       final email = user.kakaoAccount?.email ?? '';
-      final nickname = '${user.kakaoAccount?.profile?.nickname}_kakao' ?? '';
       final profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl ?? '';
-
+      String nickname = user.kakaoAccount?.profile?.nickname ?? '';
+      print(uid);
+      print(email);
+      print(profileImageUrl);
       // Firebase Functions에 요청
       final res = await http.post(
         Uri.parse('https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken'),
@@ -192,11 +235,19 @@ class _LoginPageState extends State<LoginPage> {
       String? authUid = userCredential.user?.uid;
 
       if (authUid != null) {
+
         // Firestore 저장
         final firestore = FirebaseFirestore.instance;
         final doc = await firestore.collection('users').doc(authUid).get();
         if (!doc.exists) {
-          // 위에 set 코드 실행
+          // 닉네임 중복 검사
+          final taken = await isNicknameTaken(nickname);
+          if (taken || nickname.trim().isEmpty) {
+            nickname = generateSocialNickname(
+              baseNickname: nickname,
+              provider: 'kakao',
+            );
+          }
           await firestore.collection('users').doc(authUid).set({
             'email': email,
             'nickname': nickname,
@@ -223,64 +274,88 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
-      print('Kakao Login failed: $e');
+      if (e is PlatformException && e.code == 'CANCELED') {
+        print('사용자가 로그인 취소함');
+      } else {
+        print('로그인 실패: $e');
+      }
     }
   }
 
-  Future<Map<String, dynamic>?> signInWithNaver() async {
-    final clientId = 'G0sonEyPthLnRvkvNR7j';
-    final redirectUri = 'your.app://callback';
-    final state = DateTime.now().millisecondsSinceEpoch.toString();
+  Future<void> signInWithNaver() async {
+    try {
+      final NaverLoginResult result = await FlutterNaverLogin.logIn();
 
-    final authUrl = Uri.parse(
-      'https://nid.naver.com/oauth2.0/authorize'
-          '?response_type=code'
-          '&client_id=$clientId'
-          '&redirect_uri=$redirectUri'
-          '&state=$state',
-    );
+      if (result.status == NaverLoginStatus.loggedIn) {
+        final NaverAccountResult? account = result.account;
 
-    final result = await FlutterWebAuth2.authenticate(
-      url: authUrl.toString(),
-      callbackUrlScheme: 'your.app',
-    );
+        final String uid = 'naver:${account?.id ?? ''}';
+        final String email = account?.email ?? '';
+        final String nickname = account?.nickname ?? '';
+        final String profileImage = account?.profileImage ?? '';
 
-    final code = Uri.parse(result).queryParameters['code'];
-    final receivedState = Uri.parse(result).queryParameters['state'];
+        // 👉 Firebase 커스텀 토큰 발급 요청 후 로그인
+        final res = await http.post(
+          Uri.parse('https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'uid': uid,
+            'email': email,
+            'nickname': nickname,
+            'provider': 'naver',
+          }),
+        );
 
-    if (code == null || receivedState != state) return null;
+        final token = jsonDecode(res.body)['token'];
+        final credential = await _auth.signInWithCustomToken(token);
+        final String? authUid = credential.user?.uid;
 
-    // 토큰 요청
-    final tokenRes = await http.post(
-      Uri.parse('https://nid.naver.com/oauth2.0/token'),
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {
-        'grant_type': 'authorization_code',
-        'client_id': clientId,
-        'client_secret': 'YOUR_NAVER_CLIENT_SECRET',
-        'code': code,
-        'state': state,
-      },
-    );
+        if (authUid != null) {
+          final firestore = FirebaseFirestore.instance;
+          final docRef = firestore.collection('users').doc(authUid);
+          final doc = await docRef.get();
 
-    final tokenData = json.decode(tokenRes.body);
-    final accessToken = tokenData['access_token'];
+          // 최초 로그인 시 유저 정보 저장
+          if (!doc.exists) {
+            // 닉네임 중복 검사
+            String finalNickname = nickname;
+            final taken = await isNicknameTaken(nickname);
+            if (taken || nickname.trim().isEmpty) {
+              finalNickname = generateSocialNickname(
+                baseNickname: nickname,
+                provider: 'naver',
+              );
+            }
 
-    // 사용자 정보 요청
-    final userInfoRes = await http.get(
-      Uri.parse('https://openapi.naver.com/v1/nid/me'),
-      headers: {'Authorization': 'Bearer $accessToken'},
-    );
+            await docRef.set({
+              'email': email,
+              'nickname': finalNickname,
+              'bio': '',
+              'agreeTerm': true,
+              'allowNotification': true,
+              'cdatetime': FieldValue.serverTimestamp(),
+              'isPublic': true,
+              'socialAccount': 'naver',
+              'interest': [],
+              'follower': '',
+              'following': '',
+              'location': '',
+              'profileImage': profileImage,
+              'mainCoordiId': '',
+            }, SetOptions(merge: true));
+          }
 
-    final userInfo = json.decode(userInfoRes.body);
-    final naverUser = userInfo['response'];
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('userId', authUid);
 
-    return {
-      'id': naverUser['id'],
-      'email': naverUser['email'],
-      'nickname': naverUser['nickname'],
-    };
-
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => HomePage()),
+          );
+        }
+      }
+    } catch (e) {
+      print('Naver login failed: $e');
+    }
   }
 
   Widget _buildSocialButton(String text, Color bgColor, Color textColor, {
@@ -477,9 +552,9 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(height: 20),
 
                   // 소셜 로그인 버튼들
-                  _buildSocialButton('구글로 로그인', Colors.white, Colors.black, border: true, onPressed: signInWithGoogle),
-                  _buildSocialButton('카카오로 로그인', Colors.yellow[600]!, Colors.black, onPressed:loginWithKakaoAndFirebase),
-                  _buildSocialButton('네이버로 로그인', Colors.green, Colors.white, onPressed:(){}),
+                  _buildSocialButton('구글로 로그인', Colors.white, Colors.black, border: true, onPressed: (){signInWithGoogle();}),
+                  _buildSocialButton('카카오로 로그인', Colors.yellow[600]!, Colors.black, onPressed: (){loginWithKakao();}),
+                  _buildSocialButton('네이버로 로그인', Colors.green, Colors.white, onPressed:(){signInWithNaver();}),
                   SizedBox(height: 30),
 
                   // 하단 링크

@@ -32,11 +32,19 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
+        manifestPlaceholders += mapOf(
+            "NAVER_CLIENT_ID" to "G0sonEyPthLnRvkvNR7j",
+            "NAVER_CLIENT_SECRET" to "Xdef_o0yOx",
+            "NAVER_CLIENT_NAME" to "wearly",
+            "kakao_app_key" to "102bf4d0a6bfeeab56fd2d28f7573cc1",
+            "kakao_scheme" to "kakao102bf4d0a6"
+        )
     }
 
     dependencies {
         implementation("com.squareup.okhttp3:okhttp:4.12.0")
         implementation("androidx.work:work-runtime:2.8.1")
+        implementation("com.kakao.sdk:v2-user:2.21.4")
         implementation("com.google.guava:guava:31.1-android")
         implementation("com.google.android.gms:play-services-location:21.0.1")
         // 예: kotlin stdlib
