@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main/widget/comment_list.dart';
 
 // 댓글 모델 (대댓글 포함)
@@ -55,6 +56,7 @@ class FeedListPage extends StatefulWidget {
 
 class _FeedListPageState extends State<FeedListPage> {
   List<Map<String, dynamic>> feeds = [];
+  String currentUserId = '';
 
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   bool isLoading = true;
@@ -62,7 +64,21 @@ class _FeedListPageState extends State<FeedListPage> {
   @override
   void initState() {
     super.initState();
-    fetchFeeds();
+    _loadUserId();
+    fetchFeedsWithWriter();
+  }
+
+  Future<void> _loadUserId() async {
+    String? userId = await getSavedUserId();
+    setState(() {
+      currentUserId = userId!;
+      print("currentUserId====>$currentUserId");
+    });
+  }
+
+  Future<String?> getSavedUserId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('userId');
   }
 
   String _formatDate(dynamic timestamp) {
@@ -81,86 +97,75 @@ class _FeedListPageState extends State<FeedListPage> {
     }
   }
 
-  Future<void> fetchFeeds() async {
+  Future<void> fetchFeedsWithWriter() async {
     try {
       final snapshot = await fs
           .collection('feeds')
           .orderBy('cdatetime', descending: true)
           .get();
 
-      final List<Map<String, dynamic>> items = snapshot.docs.map((doc) {
+      final Map<String, Map<String, dynamic>> userCache = {};
+
+      final futures = snapshot.docs.map((doc) async {
         final data = doc.data();
-        data['id'] = doc.id; // 문서 ID를 feed의 id 필드로 추가
+        data['id'] = doc.id;
+
+        final writeId = data['writeid'];
+
+        if (writeId != null && writeId.isNotEmpty) {
+          if (userCache.containsKey(writeId)) {
+            // 캐시에 있으면 바로 넣기
+            data['writerInfo'] = userCache[writeId];
+          } else {
+            // 캐시에 없으면 users 조회
+            final userDoc = await fs.collection('users').doc(writeId).get();
+            if (userDoc.exists) {
+              final userData = userDoc.data()!;
+              // 문서 ID를 포함한 새 Map 생성
+              final userDataWithId = {
+                ...userData,
+                'docId': userDoc.id,
+              };
+              userCache[writeId] = userDataWithId;
+              data['writerInfo'] = userDataWithId;
+            } else {
+              data['writerInfo'] = null;
+            }
+          }
+        } else {
+          data['writerInfo'] = null;
+        }
+        print("writerInfo ===> ${data['writerInfo']}");
         return data;
-      }).toList();
+      });
+
+      final items = await Future.wait(futures);
 
       setState(() {
         feeds = items;
         isLoading = false;
       });
     } catch (e) {
-      print("Error fetching feeds: $e");
+      print("Error fetching feeds with writer info: $e");
       setState(() {
         isLoading = false;
       });
     }
   }
 
+    Future<void> updateMainCoordiId( String newMainCoordiId ) async {
+    print("currentUserId>>>>>?$currentUserId");
+      try {
+        final docRef = FirebaseFirestore.instance.collection('users').doc(currentUserId);
 
-    Widget _buildComment(Comment comment, {double leftPadding = 0}) {
-      return Padding(
-        padding: EdgeInsets.only(left: leftPadding, top: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    widget.onUserTap('user456'); // userId 전달해서 페이지 열기
-                  },
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.grey.shade400,
-                    child: Text(
-                      comment.userName.isNotEmpty ? comment.userName[0] : '',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: "${comment.userName} ",
-                          style: TextStyle(fontWeight: FontWeight.bold,
-                              color: Colors.black),
-                        ),
-                        TextSpan(
-                          text: comment.comment,
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (comment.replies.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Column(
-                  children: comment.replies
-                      .map((reply) =>
-                      _buildComment(reply, leftPadding: leftPadding + 20))
-                      .toList(),
-                ),
-              ),
-          ],
-        ),
-      );
+        await docRef.update({
+          'mainCoordiId': newMainCoordiId,
+        });
+
+        print('mainCoordiId가 성공적으로 업데이트되었습니다.');
+      } catch (e) {
+        print('mainCoordiId 업데이트 중 오류 발생: $e');
+      }
     }
 
     @override
@@ -195,7 +200,33 @@ class _FeedListPageState extends State<FeedListPage> {
                                   fontWeight: FontWeight.bold, fontSize: 20),
                             ),
                           ),
-                          Icon(Icons.more_vert, color: Colors.grey),
+                          PopupMenuButton<String>(
+                            icon: Icon(Icons.more_vert, color: Colors.grey),
+                            onSelected: (value) {
+                              // 메뉴 선택 시 동작
+                              if (value == 'edit') {
+                                print("Edit 선택됨");
+                              } else if (value == 'del') {
+                                print("Delete 선택됨");
+                              } else if (value == 'main') {
+                                updateMainCoordiId(feed['id']);
+                              }
+                            },
+                            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                value: 'edit',
+                                child: Text('수정'),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'del',
+                                child: Text('삭제'),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'main',
+                                child: Text('대표설정'),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
 
@@ -227,7 +258,13 @@ class _FeedListPageState extends State<FeedListPage> {
                             child:
                             feed!['imageUrls'] != null
                                 ? _buildImageCarousel(
-                              (feed!['imageUrls'] as List<dynamic>).map((e) => e.toString()).toList(),
+                                imageUrls: (feed!['imageUrls'] as List<dynamic>).map((e) => e.toString()).toList(),
+                                profileImageUrl : feed['writerInfo']?['profileImage'] ?? '',
+                                userName : feed['writerInfo']?['nickname'] ?? '닉네임',
+                                onUserTap: () {
+                                  final docId = feed['writerInfo']?['docId'] ?? '';
+                                  widget.onUserTap(docId);
+                                },
                             )
                                 : Container(height: 200, color: Colors.grey[300]),
                           ),
@@ -309,7 +346,7 @@ class _FeedListPageState extends State<FeedListPage> {
                       CommentSection(
                         key: ValueKey("comment_${feed['id']}"),
                         feedId: feed['id'],
-                        currentUserId: '',
+                        currentUserId: currentUserId,
                       ),
                     ],
                   ),
@@ -325,7 +362,12 @@ class _FeedListPageState extends State<FeedListPage> {
 
 
 // --- 이미지 슬라이더 UI 함수 --- //
-Widget _buildImageCarousel(List<String> imageUrls) {
+Widget _buildImageCarousel({
+  required List<String> imageUrls,
+  required String profileImageUrl,
+  required String userName,
+  required void Function() onUserTap,
+}) {
   if (imageUrls.isEmpty) {
     return Container(
       height: 480,
@@ -339,36 +381,89 @@ Widget _buildImageCarousel(List<String> imageUrls) {
       alignment: Alignment.center,
       child: Text('이미지가 없습니다'),
     );
-  } else if (imageUrls.length == 1) {
-    return ClipRRect(
-      borderRadius: BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        topRight: Radius.circular(20),
-      ),
-      child: Image.network(
-        imageUrls[0],
-        height: 480,
-        width: double.infinity,
-        fit: BoxFit.cover,
-      ),
+  }
+
+  Widget buildImage(String imageUrl) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+          child: Image.network(
+            imageUrl,
+            height: 480,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+        // 프로필 사진 + 닉네임 위치
+        Positioned(
+          top: 16,
+          left: 16,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black45,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: GestureDetector(
+              onTap: () {
+                onUserTap(); // userId 전달해서 페이지 열기
+              },
+              child: Row(
+                children: [
+                  ClipOval(
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      color: Colors.grey[400], // 기본 배경색 (사진 없을 때)
+                      child: profileImageUrl != null && profileImageUrl.isNotEmpty
+                          ? Image.network(
+                        profileImageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          // 이미지 로드 실패 시 기본 배경만 보여줌
+                          return Container(color: Colors.grey[400]);
+                        },
+                      )
+                          : null, // 사진 없으면 비워둠
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    userName,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black87,
+                          blurRadius: 2,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  if (imageUrls.length == 1) {
+    return buildImage(imageUrls[0]);
   } else {
     return SizedBox(
       height: 480,
       child: PageView.builder(
         itemCount: imageUrls.length,
         itemBuilder: (context, index) {
-          return ClipRRect(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-            child: Image.network(
-              imageUrls[index],
-              fit: BoxFit.cover,
-              width: double.infinity,
-            ),
-          );
+          return buildImage(imageUrls[index]);
         },
       ),
     );
