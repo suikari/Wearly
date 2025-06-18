@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../common/custom_app_bar.dart';
 
 class SearchResultPage extends StatefulWidget {
@@ -104,93 +105,405 @@ class _SearchResultPageState extends State<SearchResultPage>
             ),
           ),
 
-          // 탭별 콘텐츠
+          // 탭별 콘텐츠 (슬라이드 가능)
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _selectedIndex == 0
-                  ? fs.collection("tags").snapshots()
-                  : _selectedIndex == 1 || _selectedIndex == 2
-                  ? fs
-                  .collection("feeds").snapshots()
-                  : fs.collection("users").snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text('에러 발생: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final docs = snapshot.data!.docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  switch (_selectedIndex) {
-                    case 0: // 태그
-                      final content =
-                      (data['content'] ?? '').toString().toLowerCase();
-                      return content.contains(kw);
-                    case 1: // 지역
-                      final location =
-                      (data['location'] ?? '').toString().toLowerCase();
-                      return location.contains(kw);
-                    case 2: // 내용
-                      final title =
-                      (data['title'] ?? '').toString().toLowerCase();
-                      final content =
-                      (data['content'] ?? '').toString().toLowerCase();
-                      return title.contains(kw) || content.contains(kw);
-                    case 3: // 유저
-                      final nickname =
-                      (data['nickname'] ?? '').toString().toLowerCase();
-                      return nickname.contains(kw);
-                    default:
-                      return false;
-                  }
-                }).toList();
-
-                if (docs.isEmpty) {
-                  return const Center(child: Text('검색 결과가 없습니다.'));
-                }
-
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (_selectedIndex == 0) ...[
-                            Text("태그 내용: ${data['content'] ?? '없음'}"),
-                            Text("카테고리: ${data['category'] ?? '없음'}"),
-                            Text("제목: ${data['title'] ?? '없음'}"),
-                            Text("제목: ${data['content'] ?? '없음'}"),
-                            Text("글쓴 시간: ${data['cdatetime'] ?? '없음'}"),
-                            Text("data :$data")
-                          ] else if (_selectedIndex == 1) ...[
-                            Text("지역: ${data['location'] ?? '없음'}"),
-                          ] else if (_selectedIndex == 2) ...[
-                            Text("제목: ${data['title'] ?? '없음'}"),
-                            Text("내용: ${data['content'] ?? '없음'}"),
-                          ] else if (_selectedIndex == 3) ...[
-                            Text("닉네임: ${data['nickname'] ?? '없음'}"),
-                          ],
-                        ],
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.edit),
-                          SizedBox(width: 8),
-                          Icon(Icons.delete),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
+            child: TabBarView(
+              controller: _tabController,
+              children: List.generate(tabs.length, (index) {
+                return buildTabContent(index, kw, fs);
+              }),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// 각 탭별 콘텐츠 위젯 빌더
+  Widget buildTabContent(int tabIndex, String kw, FirebaseFirestore fs) {
+    late Stream<QuerySnapshot> stream;
+    switch (tabIndex) {
+      case 0:
+        stream = fs.collection("feeds").snapshots();
+        break;
+      case 1:
+      case 2:
+        stream = fs.collection("feeds").snapshots();
+        break;
+      case 3:
+        stream = fs.collection("users").snapshots();
+        break;
+      default:
+        stream = const Stream.empty();
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('에러 발생: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final docs = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          switch (tabIndex) {
+            case 0:
+              final content = (data['tags'] ?? '').toString().toLowerCase();
+              return content.contains(kw);
+            case 1:
+              final location = (data['location'] ?? '').toString().toLowerCase();
+              return location.contains(kw);
+            case 2:
+              final title = (data['title'] ?? '').toString().toLowerCase();
+              final content = (data['content'] ?? '').toString().toLowerCase();
+              return title.contains(kw) || content.contains(kw);
+            case 3:
+              final nickname = (data['nickname'] ?? '').toString().toLowerCase();
+              return nickname.contains(kw);
+            default:
+              return false;
+          }
+        }).toList();
+
+        if (docs.isEmpty) {
+          return const Center(child: Text('검색 결과가 없습니다.'));
+        }
+
+        return ListView.builder (
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final data = docs[index].data() as Map<String, dynamic>;
+            return ListTile(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (tabIndex == 0) ...[
+                    Card(
+                      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      color: Colors.pink.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 제목
+                            Text(
+                              data['title'] ?? '제목 없음',
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+
+                            // 추천/기온 뱃지
+                            Row(
+                              children: [
+                                if (data['feeling'] != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    margin: const EdgeInsets.only(right: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      data['feeling'],
+                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                    ),
+                                  ),
+                                if (data['temperature'] != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.pink.shade100,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      "${data['temperature']}℃",
+                                      style: const TextStyle(color: Colors.black87, fontSize: 12),
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // 이미지
+                            if (data['imageUrls'] != null &&
+                                data['imageUrls'] is List &&
+                                data['imageUrls'].isNotEmpty)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  data['imageUrls'][0],
+                                  height: 180,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+
+                            const SizedBox(height: 10),
+
+                            // 내용 요약
+                            Text(
+                              data['content'] ?? '',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(height: 8),
+
+                            // 해시태그
+                            if (data['tags'] != null && data['tags'] is List)
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: -8,
+                                children: (data['tags'] as List)
+                                    .map((tag) => Text(
+                                  tag,
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 13),
+                                ))
+                                    .toList(),
+                              ),
+
+                            const SizedBox(height: 6),
+
+                            // 지역 + 날짜
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  data['location'] ?? '지역 정보 없음',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                ),
+                                Text(
+                                  data['cdatetime'] != null
+                                      ? DateFormat('yyyy.MM.dd')
+                                      .format((data['cdatetime'] as Timestamp).toDate())
+                                      : '',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                ),
+                              ],
+                            ),
+
+                            const Divider(height: 20),
+
+                            // 댓글 예시 (고정된 더미 데이터)
+                            Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 14,
+                                  backgroundImage: NetworkImage(
+                                      'https://i.pravatar.cc/100?img=3'), // 댓글 유저 프로필
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    '이두나: 빈티지 하면 사나야 사나하면 빈티지!',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                )
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 14,
+                                  backgroundImage: NetworkImage(
+                                      'https://i.pravatar.cc/100?img=5'), // 댓글 유저 프로필
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    '세세나: 빈티지 하면 사나야 사나하면 빈티지!',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                )
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    )
+                  ] else if (tabIndex == 1) ...[
+                    Text("지역: ${data['location'] ?? '없음'}"),
+                  ] else if (tabIndex == 2) ...[
+                    Card(
+                      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      color: Colors.pink.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 제목
+                            Text(
+                              data['title'] ?? '제목 없음',
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+
+                            // 추천/기온 뱃지
+                            Row(
+                              children: [
+                                if (data['feeling'] != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    margin: const EdgeInsets.only(right: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      data['feeling'],
+                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                    ),
+                                  ),
+                                if (data['temperature'] != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.pink.shade100,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      "${data['temperature']}℃",
+                                      style: const TextStyle(color: Colors.black87, fontSize: 12),
+                                    ),
+                                  ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // 이미지
+                            if (data['imageUrls'] != null &&
+                                data['imageUrls'] is List &&
+                                data['imageUrls'].isNotEmpty)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  data['imageUrls'][0],
+                                  height: 180,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+
+                            const SizedBox(height: 10),
+
+                            // 내용 요약
+                            Text(
+                              data['content'] ?? '',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(height: 8),
+
+                            // 해시태그
+                            if (data['tags'] != null && data['tags'] is List)
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: -8,
+                                children: (data['tags'] as List)
+                                    .map((tag) => Text(
+                                  tag,
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 13),
+                                ))
+                                    .toList(),
+                              ),
+
+                            const SizedBox(height: 6),
+
+                            // 지역 + 날짜
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  data['location'] ?? '지역 정보 없음',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                ),
+                                Text(
+                                  data['cdatetime'] != null
+                                      ? DateFormat('yyyy.MM.dd')
+                                      .format((data['cdatetime'] as Timestamp).toDate())
+                                      : '',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                ),
+                              ],
+                            ),
+
+                            const Divider(height: 20),
+
+                            // 댓글 예시 (고정된 더미 데이터)
+                            Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 14,
+                                  backgroundImage: NetworkImage(
+                                      'https://i.pravatar.cc/100?img=3'), // 댓글 유저 프로필
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    '이두나: 빈티지 하면 사나야 사나하면 빈티지!',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                )
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 14,
+                                  backgroundImage: NetworkImage(
+                                      'https://i.pravatar.cc/100?img=5'), // 댓글 유저 프로필
+                                ),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    '세세나: 빈티지 하면 사나야 사나하면 빈티지!',
+                                    style: TextStyle(fontSize: 13),
+                                  ),
+                                )
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    )
+                  ] else if (tabIndex == 3) ...[
+                    Text("닉네임: ${data['nickname'] ?? '없음'}"),
+                    Text("관심사: ${data['interest'] ?? '없음'}"),
+                    Text("자기소개: ${data['bio'] ?? '없음'}"),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundImage: NetworkImage(
+                              'https://i.pravatar.cc/100?img=3'), // 댓글 유저 프로필
+                        ),
+                        Column(
+                          children: [
+                            Text("닉네임: ${data['nickname'] ?? '없음'}"),
+                          ],
+                        )
+                      ],
+                    )
+
+
+                  ],
+                ],
+              ),
+
+            );
+          },
+        );
+      },
     );
   }
 }
