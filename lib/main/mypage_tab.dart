@@ -29,6 +29,8 @@ class _MyPageWidgetState extends State<MyPageTab> {
   bool isUserLoading = true;
 
   String currentUserId = '';
+  String viewedUserId = '';
+
   final FirebaseFirestore fs = FirebaseFirestore.instance;
 
   List<Map<String, dynamic>> userProfiles = [];
@@ -40,8 +42,14 @@ class _MyPageWidgetState extends State<MyPageTab> {
   Map<String, List<Map<String, dynamic>>> feedItemsByMonth = {};
 
   Future<void> fetchFeeds() async {
+    print('fetchstart==>>>$currentUserId');
     try {
-      final snapshot = await fs.collection('feeds').orderBy('cdatetime', descending: true).get();
+      //currentUserId
+      final snapshot = await fs
+          .collection('feeds')
+          .where('writeid', isEqualTo: currentUserId) // 조건 추가
+          .orderBy('cdatetime', descending: true)       // 정렬 기준
+          .get();
       final items = snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
@@ -77,7 +85,6 @@ class _MyPageWidgetState extends State<MyPageTab> {
   @override
   void initState() {
     super.initState();
-    fetchFeeds();
     _loadUserId();
 
   }
@@ -86,7 +93,10 @@ class _MyPageWidgetState extends State<MyPageTab> {
     String? userId = await getSavedUserId();
     setState(() {
       currentUserId = userId!;
-      print("currentUserId====>$currentUserId");
+      if ( widget.userId == null || widget.userId == '' ){
+        viewedUserId = userId!;
+      }
+      //print("currentUserId====>$currentUserId");
       fetchCurrentUserProfile();
     });
   }
@@ -130,16 +140,18 @@ class _MyPageWidgetState extends State<MyPageTab> {
                 mainCoordiFeed = feedData;
               });
 
-              print('mainCoordiFeeds 리스트에 추가됨: $feedData');
+              //print('mainCoordiFeeds 리스트에 추가됨: $feedData');
             } else {
-              print('해당 mainCoordiId 문서가 존재하지 않음');
+              //print('해당 mainCoordiId 문서가 존재하지 않음');
             }
           } catch (e) {
-            print('feeds 문서 가져오기 실패: $e');
+            //print('feeds 문서 가져오기 실패: $e');
           }
         }
+        fetchFeeds();
+
       } else {
-        print('해당 userId 문서가 존재하지 않습니다.');
+        //print('해당 userId 문서가 존재하지 않습니다.');
         setState(() {
           userProfiles = [];
           isUserLoading = false;
@@ -209,10 +221,9 @@ class _MyPageWidgetState extends State<MyPageTab> {
       return const Center(child: Text("프로필 데이터를 불러올 수 없습니다."));
     }
 
-    final String viewedUserId = widget.userId ?? currentUserId;
 
     print("widget.userId ==>${widget.userId }");
-
+    print("currentUserId ==>${currentUserId }");
     print("viewedUserId==>$viewedUserId");
 
     final bool isOwnPage = viewedUserId == currentUserId;

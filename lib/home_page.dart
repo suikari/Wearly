@@ -71,6 +71,7 @@ class _HomePageState extends State<HomePage> {
       if (userDoc.exists) {
         setState(() {
           _nickname = userDoc['nickname'] ?? '';
+          _profileImageUrl  = userDoc['profileImage'] ?? null ;
           prefs.setString('nickname', userDoc['nickname'] ?? '');
           prefs.setString('profileImage', userDoc['profileImage'] ?? '');
         });

@@ -26,6 +26,10 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
     final selectedItemColor = bottomNavTheme.selectedItemColor ?? Colors.white;
     final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor ?? Colors.white70;
+
+
+
+    print("widget.profileImageUrl>>>>${widget.profileImageUrl}");
     // Column(
     //   mainAxisSize: MainAxisSize.min,
     //   children: [

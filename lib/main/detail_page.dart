@@ -117,8 +117,8 @@ Widget _buildImageCarousel(List<String> imageUrls) {
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+          bottomLeft: Radius.circular(50),
+          topRight: Radius.circular(50),
         ),
       ),
       alignment: Alignment.center,
@@ -127,8 +127,8 @@ Widget _buildImageCarousel(List<String> imageUrls) {
   } else if (imageUrls.length == 1) {
     return ClipRRect(
       borderRadius: BorderRadius.only(
-        bottomLeft: Radius.circular(20),
-        topRight: Radius.circular(20),
+        bottomLeft: Radius.circular(50),
+        topRight: Radius.circular(50),
       ),
       child: Image.network(
         imageUrls[0],
@@ -145,8 +145,8 @@ Widget _buildImageCarousel(List<String> imageUrls) {
         itemBuilder: (context, index) {
           return ClipRRect(
             borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(50),
+              topRight: Radius.circular(50),
             ),
             child: Image.network(
               imageUrls[index],

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main/widget/comment_list.dart';
+import 'package:w2wproject/main/widget/image_carousel_card.dart';
 
 // 댓글 모델 (대댓글 포함)
 class Comment {
@@ -257,7 +258,7 @@ class _FeedListPageState extends State<FeedListPage> {
                           Center(
                             child:
                             feed!['imageUrls'] != null
-                                ? _buildImageCarousel(
+                                ? ImageCarouselCard(
                                 imageUrls: (feed!['imageUrls'] as List<dynamic>).map((e) => e.toString()).toList(),
                                 profileImageUrl : feed['writerInfo']?['profileImage'] ?? '',
                                 userName : feed['writerInfo']?['nickname'] ?? '닉네임',
@@ -267,30 +268,6 @@ class _FeedListPageState extends State<FeedListPage> {
                                 },
                             )
                                 : Container(height: 200, color: Colors.grey[300]),
-                          ),
-                          Positioned(
-                            left: MediaQuery
-                                .of(context)
-                                .size
-                                .width * 0.05,
-                            bottom: 8,
-                            child: Icon(
-                              Icons.favorite_border,
-                              color: Colors.white70,
-                              size: 28,
-                            ),
-                          ),
-                          Positioned(
-                            right: MediaQuery
-                                .of(context)
-                                .size
-                                .width * 0.05,
-                            bottom: 8,
-                            child: Icon(
-                              Icons.share_outlined,
-                              color: Colors.white70,
-                              size: 28,
-                            ),
                           ),
                         ],
                       ),
@@ -359,113 +336,3 @@ class _FeedListPageState extends State<FeedListPage> {
     }
   }
 
-
-
-// --- 이미지 슬라이더 UI 함수 --- //
-Widget _buildImageCarousel({
-  required List<String> imageUrls,
-  required String profileImageUrl,
-  required String userName,
-  required void Function() onUserTap,
-}) {
-  if (imageUrls.isEmpty) {
-    return Container(
-      height: 480,
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Text('이미지가 없습니다'),
-    );
-  }
-
-  Widget buildImage(String imageUrl) {
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-          child: Image.network(
-            imageUrl,
-            height: 480,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
-        ),
-        // 프로필 사진 + 닉네임 위치
-        Positioned(
-          top: 16,
-          left: 16,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.black45,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: GestureDetector(
-              onTap: () {
-                onUserTap(); // userId 전달해서 페이지 열기
-              },
-              child: Row(
-                children: [
-                  ClipOval(
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      color: Colors.grey[400], // 기본 배경색 (사진 없을 때)
-                      child: profileImageUrl != null && profileImageUrl.isNotEmpty
-                          ? Image.network(
-                        profileImageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          // 이미지 로드 실패 시 기본 배경만 보여줌
-                          return Container(color: Colors.grey[400]);
-                        },
-                      )
-                          : null, // 사진 없으면 비워둠
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    userName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black87,
-                          blurRadius: 2,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  if (imageUrls.length == 1) {
-    return buildImage(imageUrls[0]);
-  } else {
-    return SizedBox(
-      height: 480,
-      child: PageView.builder(
-        itemCount: imageUrls.length,
-        itemBuilder: (context, index) {
-          return buildImage(imageUrls[index]);
-        },
-      ),
-    );
-  }
-}
