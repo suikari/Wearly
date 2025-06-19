@@ -66,6 +66,17 @@
                 android:name="com.naver.oauth.client_name"
                 android:value="${NAVER_CLIENT_NAME}" />
         </receiver>
+
+        <activity android:name="com.navercorp.nid.oauth.NidOAuthLoginActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="your_custom_scheme" android:host="oauth"/>
+            </intent-filter>
+        </activity>
         <meta-data
             android:name="com.kakao.sdk.AppKey"
             android:value="${kakao_app_key}"/>
@@ -78,7 +89,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="kakao102bf4d0a6" android:host="oauth"/>
+                <data android:scheme="${kakao_app_key}" android:host="oauth"/>
             </intent-filter>
         </activity>
     </application>

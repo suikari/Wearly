@@ -36,6 +36,7 @@ Future<void> main() async {
   KakaoSdk.init(
     nativeAppKey: '102bf4d0a6bfeeab56fd2d28f7573cc1',
   );
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeProvider(),

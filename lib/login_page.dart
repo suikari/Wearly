@@ -211,11 +211,11 @@ class _LoginPageState extends State<LoginPage> {
       print('login success, token: ${kakaoToken.accessToken}');
       final user = await UserApi.instance.me();
       final uid = 'kakao:${user.id}';
-      final email = user.kakaoAccount?.email ?? '';
+      final email = user.id ?? '';
       final profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl ?? '';
       String nickname = user.kakaoAccount?.profile?.nickname ?? '';
-      print(uid);
       print(email);
+      print(nickname);
       print(profileImageUrl);
       // Firebase Functions에 요청
       final res = await http.post(
@@ -223,15 +223,15 @@ class _LoginPageState extends State<LoginPage> {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'uid': uid,
-          'email': email,
           'nickname': nickname,
           'provider': 'kakao',
         }),
       );
-
+      print('Response status: ${res.statusCode}');
+      print('Response body: ${res.body}');
       final customToken = json.decode(res.body)['token'];
       final UserCredential userCredential = await _auth.signInWithCustomToken(customToken);
-
+      print(customToken);
       String? authUid = userCredential.user?.uid;
 
       if (authUid != null) {
@@ -283,17 +283,21 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> signInWithNaver() async {
+    print('signInWithNaver started');
     try {
       final NaverLoginResult result = await FlutterNaverLogin.logIn();
-
+      print('NaverLoginResult: $result');
+      print("로그인 상태: ${result.status}");
+      print("에러 메시지: ${result.errorMessage}");
       if (result.status == NaverLoginStatus.loggedIn) {
         final NaverAccountResult? account = result.account;
-
         final String uid = 'naver:${account?.id ?? ''}';
         final String email = account?.email ?? '';
         final String nickname = account?.nickname ?? '';
         final String profileImage = account?.profileImage ?? '';
-
+        print(uid);
+        print(email);
+        print(profileImage);
         // 👉 Firebase 커스텀 토큰 발급 요청 후 로그인
         final res = await http.post(
           Uri.parse('https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken'),
