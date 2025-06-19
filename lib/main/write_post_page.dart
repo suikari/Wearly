@@ -1,14 +1,21 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_editor_plus/image_editor_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:ui' as ui;
+import 'package:intl/intl.dart';
 
+const String KMA_API_KEY = 'Wjb8zKkrrbUtY2pQXCNNv%2B5M2EqShPVq92B139bdclMwmJDylxQjPYUUF6cobHdRtf9Et%2Bq0MxDFn1Oh4tBLhg%3D%3D';
 class WritePostPage extends StatefulWidget {
   const WritePostPage({super.key});
 
@@ -32,11 +39,24 @@ class _WritePostPageState extends State<WritePostPage> {
   int currentPageIndex = 0;
   bool isLoadingTags = true;
 
+  DateTime? selectedDT;
+  int? selectedTemp;
+
+  String? userId;
+
+
   @override
   void initState() {
     super.initState();
     fetchTagsFromFirestore();
+    getUserId();
   }
+
+  Future<void> getUserId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    userId = prefs.getString('userId');
+  }
+
 
   Future<void> fetchTagsFromFirestore() async {
     try {
@@ -138,6 +158,36 @@ class _WritePostPageState extends State<WritePostPage> {
     });
   }
 
+  DateTime? selectedDateTime;
+
+  void _openDateClockPicker() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: SizedBox(
+          width: 350,
+          height: 600,
+          child: DateClockPicker(
+            onDateTimeSelected: (DateTime dt) async {
+              setState(() {
+                selectedDateTime = dt;
+                selectedTemp = null;
+              });
+              final grid = convertGRID_GPS(37.5665, 126.9780); // 서울
+              int? temp = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
+
+              setState(() {
+                selectedTemp = temp;
+              });
+
+              Navigator.of(context).pop();
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     titleController.dispose();
@@ -147,6 +197,7 @@ class _WritePostPageState extends State<WritePostPage> {
 
   @override
   Widget build(BuildContext context) {
+    final dateTimeFormat = DateFormat('yyyy-MM-dd HH:mm');
     return Scaffold(
       appBar: AppBar(title: const Text('글 쓰기')),
       body: isLoadingTags
@@ -258,7 +309,7 @@ class _WritePostPageState extends State<WritePostPage> {
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
                       child: ChoiceChip(
-                        label: Text(tag),
+                        label: Text('#$tag'),
                         selected: isSelected,
                         onSelected: (selected) {
                           setState(() {
@@ -285,48 +336,77 @@ class _WritePostPageState extends State<WritePostPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(children: [
-                  const Icon(Icons.wb_sunny_outlined),
-                  const SizedBox(width: 8),
-                  DropdownButton<String>(
-                    value: selectedWeather,
-                    items: ['맑음', '흐림', '비', '눈']
-                        .map((w) => DropdownMenuItem(value: w, child: Text(w)))
-                        .toList(),
-                    onChanged: (val) => setState(() => selectedWeather = val!),
-                  ),
-                ]),
-                Row(children: [
-                  const Icon(Icons.wb_sunny_outlined),
-                  const SizedBox(width: 8),
-                  DropdownButton<String>(
-                    value: selectedFeeling,
-                    items: ['적당해요', '추웠어요', '더웠어요']
-                        .map((w) => DropdownMenuItem(value: w, child: Text(w)))
-                        .toList(),
-                    onChanged: (val) => setState(() => selectedFeeling = val!),
-                  ),
-                ]),
-                Row(children: [
-                  DropdownButton<double>(
-                    value: selectedTemperature,
-                    items: [10.0, 15.0, 20.0, 25.0, 30.0]
-                        .map((t) => DropdownMenuItem(value: t, child: Text('${t.toDouble()}℃')))
-                        .toList(),
-                    onChanged: (val) => setState(() => selectedTemperature = val!),
-                  ),
-                  const SizedBox(width: 8),
-                  Row(
-                    children: [
-                      const Text('공개 여부: '),
-                      Switch(
-                        value: isPublic,
-                        onChanged: (val) => setState(() => isPublic = val),
-                        activeColor: Colors.pink,
-                      ),
-                    ],
-                  ),
-                ]),
+                Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.wb_sunny_outlined),
+                        const SizedBox(width: 8),
+                        DropdownButton<String>(
+                          value: selectedWeather,
+                          items: ['맑음', '흐림', '비', '눈']
+                            .map((w) => DropdownMenuItem(value: w, child: Text(w)))
+                            .toList(),
+                          onChanged: (val) => setState(() => selectedWeather = val!),
+                        ),
+                      ]
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.wb_sunny_outlined),
+                        const SizedBox(width: 8),
+                        DropdownButton<String>(
+                          value: selectedFeeling,
+                          items: ['적당해요', '추웠어요', '더웠어요']
+                            .map((w) => DropdownMenuItem(value: w, child: Text(w)))
+                            .toList(),
+                          onChanged: (val) => setState(() => selectedFeeling = val!),
+                        ),
+                      ]
+                    ),
+                    Row(
+                        children: [
+                          DropdownButton<double>(
+                            value: selectedTemperature,
+                            items: [10.0, 15.0, 20.0, 25.0, 30.0]
+                                .map((t) => DropdownMenuItem(value: t, child: Text('${t.toDouble()}℃')))
+                                .toList(),
+                            onChanged: (val) => setState(() => selectedTemperature = val!),
+                          ),
+                          const SizedBox(width: 8),
+                          Row(
+                            children: [
+                              const Text('공개 여부: '),
+                              Switch(
+                                value: isPublic,
+                                onChanged: (val) => setState(() => isPublic = val),
+                                activeColor: Colors.pink,
+                              ),
+                            ],
+                          ),
+                        ]
+                    ),
+                    Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed: _openDateClockPicker,
+                          child: selectedDateTime != null
+                              ? Text('선택된 시간: ${dateTimeFormat.format(selectedDateTime!)}')
+                              : Text('날짜 선택'),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        if (selectedTemp != null)
+                          Text(
+                            '해당 시간의 기온: ${selectedTemp}°C',
+                            style: const TextStyle(fontSize: 22, color: Colors.blue),
+                          )
+                      ],
+                    )
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -372,6 +452,7 @@ class _WritePostPageState extends State<WritePostPage> {
                       "imageUrls": imageUrls,
                       "tags": selectedTags,
                       "weather": selectedWeather,
+                      "writeid" : userId
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -395,4 +476,262 @@ class _WritePostPageState extends State<WritePostPage> {
       ),
     );
   }
+}
+
+class DateClockPicker extends StatefulWidget {
+  final void Function(DateTime selectedDateTime) onDateTimeSelected;
+
+  const DateClockPicker({super.key, required this.onDateTimeSelected});
+
+  @override
+  State<DateClockPicker> createState() => _DateClockPickerState();
+}
+
+class _DateClockPickerState extends State<DateClockPicker> {
+  DateTime selectedDate = DateTime.now();
+  int selectedHour = 12;
+  bool isPM = false; // ✅ AM/PM 상태 저장
+
+  final dateTimeFormat = DateFormat('yyyy-MM-dd hh:mm a');
+
+  Future<void> _pickDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
+
+  void _onTapDown(TapDownDetails details, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final touchPoint = details.localPosition;
+
+    final dx = touchPoint.dx - center.dx;
+    final dy = touchPoint.dy - center.dy;
+
+    double angle = atan2(dy, dx);
+    angle = angle < -pi / 2 ? (2 * pi + angle) : angle;
+    double adjustedAngle = angle + pi / 2;
+    if (adjustedAngle > 2 * pi) adjustedAngle -= 2 * pi;
+
+    int hour = (adjustedAngle / (2 * pi) * 12).round() % 12;
+    if (hour == 0) hour = 12;
+
+    setState(() {
+      selectedHour = hour;
+    });
+  }
+
+  void _onComplete() {
+    // ✅ AM/PM 적용된 24시간 변환
+    int hour24 = selectedHour % 12 + (isPM ? 12 : 0);
+    if (hour24 == 24) hour24 = 0;
+
+    final DateTime combined = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      hour24,
+      0,
+    );
+    widget.onDateTimeSelected(combined);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = 300.0;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ElevatedButton(
+          onPressed: () => _pickDate(context),
+          child: Text('날짜 선택: ${DateFormat('yyyy-MM-dd').format(selectedDate)}'),
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTapDown: (details) => _onTapDown(details, Size(size, size)),
+          child: CustomPaint(
+            size: Size(size, size),
+            painter: ClockPainter(selectedHour: selectedHour),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // ✅ AM/PM 토글 버튼
+        ToggleButtons(
+          isSelected: [!isPM, isPM],
+          onPressed: (index) {
+            setState(() {
+              isPM = index == 1;
+            });
+          },
+          children: const [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text('AM'),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text('PM'),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+        Text(
+          '선택한 시간: ${selectedHour.toString().padLeft(2, '0')}:00 ${isPM ? 'PM' : 'AM'}',
+          style: const TextStyle(fontSize: 24),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: (){
+            _onComplete();
+          },
+          child: const Text('완료'),
+        ),
+      ],
+    );
+  }
+}
+
+class ClockPainter extends CustomPainter {
+  final int selectedHour;
+
+  ClockPainter({required this.selectedHour});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    final paintCircle = Paint()
+      ..color = Colors.grey.shade300
+      ..style = PaintingStyle.fill;
+
+    final paintOutline = Paint()
+      ..color = Colors.black87
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    final paintHourHand = Paint()
+      ..color = Colors.blueAccent
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+
+    final paintCenterDot = Paint()
+      ..color = Colors.black87
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(center, radius, paintCircle);
+    canvas.drawCircle(center, radius, paintOutline);
+
+    double angle = (selectedHour % 12) * (2 * pi / 12) - pi / 2;
+    final handLength = radius * 0.5;
+    final handEnd = Offset(
+      center.dx + handLength * cos(angle),
+      center.dy + handLength * sin(angle),
+    );
+
+    canvas.drawLine(center, handEnd, paintHourHand);
+    canvas.drawCircle(center, 8, paintCenterDot);
+
+    final textPainter = TextPainter(
+        textAlign: TextAlign.center,
+        textDirection: ui.TextDirection.ltr);
+
+    final numberRadius = radius * 0.8;
+
+    for (int i = 1; i <= 12; i++) {
+      final numAngle = (i * 2 * pi / 12) - pi / 2;
+      final offset = Offset(
+        center.dx + numberRadius * cos(numAngle),
+        center.dy + numberRadius * sin(numAngle),
+      );
+
+      textPainter.text = TextSpan(
+        text: i.toString(),
+        style: TextStyle(
+          color: i == selectedHour ? Colors.blue : Colors.black54,
+          fontSize: i == selectedHour ? 24 : 18,
+          fontWeight: i == selectedHour ? FontWeight.bold : FontWeight.normal,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+          canvas,
+          offset - Offset(textPainter.width / 2, textPainter.height / 2));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ClockPainter oldDelegate) {
+    return oldDelegate.selectedHour != selectedHour;
+  }
+}
+
+Future<int?> fetchTemperatureFromKMA(DateTime dateTime, int nx, int ny) async {
+  String date = DateFormat('yyyyMMdd').format(dateTime);
+  String time = DateFormat('HH00').format(dateTime);
+  String baseTime = _getNearestBaseTime(dateTime);
+
+  final url = Uri.parse(
+    'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst'
+        '?serviceKey=$KMA_API_KEY'
+        '&numOfRows=1000&pageNo=1&dataType=JSON'
+        '&base_date=$date&base_time=$baseTime'
+        '&nx=$nx&ny=$ny',
+  );
+
+  final response = await http.get(url);
+  if (response.statusCode == 200) {
+    final data = json.decode(response.body);
+    final List items = data['response']['body']['items']['item'];
+    for (var item in items) {
+      if (item['category'] == 'TMP' &&
+          item['fcstDate'] == date &&
+          item['fcstTime'] == time) {
+        return double.tryParse(item['fcstValue'] ?? '')?.round();
+      }
+    }
+  }
+  return null;
+}
+
+String _getNearestBaseTime(DateTime dt) {
+  final times = [2, 5, 8, 11, 14, 17, 20, 23];
+  int hour = dt.hour;
+  int baseHour = times.lastWhere((t) => hour >= t, orElse: () => 23);
+  return baseHour.toString().padLeft(2, '0') + "00";
+}
+
+/// ▶ 위도, 경도 → 격자 좌표
+Map<String, int> convertGRID_GPS(double lat, double lon) {
+  const double RE = 6371.00877, GRID = 5.0,
+      SLAT1 = 30.0, SLAT2 = 60.0, OLON = 126.0, OLAT = 38.0,
+      XO = 43, YO = 136;
+  double DEGRAD = pi / 180.0;
+  double re = RE / GRID;
+  double slat1 = SLAT1 * DEGRAD;
+  double slat2 = SLAT2 * DEGRAD;
+  double olon = OLON * DEGRAD;
+  double olat = OLAT * DEGRAD;
+  double sn = log(cos(slat1) / cos(slat2)) /
+      log(tan(pi * 0.25 + slat2 * 0.5) / tan(pi * 0.25 + slat1 * 0.5));
+  double sf = pow(tan(pi * 0.25 + slat1 * 0.5), sn) * cos(slat1) / sn;
+  double ro = re * sf / pow(tan(pi * 0.25 + olat * 0.5), sn);
+  double ra = re * sf / pow(tan(pi * 0.25 + lat * DEGRAD * 0.5), sn);
+  double theta = lon * DEGRAD - olon;
+  if (theta > pi) theta -= 2.0 * pi;
+  if (theta < -pi) theta += 2.0 * pi;
+  theta *= sn;
+  int x = (ra * sin(theta) + XO + 0.5).floor();
+  int y = (ro - ra * cos(theta) + YO + 0.5).floor();
+  return {'x': x, 'y': y};
 }
