@@ -4,44 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main/widget/comment_list.dart';
 import 'package:w2wproject/main/widget/image_carousel_card.dart';
 
-// 댓글 모델 (대댓글 포함)
-class Comment {
-  final String userName;
-  final String comment;
-  final List<Comment> replies; // 대댓글 리스트
-
-  Comment({
-    required this.userName,
-    required this.comment,
-    List<Comment>? replies,
-  }) : replies = replies ?? [];
-}
-
-// Feed 모델
-class Feed {
-  final String imagePath;
-  final String title;
-  final String description;
-  final String hashtags;
-  final String location;
-  final String date;
-  final String mood;
-  final String temperature;
-  final List<Comment> comments;
-
-  Feed({
-    required this.imagePath,
-    required this.title,
-    required this.description,
-    required this.hashtags,
-    required this.location,
-    required this.date,
-    required this.mood,
-    required this.temperature,
-    List<Comment>? comments,
-  }) : comments = comments ?? [];
-}
-
 // Feed 전체 리스트 페이지
 class FeedListPage extends StatefulWidget {
   final void Function(String userId) onUserTap;
@@ -201,33 +163,34 @@ class _FeedListPageState extends State<FeedListPage> {
                                   fontWeight: FontWeight.bold, fontSize: 20),
                             ),
                           ),
-                          PopupMenuButton<String>(
-                            icon: Icon(Icons.more_vert, color: Colors.grey),
-                            onSelected: (value) {
-                              // 메뉴 선택 시 동작
-                              if (value == 'edit') {
-                                print("Edit 선택됨");
-                              } else if (value == 'del') {
-                                print("Delete 선택됨");
-                              } else if (value == 'main') {
-                                updateMainCoordiId(feed['id']);
-                              }
-                            },
-                            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                              PopupMenuItem<String>(
-                                value: 'edit',
-                                child: Text('수정'),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'del',
-                                child: Text('삭제'),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'main',
-                                child: Text('대표설정'),
-                              ),
-                            ],
-                          ),
+                          if (feed['writeid'] != null && feed['writeid'] == currentUserId)
+                            PopupMenuButton<String>(
+                              icon: Icon(Icons.more_vert, color: Colors.grey),
+                              onSelected: (value) {
+                                // 메뉴 선택 시 동작
+                                if (value == 'edit') {
+                                  print("Edit 선택됨");
+                                } else if (value == 'del') {
+                                  print("Delete 선택됨");
+                                } else if (value == 'main') {
+                                  updateMainCoordiId(feed['id']);
+                                }
+                              },
+                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                PopupMenuItem<String>(
+                                  value: 'edit',
+                                  child: Text('수정'),
+                                ),
+                                PopupMenuItem<String>(
+                                  value: 'del',
+                                  child: Text('삭제'),
+                                ),
+                                PopupMenuItem<String>(
+                                  value: 'main',
+                                  child: Text('대표설정'),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
 

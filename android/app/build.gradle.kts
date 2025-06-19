@@ -29,14 +29,14 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    signingConfigs {
-        create("release") {
-            storeFile = file(localProperties["storeFile"] as String)
-            storePassword = localProperties["storePassword"] as String
-            keyAlias = localProperties["keyAlias"] as String
-            keyPassword = localProperties["keyPassword"] as String
-        }
-    }
+//    signingConfigs {
+//        create("release") {
+//            storeFile = file(localProperties["storeFile"] as String)
+//            storePassword = localProperties["storePassword"] as String
+//            keyAlias = localProperties["keyAlias"] as String
+//            keyPassword = localProperties["keyPassword"] as String
+//        }
+//    }
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
@@ -70,15 +70,15 @@ android {
     }
 
     buildTypes {
-        getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
+//        getByName("release") {
+//            signingConfig = signingConfigs.getByName("release")
+//            isMinifyEnabled = true
+//            isShrinkResources = true
+//            proguardFiles(
+//                getDefaultProguardFile("proguard-android-optimize.txt"),
+//                "proguard-rules.pro"
+//            )
+//        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
