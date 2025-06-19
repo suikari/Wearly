@@ -230,7 +230,7 @@ class _ClosetPageState extends State<ClosetPage> {
         currentIndex: _selectedNavIndex,
         onTap: (i) {
           setState(() => _selectedNavIndex = i);
-        },
+        }, nickname: '', profileImageUrl: '',
       ),
     );
   }

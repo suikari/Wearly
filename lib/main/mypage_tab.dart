@@ -26,31 +26,15 @@ class _MyPageWidgetState extends State<MyPageTab> {
   bool showDetail = false;
   String? selectedFeedId;
   bool isLoading = true;
+  bool isUserLoading = true;
 
+  String currentUserId = '';
+  String viewedUserId = '';
 
-
-
-  String currentUserId = 'XHIEfJKfSqhT7SqfZXoX';
   final FirebaseFirestore fs = FirebaseFirestore.instance;
 
-  final List<Map<String, dynamic>> userProfiles = [
-    {
-      "userId": "XHIEfJKfSqhT7SqfZXoX",
-      "name": "윤사나",
-      "profileImages": ['assets/w1.jpg', 'assets/w3.jpg', 'assets/w5.jfif'],
-      "bio": "안녕하세요. 윤사나 입니다.",
-      "hashtags": "#캐주얼 #반팔",
-      "mainProfileImage": "assets/w2.jpg"
-    },
-    {
-      "userId": "user456",
-      "name": "김지은",
-      "profileImages": ['assets/w7.jfif', 'assets/w8.jfif'],
-      "bio": "반가워요. 지은이에요!",
-      "hashtags": "#댄디 #봄코디",
-      "mainProfileImage": "assets/w9.jfif"
-    },
-  ];
+  List<Map<String, dynamic>> userProfiles = [];
+  Map<String, dynamic> mainCoordiFeed = {};
 
   final PageController _pageController = PageController(viewportFraction: 0.85);
 
@@ -58,8 +42,14 @@ class _MyPageWidgetState extends State<MyPageTab> {
   Map<String, List<Map<String, dynamic>>> feedItemsByMonth = {};
 
   Future<void> fetchFeeds() async {
+    print('fetchstart==>>>$currentUserId');
     try {
-      final snapshot = await fs.collection('feeds').orderBy('cdatetime', descending: true).get();
+      //currentUserId
+      final snapshot = await fs
+          .collection('feeds')
+          .where('writeid', isEqualTo: currentUserId) // 조건 추가
+          .orderBy('cdatetime', descending: true)       // 정렬 기준
+          .get();
       final items = snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
@@ -95,17 +85,87 @@ class _MyPageWidgetState extends State<MyPageTab> {
   @override
   void initState() {
     super.initState();
-    fetchFeeds();
     _loadUserId();
+
   }
 
   Future<void> _loadUserId() async {
     String? userId = await getSavedUserId();
     setState(() {
       currentUserId = userId!;
-      print("currentUserId====>$currentUserId");
+      if ( widget.userId == null || widget.userId == '' ){
+        viewedUserId = userId!;
+      }
+      //print("currentUserId====>$currentUserId");
+      fetchCurrentUserProfile();
     });
   }
+
+  Future<void> fetchCurrentUserProfile() async {
+    if (currentUserId == null) return; // null 체크
+
+    currentUserId = widget.userId ?? currentUserId;
+
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data()!;
+        final userId = docSnapshot.id;
+        data['id'] = userId;
+
+        setState(() {
+          userProfiles = [data];
+          isUserLoading = false;
+        });
+
+        // 🔽 mainCoordiId 가져와서 feeds에서 문서 가져오기
+        final mainCoordiId = data['mainCoordiId'];
+        if (mainCoordiId != null && mainCoordiId.toString().trim().isNotEmpty) {
+          try {
+            final feedSnapshot = await FirebaseFirestore.instance
+                .collection('feeds')
+                .doc(mainCoordiId)
+                .get();
+
+            if (feedSnapshot.exists) {
+              final feedData = feedSnapshot.data()!;
+              feedData['id'] = feedSnapshot.id;
+
+              // 🔽 리스트에 추가
+              setState(() {
+                mainCoordiFeed = feedData;
+              });
+
+              //print('mainCoordiFeeds 리스트에 추가됨: $feedData');
+            } else {
+              //print('해당 mainCoordiId 문서가 존재하지 않음');
+            }
+          } catch (e) {
+            //print('feeds 문서 가져오기 실패: $e');
+          }
+        }
+        fetchFeeds();
+
+      } else {
+        //print('해당 userId 문서가 존재하지 않습니다.');
+        setState(() {
+          userProfiles = [];
+          isUserLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isUserLoading = false;
+      });
+      print('유저 프로필 불러오기 실패: $e');
+    }
+  }
+
+
 
   @override
   void dispose() {
@@ -129,7 +189,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
 
   Map<String, dynamic> getUserProfile(String userId) {
     return userProfiles.firstWhere(
-          (profile) => profile['userId'] == userId,
+          (profile) => profile['id'] == userId,
       orElse: () => userProfiles[0],
     );
   }
@@ -152,10 +212,25 @@ class _MyPageWidgetState extends State<MyPageTab> {
 
   @override
   Widget build(BuildContext context) {
-    final String viewedUserId = widget.userId ?? currentUserId;
+
+    if (isUserLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (userProfiles.isEmpty) {
+      return const Center(child: Text("프로필 데이터를 불러올 수 없습니다."));
+    }
+
+
+    print("widget.userId ==>${widget.userId }");
+    print("currentUserId ==>${currentUserId }");
+    print("viewedUserId==>$viewedUserId");
+
     final bool isOwnPage = viewedUserId == currentUserId;
+
     final Map<String, dynamic> profile = getUserProfile(viewedUserId);
 
+    //print("profile ==> $profile");
     final theme = Theme.of(context);
     final bottomNavTheme = theme.bottomNavigationBarTheme;
     final backgroundColor = theme.scaffoldBackgroundColor;
@@ -164,12 +239,15 @@ class _MyPageWidgetState extends State<MyPageTab> {
     final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
     final screenWidth = MediaQuery.of(context).size.width;
 
+
+
+
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 프로필 UI (생략 안함)
+            // 상단 프로필 UI
             AnimatedContainer(
               duration: Duration(milliseconds: 200),
               width: screenWidth,
@@ -194,55 +272,47 @@ class _MyPageWidgetState extends State<MyPageTab> {
                         ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundImage: AssetImage(profile["mainProfileImage"]),
-                        ),
+                        if (profile["profileImage"] != null &&
+                            profile["profileImage"].toString().isNotEmpty)
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundImage: NetworkImage(profile["profileImage"]),
+                          ),
                         SizedBox(width: 12),
-                        Text(profile["name"], style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: selectedItemColor)),
+                        Text(
+                          profile["nickname"] ?? '',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: selectedItemColor),
+                        ),
                       ],
                     )
                         : Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundImage: AssetImage(profile["mainProfileImage"]),
-                        ),
-                        SizedBox(height: 8),
-                        Text(profile["name"], style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: selectedItemColor)),
-                        AnimatedCrossFade(
-                          duration: Duration(milliseconds: 300),
-                          crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                          firstChild: Column(
-                            children: [
-                              SizedBox(height: 8),
-                              SizedBox(
-                                height: 360,
-                                child: PageView.builder(
-                                  controller: _pageController,
-                                  itemCount: profile["profileImages"].length,
-                                  itemBuilder: (context, index) {
-                                    return Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 8),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Image.asset(profile["profileImages"][index], fit: BoxFit.cover),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(profile["bio"], style: TextStyle(color: selectedItemColor)),
-                              Text(profile["hashtags"], style: TextStyle(color: Colors.blue)),
-                            ],
+                        if (profile["profileImage"] != null &&
+                            profile["profileImage"].toString().isNotEmpty)
+                          CircleAvatar(
+                            radius: 32,
+                            backgroundImage: NetworkImage(profile["profileImage"]),
                           ),
-                          secondChild: SizedBox.shrink(),
+                        SizedBox(height: 8),
+                        Text(
+                          profile["nickname"] ?? '',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: selectedItemColor),
+                        ),
+                        buildExpandedFeedSection(
+                          imageUrls: mainCoordiFeed["imageUrls"] ?? [],
+                          profile: profile,
+                          isExpanded: isExpanded,
+                          selectedItemColor: selectedItemColor,
+                          pageController: _pageController,
                         ),
                         TextButton(
                           onPressed: () => setState(() => isExpanded = !isExpanded),
-                          child: Icon(isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 32, color: selectedItemColor),
+                          child: Icon(
+                            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            size: 32,
+                            color: selectedItemColor,
+                          ),
                         ),
                       ],
                     ),
@@ -253,8 +323,12 @@ class _MyPageWidgetState extends State<MyPageTab> {
                     child: isOwnPage
                         ? Row(
                       children: [
-                        _buildIconBtn('assets/common/person_edit.png', () {openUserEditPage(context);}),
-                        _buildIconBtn(Icons.settings, (){ openSettingsPage(context);}),
+                        _buildIconBtn('assets/common/person_edit.png', () {
+                          openUserEditPage(context);
+                        }),
+                        _buildIconBtn(Icons.settings, () {
+                          openSettingsPage(context);
+                        }),
                       ],
                     )
                         : ElevatedButton(
@@ -272,7 +346,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
               ),
             ),
 
-            // 피드 목록
+            // 피드 목록 영역
             Expanded(
               child: IndexedStack(
                 index: showDetail ? 1 : 0,
@@ -305,8 +379,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                               ),
                               itemBuilder: (context, index) {
                                 final item = entry.value[index];
-                                final imageUrl = item["imageUrls"] != null &&
-                                    item["imageUrls"].isNotEmpty
+                                final imageUrl = item["imageUrls"] != null && item["imageUrls"].isNotEmpty
                                     ? item["imageUrls"][0]
                                     : '';
 
@@ -320,78 +393,30 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                     child: Stack(
                                       fit: StackFit.expand,
                                       children: [
-                                        // 배경 이미지
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                              8),
+                                          borderRadius: BorderRadius.circular(8),
                                           child: imageUrl != ''
-                                              ? Image.network(
-                                              imageUrl, fit: BoxFit.cover)
-                                              : Image.asset('assets/noimg.jpg',
-                                              fit: BoxFit.cover),
+                                              ? Image.network(imageUrl, fit: BoxFit.cover)
+                                              : Image.asset('assets/noimg.jpg', fit: BoxFit.cover),
                                         ),
-
-                                        // 우상단 온도 & 좌하단 기분 텍스트
-                                        if ((item["feeling"]
-                                            ?.toString()
-                                            .isNotEmpty ?? false) ||
-                                            (item["temperature"]
-                                                ?.toString()
-                                                .isNotEmpty ?? false))
+                                        if ((item["feeling"]?.toString().isNotEmpty ?? false) ||
+                                            (item["temperature"]?.toString().isNotEmpty ?? false))
                                           Positioned.fill(
                                             child: Padding(
                                               padding: EdgeInsets.all(6),
                                               child: Stack(
                                                 children: [
-                                                  if (item["temperature"]
-                                                      ?.toString()
-                                                      .isNotEmpty ?? false)
+                                                  if (item["temperature"]?.toString().isNotEmpty ?? false)
                                                     Positioned(
                                                       top: 0,
                                                       right: 0,
-                                                      child: Container(
-                                                        padding: EdgeInsets
-                                                            .symmetric(
-                                                            horizontal: 6,
-                                                            vertical: 2),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.black45,
-                                                          borderRadius: BorderRadius
-                                                              .circular(4),
-                                                        ),
-                                                        child: Text(
-                                                          '${item["temperature"]?.toString()}℃',
-                                                          style: TextStyle(
-                                                              color: Colors
-                                                                  .white,
-                                                              fontSize: 12),
-                                                        ),
-                                                      ),
+                                                      child: _buildOverlayText('${item["temperature"]}℃'),
                                                     ),
-                                                  if (item["feeling"]
-                                                      ?.toString()
-                                                      .isNotEmpty ?? false)
+                                                  if (item["feeling"]?.toString().isNotEmpty ?? false)
                                                     Positioned(
                                                       bottom: 0,
                                                       left: 0,
-                                                      child: Container(
-                                                        padding: EdgeInsets
-                                                            .symmetric(
-                                                            horizontal: 6,
-                                                            vertical: 2),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.black45,
-                                                          borderRadius: BorderRadius
-                                                              .circular(4),
-                                                        ),
-                                                        child: Text(
-                                                          item["feeling"],
-                                                          style: TextStyle(
-                                                              color: Colors
-                                                                  .white,
-                                                              fontSize: 12),
-                                                        ),
-                                                      ),
+                                                      child: _buildOverlayText(item["feeling"]),
                                                     ),
                                                 ],
                                               ),
@@ -412,7 +437,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                     DetailPage(
                       key: ValueKey(selectedFeedId),
                       feedId: selectedFeedId!,
-                      currentUserId : currentUserId,
+                      currentUserId: currentUserId,
                       onBack: closeDetail,
                     ),
                 ],
@@ -420,6 +445,22 @@ class _MyPageWidgetState extends State<MyPageTab> {
             ),
           ],
         ),
+      ),
+    );
+    ;
+  }
+
+
+  Widget _buildOverlayText(String text) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: Colors.white, fontSize: 12),
       ),
     );
   }
@@ -442,3 +483,68 @@ class _MyPageWidgetState extends State<MyPageTab> {
     );
   }
 }
+
+Widget buildExpandedFeedSection({
+  required List<dynamic> imageUrls,
+  required Map<String, dynamic> profile,
+  required bool isExpanded,
+  required Color selectedItemColor,
+  required PageController pageController,
+}) {
+  return AnimatedCrossFade(
+    duration: Duration(milliseconds: 300),
+    crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+    firstChild: Column(
+      children: [
+        SizedBox(height: 8),
+        SizedBox(
+          height: 360,
+          child: PageView.builder(
+            controller: pageController,
+            itemCount: imageUrls.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    imageUrls[index],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image),
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(child: CircularProgressIndicator());
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(profile["bio"] ?? '', style: TextStyle(color: selectedItemColor)),
+        SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: (profile["interest"] as List<dynamic>? ?? [])
+              .take(3)
+              .map((item) => Container(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              item.toString(),
+              style: TextStyle(color: Colors.blue),
+            ),
+          ))
+              .toList(),
+        )
+      ],
+    ),
+    secondChild: SizedBox.shrink(),
+  );
+}
+
