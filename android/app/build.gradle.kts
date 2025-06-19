@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -6,6 +9,10 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val localProperties = Properties().apply {
+    load(FileInputStream(File(rootDir, "local.properties")))
 }
 
 android {
@@ -22,6 +29,15 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(localProperties["storeFile"] as String)
+            storePassword = localProperties["storePassword"] as String
+            keyAlias = localProperties["keyAlias"] as String
+            keyPassword = localProperties["keyPassword"] as String
+        }
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.w2wproject"
@@ -32,11 +48,19 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
+        manifestPlaceholders += mapOf(
+            "NAVER_CLIENT_ID" to "G0sonEyPthLnRvkvNR7j",
+            "NAVER_CLIENT_SECRET" to "Xdef_o0yOx",
+            "NAVER_CLIENT_NAME" to "wearly",
+            "kakao_app_key" to "102bf4d0a6bfeeab56fd2d28f7573cc1",
+            "kakao_scheme" to "kakao102bf4d0a6"
+        )
     }
 
     dependencies {
         implementation("com.squareup.okhttp3:okhttp:4.12.0")
         implementation("androidx.work:work-runtime:2.8.1")
+        implementation("com.kakao.sdk:v2-user:2.21.4")
         implementation("com.google.guava:guava:31.1-android")
         implementation("com.google.android.gms:play-services-location:21.0.1")
         // 예: kotlin stdlib
@@ -46,10 +70,23 @@ android {
     }
 
     buildTypes {
+        getByName("release") {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+        }
+        getByName("debug") {
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
