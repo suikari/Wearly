@@ -63,7 +63,7 @@ class ThemeProvider extends ChangeNotifier {
           ),
           bottomNavigationBarTheme: BottomNavigationBarThemeData(
             backgroundColor: Color(0xFF4058A6),
-            selectedItemColor: Colors.white,
+            selectedItemColor: Colors.blueAccent,
             unselectedItemColor: Colors.white70,
           ),
           extensions: <ThemeExtension<dynamic>>[
