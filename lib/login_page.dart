@@ -210,7 +210,7 @@ class _LoginPageState extends State<LoginPage> {
           : await UserApi.instance.loginWithKakaoAccount();
       print('login success, token: ${kakaoToken.accessToken}');
       final user = await UserApi.instance.me();
-      final uid = 'kakao:${user.id}';
+      final uid = 'kakao_${user.id}';
       final email = user.id ?? '';
       final profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl ?? '';
       String nickname = user.kakaoAccount?.profile?.nickname ?? '';
