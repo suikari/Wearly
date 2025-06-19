@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+
 class CommentSection extends StatefulWidget {
   final String feedId;
   final String currentUserId; // 현재 로그인한 유저 ID를 외부에서 받음
@@ -340,6 +341,7 @@ class _CommentSectionState extends State<CommentSection> {
 
   @override
   Widget build(BuildContext context) {
+    print("widget.feedId==>${widget.feedId}");
     final commentsRef = FirebaseFirestore.instance
         .collection('feeds')
         .doc(widget.feedId)
@@ -352,7 +354,6 @@ class _CommentSectionState extends State<CommentSection> {
           stream: commentsRef.snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const CircularProgressIndicator();
-
             final commentDocs = snapshot.data!.docs;
             final comments = commentDocs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
@@ -362,7 +363,7 @@ class _CommentSectionState extends State<CommentSection> {
                 userName: data['userName'] ?? '익명',
                 comment: data['comment'] ?? '',
                 cdatetime: (data['cdatetime'] as Timestamp).toDate(),
-                parentId: (data['parentId'].toString()),
+                parentId: data['parentId'] != null ? data['parentId'].toString() : null,
               );
             }).toList();
 
@@ -376,6 +377,7 @@ class _CommentSectionState extends State<CommentSection> {
     );
   }
 }
+
 
 class Comment {
   final String id;
@@ -393,4 +395,5 @@ class Comment {
     required this.cdatetime,
     this.parentId,
   });
+
 }

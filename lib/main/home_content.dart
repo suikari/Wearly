@@ -3,9 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
 
+import 'ClosetPage.dart';
 import 'mypage_tab.dart';
 import 'wearly_weather_card.dart';
 import 'feed_widget.dart';
@@ -21,19 +23,34 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
+  static Map<String, dynamic>? cachedWeatherData;
+  static DateTime? lastFetchTime;
+  static const cacheDuration = Duration(minutes: 10);
+
   Map<String, dynamic>? weatherData;
   bool loading = true;
   String? errorMsg;
   bool isWeatherExpanded = true;
   List<String> tagList = [];
   bool showAllTags = false;
+  List<Map<String, dynamic>> _hourlyWeather = []; // TMP+POP
 
   String displayLocationName = "현재 위치";
 
   @override
   void initState() {
     super.initState();
-    fetchWeather();
+    if (cachedWeatherData != null &&
+        lastFetchTime != null &&
+        DateTime.now().difference(lastFetchTime!) < cacheDuration) {
+      weatherData = cachedWeatherData;
+      loading = false;
+      tagList = weatherData?['tags'] ?? [];
+      displayLocationName = weatherData?['location'] ?? "현재 위치";
+      setState(() {});
+    } else {
+      fetchWeather();
+    }
   }
 
   static Future<String> getSidoFromLatLng(Position position) async {
@@ -73,20 +90,14 @@ class _HomeContentState extends State<HomeContent> {
       }
 
       String result =
-      [
-        area,
-        dong,
-      ].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
+      [area, dong].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
       return result.isEmpty ? '위치 정보 없음' : result;
     }
     return '주소를 찾을 수 없습니다.';
   }
 
   Future<Map<String, dynamic>?> fetchAirQuality(
-      String sido,
-      String sigungu,
-      String airApiKey,
-      ) async {
+      String sido, String sigungu, String airApiKey) async {
     String url =
         'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty'
         '?serviceKey=$airApiKey'
@@ -104,8 +115,7 @@ class _HomeContentState extends State<HomeContent> {
               (e) =>
           (e['pm10Value'] != null && e['pm10Value'] != "-") &&
               (e['pm25Value'] != null && e['pm25Value'] != "-"),
-          orElse:
-              () => items.firstWhere(
+          orElse: () => items.firstWhere(
                 (e) => (e['pm10Value'] != null && e['pm10Value'] != "-"),
             orElse: () => items.first,
           ),
@@ -145,22 +155,18 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Future<Map<String, int?>> fetchYesterdayTmxTmn(
-      int nx,
-      int ny,
-      String today,
-      String apiKey,
-      ) async {
+      int nx, int ny, String today, String apiKey) async {
     DateTime now = DateTime.now().toUtc().add(Duration(hours: 9));
     DateTime yesterdayDt = now.subtract(Duration(days: 1));
     String yesterday =
         "${yesterdayDt.year.toString().padLeft(4, '0')}${yesterdayDt.month.toString().padLeft(2, '0')}${yesterdayDt.day.toString().padLeft(2, '0')}";
-    String yesterdayBaseTime = getBaseTime(yesterdayDt);
+    String baseTime = "2300"; // 반드시 23시
 
     String urlFcstYesterday =
         "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?"
         "serviceKey=$apiKey"
         "&numOfRows=1000&pageNo=1&dataType=JSON"
-        "&base_date=$yesterday&base_time=$yesterdayBaseTime"
+        "&base_date=$yesterday&base_time=$baseTime"
         "&nx=$nx&ny=$ny";
 
     final yesterFcstResponse = await http.get(Uri.parse(urlFcstYesterday));
@@ -170,45 +176,28 @@ class _HomeContentState extends State<HomeContent> {
       final Map<String, dynamic> yesterFcstData = json.decode(
         yesterFcstResponse.body,
       );
-      if (yesterFcstData['response']['header']['resultMsg'] ==
-          "NORMAL_SERVICE") {
-        final List yesterFcstItems =
-        yesterFcstData['response']['body']['items']['item'];
-        final todayTmxList =
-        yesterFcstItems
-            .where((e) => e['fcstDate'] == today && e['category'] == 'TMX')
-            .toList();
-        final todayTmnList =
-        yesterFcstItems
-            .where((e) => e['fcstDate'] == today && e['category'] == 'TMN')
-            .toList();
+      print("urlFcstYesterday>>$urlFcstYesterday");
 
-        tmx =
-        todayTmxList.isNotEmpty
-            ? double.tryParse(
-          todayTmxList.reduce(
-                (a, b) =>
-            a['fcstTime'].compareTo(b['fcstTime']) > 0 ? a : b,
-          )['fcstValue'] ??
-              '',
-        )?.round()
+      if (yesterFcstData['response']['header']['resultMsg'] == "NORMAL_SERVICE") {
+        final List yesterFcstItems = yesterFcstData['response']['body']['items']['item'];
+        final todayTmxList = yesterFcstItems.where(
+                (e) => e['fcstDate'] == today && e['category'] == 'TMX'
+        ).toList();
+        final todayTmnList = yesterFcstItems.where(
+                (e) => e['fcstDate'] == today && e['category'] == 'TMN'
+        ).toList();
+
+        tmx = todayTmxList.isNotEmpty
+            ? double.tryParse(todayTmxList.first['fcstValue'] ?? '')?.round()
             : null;
-        tmn =
-        todayTmnList.isNotEmpty
-            ? double.tryParse(
-          todayTmnList.reduce(
-                (a, b) =>
-            a['fcstTime'].compareTo(b['fcstTime']) < 0 ? a : b,
-          )['fcstValue'] ??
-              '',
-        )?.round()
+        tmn = todayTmnList.isNotEmpty
+            ? double.tryParse(todayTmnList.first['fcstValue'] ?? '')?.round()
             : null;
       }
     }
     return {'tmx': tmx, 'tmn': tmn};
   }
 
-  // ★ 이 함수 추가: PTY/SKY 기반 상태 텍스트 반환
   String getWeatherStatus(int? pty, int? sky) {
     if (pty == null || pty == 0) {
       switch (sky) {
@@ -237,16 +226,28 @@ class _HomeContentState extends State<HomeContent> {
     }
   }
 
-  // ★ 추가: 가장 가까운 시간값을 반환
   String findClosestValue(List<Map<String, dynamic>> items, String targetTime) {
     if (items.isEmpty) return '';
-    items.sort((a, b) =>
-        (int.parse(a['fcstTime']) - int.parse(targetTime)).abs().compareTo(
-            (int.parse(b['fcstTime']) - int.parse(targetTime)).abs()));
+    items.sort((a, b) => (int.parse(a['fcstTime']) - int.parse(targetTime)).abs().compareTo(
+        (int.parse(b['fcstTime']) - int.parse(targetTime)).abs()));
     return items.first['fcstValue'] ?? '';
   }
 
-  Future<void> fetchWeather() async {
+  Future<void> fetchWeather({bool force = false}) async {
+    // force 옵션이 아니고, 캐시가 유효하면 캐시 사용
+    if (!force &&
+        cachedWeatherData != null &&
+        lastFetchTime != null &&
+        DateTime.now().difference(lastFetchTime!) < cacheDuration) {
+      setState(() {
+        weatherData = cachedWeatherData;
+        loading = false;
+        tagList = weatherData?['tags'] ?? [];
+        displayLocationName = weatherData?['location'] ?? "현재 위치";
+      });
+      return;
+    }
+
     setState(() {
       loading = true;
       errorMsg = null;
@@ -312,9 +313,20 @@ class _HomeContentState extends State<HomeContent> {
 
       final List fcstItems = fcstData['response']['body']['items']['item'];
 
+      List<Map<String, dynamic>> hourlyWeather = fcstItems
+          .where((item) => item['category'] == 'TMP')
+          .map<Map<String, dynamic>>((item) => {
+        'fcstTime': item['fcstTime'],
+        'temp': double.tryParse(item['fcstValue'] ?? '') ?? 0.0,
+      })
+          .toList();
+
       final tmxTmn = await fetchYesterdayTmxTmn(nx, ny, today, apiKey);
       int? tmx = tmxTmn['tmx'];
       int? tmn = tmxTmn['tmn'];
+      print('예보 기준 오늘 일교차: ${tmx != null && tmn != null ? (tmx - tmn) : "데이터 없음"}');
+      print('오늘 날짜(today): $today');
+      print('hourlyWeather: $hourlyWeather');
 
       int popMax = 0;
       int? curTemp;
@@ -372,10 +384,7 @@ class _HomeContentState extends State<HomeContent> {
           orElse: () => {},
         );
         curHumidity = int.tryParse(
-            match.isNotEmpty
-                ? match['fcstValue']
-                : findClosestValue(rehList, curHour)
-        ) ?? 0;
+            match.isNotEmpty ? match['fcstValue'] : findClosestValue(rehList, curHour)) ?? 0;
       }
       if (wind == null) {
         final match = wsdList.firstWhere(
@@ -383,10 +392,7 @@ class _HomeContentState extends State<HomeContent> {
           orElse: () => {},
         );
         wind = double.tryParse(
-            match.isNotEmpty
-                ? match['fcstValue']
-                : findClosestValue(wsdList, curHour)
-        ) ?? 0.0;
+            match.isNotEmpty ? match['fcstValue'] : findClosestValue(wsdList, curHour)) ?? 0.0;
       }
 
       curTemp ??= tmx ?? tmn ?? 0;
@@ -402,29 +408,41 @@ class _HomeContentState extends State<HomeContent> {
         airApiKey,
       );
 
+      // 태그도 weatherData에 같이 저장
+      final allData = {
+        'location': displayLocationName,
+        'temp': curTemp,
+        'humidity': curHumidity,
+        'wind': wind,
+        'minTemp': tmn,
+        'maxTemp': tmx,
+        'precipitation': popMax,
+        'fineDust': airQuality?['pm10'] ?? 0,
+        'ultraFineDust': airQuality?['pm25'] ?? 0,
+        'baseDate': baseDate ?? today,
+        'baseTime': baseHour ?? curHour,
+        'weatherStatus': getWeatherStatus(pty, sky),
+        'tags': tagList,
+      };
+
       setState(() {
-        weatherData = {
-          'location': displayLocationName,
-          'temp': curTemp,
-          'humidity': curHumidity,
-          'wind': wind,
-          'minTemp': tmn,
-          'maxTemp': tmx,
-          'precipitation': popMax,
-          'fineDust': airQuality?['pm10'] ?? 0,
-          'ultraFineDust': airQuality?['pm25'] ?? 0,
-          'baseDate': baseDate ?? today,
-          'baseTime': baseHour ?? curHour,
-          'weatherStatus': getWeatherStatus(pty, sky),
-        };
+        weatherData = allData;
         loading = false;
+        _hourlyWeather = hourlyWeather;
       });
+      cachedWeatherData = allData;
+      lastFetchTime = DateTime.now();
     } catch (e) {
       setState(() {
         loading = false;
         errorMsg = '날씨 정보를 불러오지 못했습니다.\n$e';
       });
     }
+  }
+
+  Future<String?> getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('userId');
   }
 
   @override
@@ -482,32 +500,45 @@ class _HomeContentState extends State<HomeContent> {
                         ),
                       ),
                       SizedBox(width: 6),
-                      Expanded(
-                        child: Wrap(
-                          spacing: 8,
-                          children: tagList.take(tagShowLimit).map(
-                                (tag) => Text(
-                              tag,
-                              style: TextStyle(
-                                color: Colors.blueAccent,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
+                      Flexible(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: tagList.take(tagShowLimit).map(
+                                  (tag) => Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Text(
+                                  tag,
+                                  style: TextStyle(
+                                    color: Colors.blueAccent,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          ).toList(),
+                            ).toList(),
+                          ),
                         ),
                       ),
                       IconButton(
                         icon: Icon(Icons.checkroom_rounded, color: Colors.deepPurple),
                         tooltip: '내 옷장',
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => MyPageTab(
-                                onUserTap: () {}, // 또는 실제로 쓸 함수
+                        onPressed: () async {
+                          String? userId = await getCurrentUserId();
+                          if (userId != null) {
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => ClosetPage(
+                                hourlyWeather: _hourlyWeather,
+                                currentUserId: userId,
                               ),
-                            ),
-                          );
+                            ));
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('로그인이 필요합니다.')),
+                            );
+                          }
                         },
                       ),
                       if (tagList.length > tagShowLimit)
@@ -534,10 +565,7 @@ class _HomeContentState extends State<HomeContent> {
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 4,
-                        children:
-                        tagList
-                            .skip(tagShowLimit)
-                            .map(
+                        children: tagList.skip(tagShowLimit).map(
                               (tag) => Text(
                             tag,
                             style: TextStyle(
@@ -546,8 +574,7 @@ class _HomeContentState extends State<HomeContent> {
                               fontSize: 15,
                             ),
                           ),
-                        )
-                            .toList(),
+                        ).toList(),
                       ),
                     ),
                 ],
@@ -561,7 +588,15 @@ class _HomeContentState extends State<HomeContent> {
       children.add(WeeklyBestWidget());
     }
 
-    return SingleChildScrollView(child: Column(children: children));
+    return RefreshIndicator(
+      onRefresh: () async {
+        await fetchWeather(force: true);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(children: children),
+      ),
+    );
   }
 }
 
