@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,6 +33,9 @@ Future<void> main() async {
 
   // 익명 로그인
   // await FirebaseAuth.instance.signInAnonymously();
+  KakaoSdk.init(
+    nativeAppKey: '102bf4d0a6bfeeab56fd2d28f7573cc1',
+  );
 
   runApp(
     ChangeNotifierProvider(
