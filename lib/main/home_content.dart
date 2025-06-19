@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
 
@@ -22,7 +23,6 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-  // --------- 캐싱 ---------
   static Map<String, dynamic>? cachedWeatherData;
   static DateTime? lastFetchTime;
   static const cacheDuration = Duration(minutes: 10);
@@ -33,13 +33,13 @@ class _HomeContentState extends State<HomeContent> {
   bool isWeatherExpanded = true;
   List<String> tagList = [];
   bool showAllTags = false;
+  List<Map<String, dynamic>> _hourlyWeather = []; // TMP+POP
 
   String displayLocationName = "현재 위치";
 
   @override
   void initState() {
     super.initState();
-    // 캐시 있으면 바로 표시, 아니면 fetchWeather()
     if (cachedWeatherData != null &&
         lastFetchTime != null &&
         DateTime.now().difference(lastFetchTime!) < cacheDuration) {
@@ -160,13 +160,13 @@ class _HomeContentState extends State<HomeContent> {
     DateTime yesterdayDt = now.subtract(Duration(days: 1));
     String yesterday =
         "${yesterdayDt.year.toString().padLeft(4, '0')}${yesterdayDt.month.toString().padLeft(2, '0')}${yesterdayDt.day.toString().padLeft(2, '0')}";
-    String yesterdayBaseTime = getBaseTime(yesterdayDt);
+    String baseTime = "2300"; // 반드시 23시
 
     String urlFcstYesterday =
         "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?"
         "serviceKey=$apiKey"
         "&numOfRows=1000&pageNo=1&dataType=JSON"
-        "&base_date=$yesterday&base_time=$yesterdayBaseTime"
+        "&base_date=$yesterday&base_time=$baseTime"
         "&nx=$nx&ny=$ny";
 
     final yesterFcstResponse = await http.get(Uri.parse(urlFcstYesterday));
@@ -176,22 +176,22 @@ class _HomeContentState extends State<HomeContent> {
       final Map<String, dynamic> yesterFcstData = json.decode(
         yesterFcstResponse.body,
       );
+      print("urlFcstYesterday>>$urlFcstYesterday");
+
       if (yesterFcstData['response']['header']['resultMsg'] == "NORMAL_SERVICE") {
         final List yesterFcstItems = yesterFcstData['response']['body']['items']['item'];
-        final todayTmxList =
-        yesterFcstItems.where((e) => e['fcstDate'] == today && e['category'] == 'TMX').toList();
-        final todayTmnList =
-        yesterFcstItems.where((e) => e['fcstDate'] == today && e['category'] == 'TMN').toList();
+        final todayTmxList = yesterFcstItems.where(
+                (e) => e['fcstDate'] == today && e['category'] == 'TMX'
+        ).toList();
+        final todayTmnList = yesterFcstItems.where(
+                (e) => e['fcstDate'] == today && e['category'] == 'TMN'
+        ).toList();
 
         tmx = todayTmxList.isNotEmpty
-            ? double.tryParse(
-          todayTmxList.reduce((a, b) => a['fcstTime'].compareTo(b['fcstTime']) > 0 ? a : b)['fcstValue'] ?? '',
-        )?.round()
+            ? double.tryParse(todayTmxList.first['fcstValue'] ?? '')?.round()
             : null;
         tmn = todayTmnList.isNotEmpty
-            ? double.tryParse(
-          todayTmnList.reduce((a, b) => a['fcstTime'].compareTo(b['fcstTime']) < 0 ? a : b)['fcstValue'] ?? '',
-        )?.round()
+            ? double.tryParse(todayTmnList.first['fcstValue'] ?? '')?.round()
             : null;
       }
     }
@@ -313,9 +313,20 @@ class _HomeContentState extends State<HomeContent> {
 
       final List fcstItems = fcstData['response']['body']['items']['item'];
 
+      List<Map<String, dynamic>> hourlyWeather = fcstItems
+          .where((item) => item['category'] == 'TMP')
+          .map<Map<String, dynamic>>((item) => {
+        'fcstTime': item['fcstTime'],
+        'temp': double.tryParse(item['fcstValue'] ?? '') ?? 0.0,
+      })
+          .toList();
+
       final tmxTmn = await fetchYesterdayTmxTmn(nx, ny, today, apiKey);
       int? tmx = tmxTmn['tmx'];
       int? tmn = tmxTmn['tmn'];
+      print('예보 기준 오늘 일교차: ${tmx != null && tmn != null ? (tmx - tmn) : "데이터 없음"}');
+      print('오늘 날짜(today): $today');
+      print('hourlyWeather: $hourlyWeather');
 
       int popMax = 0;
       int? curTemp;
@@ -417,8 +428,8 @@ class _HomeContentState extends State<HomeContent> {
       setState(() {
         weatherData = allData;
         loading = false;
+        _hourlyWeather = hourlyWeather;
       });
-      // ---- 캐시에 저장 ----
       cachedWeatherData = allData;
       lastFetchTime = DateTime.now();
     } catch (e) {
@@ -427,6 +438,11 @@ class _HomeContentState extends State<HomeContent> {
         errorMsg = '날씨 정보를 불러오지 못했습니다.\n$e';
       });
     }
+  }
+
+  Future<String?> getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('userId');
   }
 
   @override
@@ -484,7 +500,6 @@ class _HomeContentState extends State<HomeContent> {
                         ),
                       ),
                       SizedBox(width: 6),
-                      // 태그 한 줄, 길면 ... 처리
                       Flexible(
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -500,7 +515,7 @@ class _HomeContentState extends State<HomeContent> {
                                     fontSize: 15,
                                   ),
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis, // 핵심
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ).toList(),
@@ -510,8 +525,20 @@ class _HomeContentState extends State<HomeContent> {
                       IconButton(
                         icon: Icon(Icons.checkroom_rounded, color: Colors.deepPurple),
                         tooltip: '내 옷장',
-                        onPressed: () {
-                          Navigator.of(context).push(MaterialPageRoute(builder: (context) => ClosetPage()));
+                        onPressed: () async {
+                          String? userId = await getCurrentUserId();
+                          if (userId != null) {
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => ClosetPage(
+                                hourlyWeather: _hourlyWeather,
+                                currentUserId: userId,
+                              ),
+                            ));
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('로그인이 필요합니다.')),
+                            );
+                          }
                         },
                       ),
                       if (tagList.length > tagShowLimit)
@@ -561,7 +588,6 @@ class _HomeContentState extends State<HomeContent> {
       children.add(WeeklyBestWidget());
     }
 
-    // 여기서부터 Pull-to-Refresh로 감싼다!
     return RefreshIndicator(
       onRefresh: () async {
         await fetchWeather(force: true);

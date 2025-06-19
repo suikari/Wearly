@@ -47,10 +47,8 @@ class WearlyWeatherCard extends StatelessWidget {
     final hour = DateTime.now().hour;
     final isNight = hour >= 18 || hour < 6;
 
-    print('[디버깅] hour=$hour isNight=$isNight weatherStatus=$weatherStatus');
 
     if (weatherStatus == '맑음') {
-      print('[디버깅] 맑음에서 분기: isNight=$isNight');
       return isNight
           ? 'assets/weather_moon.gif'
           : 'assets/weather_sun.gif';
