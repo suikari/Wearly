@@ -11,7 +11,7 @@ class ChatListPage extends StatefulWidget {
 
 class _ChatListPageState extends State<ChatListPage> {
   String searchText = '';
-  String get myEmail => FirebaseAuth.instance.currentUser?.email ?? '';
+  String get myUid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
   Widget build(BuildContext context) {
@@ -24,13 +24,13 @@ class _ChatListPageState extends State<ChatListPage> {
       ),
       body: Column(
         children: [
-          // --- 검색창 ---
+          // 검색창
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             color: Colors.pink[50],
             child: TextField(
               decoration: InputDecoration(
-                hintText: "유저 이름/이메일 검색...",
+                hintText: "유저 닉네임/UID 검색...",
                 prefixIcon: Icon(Icons.search, color: Colors.pink[300]),
                 filled: true,
                 fillColor: Colors.white,
@@ -43,18 +43,18 @@ class _ChatListPageState extends State<ChatListPage> {
               onChanged: (v) => setState(() => searchText = v),
             ),
           ),
-          // --- 채팅방 리스트 ---
+          // 채팅방 리스트
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('chatRooms')
-                  .where('emails', arrayContains: myEmail)
+                  .where('uids', arrayContains: myUid) // emails → uids
                   .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 List<QueryDocumentSnapshot> rooms = snapshot.data!.docs;
 
-                // lastMessageTime 기준 내림차순 정렬 (필드가 없으면 맨 뒤로)
+                // lastMessageTime 기준 내림차순 정렬
                 rooms.sort((a, b) {
                   final at = (a.data() as Map<String, dynamic>)['lastMessageTime'] as Timestamp?;
                   final bt = (b.data() as Map<String, dynamic>)['lastMessageTime'] as Timestamp?;
@@ -76,16 +76,14 @@ class _ChatListPageState extends State<ChatListPage> {
                   ),
                   itemBuilder: (context, idx) {
                     final data = rooms[idx].data() as Map<String, dynamic>;
-                    final emailsRaw = data['emails'];
-                    final List<dynamic> emails = (emailsRaw is List) ? emailsRaw : [];
-                    final targetEmail = emails.firstWhere((e) => e != myEmail, orElse: () => '');
+                    final uidsRaw = data['uids'];
+                    final List<dynamic> uids = (uidsRaw is List) ? uidsRaw : [];
+                    final targetUid = uids.firstWhere((e) => e != myUid, orElse: () => '');
 
-                    // 마지막 메시지
                     final lastMessage = data['lastMessage'] ?? '';
                     final lastMessageTime = data['lastMessageTime'] as Timestamp?;
-                    final unreadCount = data['unreadCount_$myEmail'] ?? 0;
+                    final unreadCount = data['unreadCount_$myUid'] ?? 0;
 
-                    // 시간 포맷팅
                     String timeText = '';
                     if (lastMessageTime != null) {
                       final dt = lastMessageTime.toDate();
@@ -97,26 +95,25 @@ class _ChatListPageState extends State<ChatListPage> {
                       }
                     }
 
-                    // --- 상대방 정보 쿼리 방식 (이메일로 가져오기) ---
-                    return FutureBuilder<QuerySnapshot>(
+                    // --- 상대방 정보 쿼리 (uid로) ---
+                    return FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
                           .collection('users')
-                          .where('email', isEqualTo: targetEmail)
-                          .limit(1)
+                          .doc(targetUid)
                           .get(),
                       builder: (context, userSnap) {
                         String nickname = '';
                         String profileUrl = 'assets/profile1.jpg';
-                        if (userSnap.hasData && userSnap.data!.docs.isNotEmpty) {
-                          final userData = userSnap.data!.docs.first.data() as Map<String, dynamic>;
+                        if (userSnap.hasData && userSnap.data!.exists) {
+                          final userData = userSnap.data!.data() as Map<String, dynamic>;
                           nickname = userData['nickname'] ?? '닉네임없음';
                           profileUrl = userData['profileImage'] ?? 'assets/profile1.jpg';
                         }
 
-                        // 검색 필터 (상대방)
+                        // 검색 필터
                         if (searchText.isNotEmpty &&
                             !nickname.toLowerCase().contains(searchText.toLowerCase()) &&
-                            !targetEmail.toLowerCase().contains(searchText.toLowerCase())) {
+                            !targetUid.toLowerCase().contains(searchText.toLowerCase())) {
                           return SizedBox.shrink();
                         }
 
@@ -130,7 +127,7 @@ class _ChatListPageState extends State<ChatListPage> {
                           ),
                           title: Text(
                             nickname,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           subtitle: Text(
                             lastMessage,
@@ -139,27 +136,35 @@ class _ChatListPageState extends State<ChatListPage> {
                             style: TextStyle(color: Colors.grey[700]),
                           ),
                           trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
                                 timeText,
-                                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                                style: const TextStyle(fontSize: 13, color: Colors.grey),
                               ),
+                              const SizedBox(height: 6),
                               if (unreadCount > 0)
                                 Container(
-                                  margin: EdgeInsets.only(top: 6),
-                                  padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  margin: const EdgeInsets.only(top: 1),
                                   decoration: BoxDecoration(
                                     color: Colors.redAccent,
-                                    borderRadius: BorderRadius.circular(15),
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.redAccent.withOpacity(0.2),
+                                        blurRadius: 2,
+                                        spreadRadius: 1,
+                                      )
+                                    ],
                                   ),
                                   child: Text(
-                                    '$unreadCount',
-                                    style: TextStyle(
+                                    unreadCount > 99 ? '99+' : '$unreadCount',
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ),
@@ -171,7 +176,7 @@ class _ChatListPageState extends State<ChatListPage> {
                               MaterialPageRoute(
                                 builder: (_) => ChatRoomPage(
                                   roomId: rooms[idx].id,
-                                  userEmail: targetEmail,
+                                  targetUid: targetUid,
                                   userName: nickname,
                                   profileUrl: profileUrl,
                                 ),
@@ -188,35 +193,6 @@ class _ChatListPageState extends State<ChatListPage> {
           ),
         ],
       ),
-    );
-  }
-}
-
-
-// 점선 위젯 등은 동일하게 사용
-
-class DottedLine extends StatelessWidget {
-  const DottedLine({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const dashWidth = 5.0;
-        final dashCount = (constraints.maxWidth / (dashWidth * 2)).floor();
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(dashCount, (_) {
-            return const SizedBox(
-              width: dashWidth,
-              height: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Colors.pinkAccent),
-              ),
-            );
-          }),
-        );
-      },
     );
   }
 }

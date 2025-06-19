@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // 이거 추가!
 
 // (1) 오늘 날씨에 어울리는 코디 피드 (태그 매칭)
 class TodayFeedSection extends StatefulWidget {
@@ -92,7 +93,7 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
             )
           else
             SizedBox(
-              height: 430, // 더 크게!
+              height: 430,
               child: PageView.builder(
                 itemCount: feedList.length,
                 controller: PageController(viewportFraction: 0.81),
@@ -150,11 +151,11 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                                 ],
                               ),
                             ),
-                            // 피드 이미지 (중앙 정렬/길쭉)
+                            // 피드 이미지
                             Center(
                               child: Container(
                                 margin: EdgeInsets.symmetric(vertical: 2),
-                                width: 210, // 이미지 최대 폭 제한
+                                width: 210,
                                 height: 280,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(19),
@@ -177,9 +178,9 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                               child: Wrap(
                                 spacing: 7,
                                 children: tags.take(3).map<Widget>((tag) => Text(
-                                  '#$tag',
+                                  '$tag',
                                   style: TextStyle(
-                                    color: Colors.black87, // ★ 밝은 배경일 땐 어두운 텍스트
+                                    color: Colors.black87,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 12.7,
                                   ),
@@ -371,9 +372,18 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
   }
 }
 
-// (3) 위클리 랭킹
+// (3) 위클리 랭킹 - 날짜 자동 표시
 class WeeklyBestWidget extends StatelessWidget {
   const WeeklyBestWidget({super.key});
+
+  // 이번 주 월요일~일요일 날짜 반환
+  String getCurrentWeekRange() {
+    DateTime now = DateTime.now();
+    DateTime monday = now.subtract(Duration(days: now.weekday - 1));
+    DateTime sunday = monday.add(const Duration(days: 6));
+    final formatter = DateFormat('yyyy.MM.dd');
+    return '${formatter.format(monday)} ~ ${formatter.format(sunday)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -394,7 +404,7 @@ class WeeklyBestWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 16, bottom: 6),
           child: Text(
-            '2025.06.02 ~ 2025.06.08',
+            getCurrentWeekRange(),
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
         ),
