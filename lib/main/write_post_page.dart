@@ -307,6 +307,26 @@ class _WritePostPageState extends State<WritePostPage> {
     );
   }
 
+  void showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 바깥 터치로 닫히지 않게
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('등록 중입니다...', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   @override
   void dispose() {
     titleController.dispose();
@@ -568,6 +588,8 @@ class _WritePostPageState extends State<WritePostPage> {
                       return;
                     }
 
+                    showLoadingDialog(context);
+
                     List<String> imageUrls = [];
                     if (selectedImages.isNotEmpty) {
                       imageUrls = await uploadImages(selectedImages);
@@ -586,6 +608,8 @@ class _WritePostPageState extends State<WritePostPage> {
                       "writeid" : userId,
                       "location" : displayLocationName
                     });
+
+                    Navigator.of(context).pop();
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
