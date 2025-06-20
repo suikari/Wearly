@@ -7,6 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_editor_plus/image_editor_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -30,7 +32,7 @@ class _WritePostPageState extends State<WritePostPage> {
   String selectedWeather = '맑음';
   String selectedFeeling = '적당해요';
   bool isPublic = true;
-
+  String? errorMsg;
   Map<String, List<String>> categoryTags = {};
   List<String> selectedTags = [];
   final List<File> selectedImages = [];
@@ -43,6 +45,10 @@ class _WritePostPageState extends State<WritePostPage> {
 
   String? userId;
 
+  DateTime now = DateTime.now();
+  String? displayLocationName;
+
+  bool isSubmitting = false;
 
   @override
   void initState() {
@@ -51,6 +57,48 @@ class _WritePostPageState extends State<WritePostPage> {
     getUserId();
   }
 
+  static Future<String> getSidoFromLatLng(Position position) async {
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+    if (placemarks.isNotEmpty) {
+      String? sido = placemarks.first.administrativeArea;
+      if (sido == null || sido.isEmpty) return "서울";
+      sido = sido.replaceAll(RegExp(r'(특별시|광역시|자치시|도|시)$'), '');
+      return sido.trim();
+    }
+    return "서울";
+  }
+
+  static Future<String> getFullAddressFromLatLng(Position position) async {
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+    if (placemarks.isNotEmpty) {
+      final p = placemarks.first;
+      String area = p.administrativeArea ?? '';
+      String street = p.street ?? '';
+      String dong = '';
+
+      final match = RegExp(
+        r'([가-힣]+시|[가-힣]+도)[^\d가-힣]*([가-힣0-9]+동)',
+      ).firstMatch(street);
+
+      if (match != null) {
+        area = match.group(1) ?? area;
+        dong = match.group(2) ?? '';
+      } else {
+        dong = p.thoroughfare ?? p.locality ?? '';
+      }
+
+      String result =
+      [area, dong].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
+      return result.isEmpty ? '위치 정보 없음' : result;
+    }
+    return '주소를 찾을 수 없습니다.';
+  }
   Future<void> getUserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     userId = prefs.getString('userId');
@@ -158,6 +206,50 @@ class _WritePostPageState extends State<WritePostPage> {
 
   DateTime? selectedDateTime;
 
+  Future<int?> fetchTemperatureFromKMA(DateTime dateTime, int nx, int ny) async {
+    // GMT 기준 현재 시간
+    DateTime now = DateTime.now();
+    String date = DateFormat('yyyyMMdd').format(now.subtract(Duration(days: 1)));
+    String time = DateFormat('HH00').format(dateTime);
+
+    // UTC 기준 시간대로 변경
+    DateTime utcTime = now.toUtc();
+
+    // KST 한국 시간대로 변경
+    DateTime kstTime = utcTime.add(Duration(hours: 9));
+    Timestamp cdatetime = Timestamp.fromDate(kstTime);
+
+
+
+    // YYYYMMDD 로 변경
+    String formatted = DateFormat('yyyyMMdd').format(kstTime);
+
+    final url = Uri.parse(
+      'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst'
+          '?serviceKey=$KMA_API_KEY'
+          '&numOfRows=1000&pageNo=1&dataType=JSON'
+          '&base_date=$date&base_time=2300'
+          '&nx=$nx&ny=$ny',
+    );
+
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final List items = data['response']['body']['items']['item'];
+
+      for (var item in items) {
+        if (item['category'] == 'TMP' &&
+            item['fcstDate'] == formatted &&
+            item['fcstTime'] == time) {
+
+          return double.tryParse(item['fcstValue'] ?? '')?.round();
+        }
+      }
+
+    }
+    return null;
+  }
+
   void _openDateClockPicker() {
     showDialog(
       context: context,
@@ -171,13 +263,42 @@ class _WritePostPageState extends State<WritePostPage> {
                 selectedDateTime = dt;
                 selectedTemp = null;
               });
-              final grid = convertGRID_GPS(37.5665, 126.9780); // 서울
-              int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
-              print("온도 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $temperature");
-              setState(() {
-                selectedTemp = temperature;
-              });
 
+                LocationPermission permission = await Geolocator
+                    .checkPermission();
+                if (permission == LocationPermission.denied) {
+                  permission = await Geolocator.requestPermission();
+                  if (permission == LocationPermission.denied) {
+                    setState(() {
+                      errorMsg = '위치 권한이 필요합니다!';
+                    });
+                    return;
+                  }
+                }
+                if (permission == LocationPermission.deniedForever) {
+                  setState(() {
+                    errorMsg = '앱 설정에서 위치 권한을 허용해주세요.';
+                  });
+                  return;
+                }
+
+                Position position = await Geolocator.getCurrentPosition(
+                  desiredAccuracy: LocationAccuracy.high,
+                );
+                double lat = position.latitude;
+                double lon = position.longitude;
+                String locationNameForAPI = await getSidoFromLatLng(position);
+                String fullAddress = await getFullAddressFromLatLng(position);
+
+                setState(() {
+                  displayLocationName = fullAddress;
+                });
+
+                Map<String, int> grid = convertGRID_GPS(lat, lon);
+                int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
+                setState(() {
+                  selectedTemp = temperature;
+                });
               Navigator.of(context).pop();
             },
           ),
@@ -347,34 +468,24 @@ class _WritePostPageState extends State<WritePostPage> {
                             .toList(),
                           onChanged: (val) => setState(() => selectedWeather = val!),
                         ),
-                      ]
-                    ),
-                    Row(
-                      children: [
+                        const SizedBox(width: 8),
                         const Icon(Icons.wb_sunny_outlined),
                         const SizedBox(width: 8),
                         DropdownButton<String>(
                           value: selectedFeeling,
                           items: ['적당해요', '추웠어요', '더웠어요']
-                            .map((w) => DropdownMenuItem(value: w, child: Text(w)))
-                            .toList(),
+                              .map((w) => DropdownMenuItem(value: w, child: Text(w)))
+                              .toList(),
                           onChanged: (val) => setState(() => selectedFeeling = val!),
                         ),
+                        const SizedBox(width: 8),
+                        const Text('공개 여부: '),
+                        Switch(
+                          value: isPublic,
+                          onChanged: (val) => setState(() => isPublic = val),
+                          activeColor: Colors.pink,
+                        ),
                       ]
-                    ),
-                    Row(
-                        children: [
-                          Row(
-                            children: [
-                              const Text('공개 여부: '),
-                              Switch(
-                                value: isPublic,
-                                onChanged: (val) => setState(() => isPublic = val),
-                                activeColor: Colors.pink,
-                              ),
-                            ],
-                          ),
-                        ]
                     ),
                     Row(
                       children: [
@@ -388,11 +499,17 @@ class _WritePostPageState extends State<WritePostPage> {
                     ),
                     Row(
                       children: [
-                        if (selectedTemp != null)
+                        Icon(Icons.thermostat, size : 40),
                           Text(
-                            '해당 시간의 기온: $selectedTemp°C',
+                            '해당 시간의 기온: ${selectedTemp ?? " "}°C',
                             style: const TextStyle(fontSize: 22, color: Colors.blue),
-                          )
+                          ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_outlined),
+                        Text("위치 : ${displayLocationName?.isNotEmpty == true ? displayLocationName : ''}")
                       ],
                     )
                   ],
@@ -415,12 +532,36 @@ class _WritePostPageState extends State<WritePostPage> {
                   child: const Text('취소'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
+                  onPressed: isSubmitting ? null : () async {
+                    setState(() {
+                      isSubmitting = true;
+                    });
+
                     if (titleController.text.trim().isEmpty &&
                         contentController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('제목과 내용을 모두 입력해주세요.'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (selectedImages.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('최소 1장의 이미지를 추가해주세요.'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (selectedTemp == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('날짜를 선택해주세요.'),
                           backgroundColor: Colors.redAccent,
                         ),
                       );
@@ -442,7 +583,8 @@ class _WritePostPageState extends State<WritePostPage> {
                       "imageUrls": imageUrls,
                       "tags": selectedTags,
                       "weather": selectedWeather,
-                      "writeid" : userId
+                      "writeid" : userId,
+                      "location" : displayLocationName
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -452,6 +594,9 @@ class _WritePostPageState extends State<WritePostPage> {
                       ),
                     );
                     resetForm();
+                    setState(() {
+                      isSubmitting = false;
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink,
@@ -461,6 +606,11 @@ class _WritePostPageState extends State<WritePostPage> {
                 ),
               ],
             ),
+            if (isSubmitting)
+              const Padding(
+                padding: EdgeInsets.only(top: 16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
           ],
         ),
       ),
@@ -663,35 +813,6 @@ class ClockPainter extends CustomPainter {
     return oldDelegate.selectedHour != selectedHour;
   }
 }
-
-Future<int?> fetchTemperatureFromKMA(DateTime dateTime, int nx, int ny) async {
-  DateTime now = DateTime.now();
-  String date = DateFormat('yyyyMMdd').format(now.subtract(Duration(days: 1)));
-  String time = DateFormat('HH00').format(dateTime);
-
-  final url = Uri.parse(
-    'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst'
-        '?serviceKey=$KMA_API_KEY'
-        '&numOfRows=1000&pageNo=1&dataType=JSON'
-        '&base_date=$date&base_time=2300'
-        '&nx=$nx&ny=$ny',
-  );
-
-  final response = await http.get(url);
-  if (response.statusCode == 200) {
-    final data = json.decode(response.body);
-    final List items = data['response']['body']['items']['item'];
-    for (var item in items) {
-      if (item['category'] == 'TMP' &&
-          item['fcstDate'] == date &&
-          item['fcstTime'] == time) {
-        return double.tryParse(item['fcstValue'] ?? '')?.round();
-      }
-    }
-  }
-  return null;
-}
-
 /// ▶ 위도, 경도 → 격자 좌표
 Map<String, int> convertGRID_GPS(double lat, double lon) {
   const double RE = 6371.00877, GRID = 5.0,
