@@ -51,9 +51,6 @@ class _SearchResultPageState extends State<SearchResultPage>
     final minTemp = widget.minTemp;
     final maxTemp = widget.maxTemp;
 
-    print(">>>>>>>>>>>>>>>>> $minTemp");
-    print(">>>>>>>>>>>>>>>>> $maxTemp");
-
     return Scaffold(
       appBar: CustomAppBar(title: '검색 결과'),
       body: Column(
@@ -154,16 +151,11 @@ class _SearchResultPageState extends State<SearchResultPage>
 
           final temp = data['temperature'];
 
-          print("temp >>>>>>>>>>> $temp");
-          print("maxTemp >>>>>>>>>>>${widget.maxTemp}");
-          print("maxTemp >>>>>>>>>>>${widget.minTemp}");
-          print("temp >>> $temp (${temp.runtimeType})");
           if (temp is num) {
             if (temp < widget.minTemp || temp > widget.maxTemp) {
               return false;
             }
           }
-
 
           switch (tabIndex) {
             case 0:
@@ -185,7 +177,7 @@ class _SearchResultPageState extends State<SearchResultPage>
         }).toList();
 
         if (docs.isEmpty) {
-          return const Center(child: Text('검색 결과가 없습니다.'));
+          return const Center(child: Text('검색 결과가 없습니다. 필터를 확인해 주세요'));
         }
 
         return ListView.builder (

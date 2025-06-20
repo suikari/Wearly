@@ -48,6 +48,8 @@ class _WritePostPageState extends State<WritePostPage> {
   DateTime now = DateTime.now();
   String? displayLocationName;
 
+  bool isSubmitting = false;
+
   @override
   void initState() {
     super.initState();
@@ -530,7 +532,11 @@ class _WritePostPageState extends State<WritePostPage> {
                   child: const Text('취소'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
+                  onPressed: isSubmitting ? null : () async {
+                    setState(() {
+                      isSubmitting = true;
+                    });
+
                     if (titleController.text.trim().isEmpty &&
                         contentController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -588,6 +594,9 @@ class _WritePostPageState extends State<WritePostPage> {
                       ),
                     );
                     resetForm();
+                    setState(() {
+                      isSubmitting = false;
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink,
@@ -597,6 +606,11 @@ class _WritePostPageState extends State<WritePostPage> {
                 ),
               ],
             ),
+            if (isSubmitting)
+              const Padding(
+                padding: EdgeInsets.only(top: 16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
           ],
         ),
       ),
