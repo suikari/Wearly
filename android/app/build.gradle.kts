@@ -23,6 +23,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true // ✅ 이 줄 추가
     }
 
     kotlinOptions {
@@ -65,6 +66,7 @@ android {
         implementation("com.google.android.gms:play-services-location:21.0.1")
         // 예: kotlin stdlib
         implementation(kotlin("stdlib"))
+        coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
         // 기타 의존성들 ...
     }
