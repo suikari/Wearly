@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Provider 필요
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../main/chat_list_page.dart';
 import '../provider/theme_provider.dart';
@@ -19,6 +21,23 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onNotificationTap,
   });
 
+  /// 실시간 미확인 메시지 개수 스트림
+  Stream<int> getUnreadMessageCountStream(String uid) {
+    return FirebaseFirestore.instance
+        .collection('chatRooms')
+        .where('uids', arrayContains: uid)
+        .snapshots()
+        .map((roomsSnap) {
+      int totalUnread = 0;
+      for (var doc in roomsSnap.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final unreadCount = data['unreadCount_$uid'] ?? 0;
+        totalUnread += unreadCount is int ? unreadCount : 0;
+      }
+      return totalUnread;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final appBarTheme = Theme.of(context).appBarTheme;
@@ -27,8 +46,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final titleTextStyle = appBarTheme.titleTextStyle ??
         TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600);
 
-    // 테마 Provider 읽기
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final user = FirebaseAuth.instance.currentUser;
+    final uid = user?.uid ?? '';
 
     return AppBar(
       title: Text(
@@ -38,45 +58,119 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: backgroundColor,
       iconTheme: IconThemeData(color: iconColor),
       actions: [
-        IconButton(
-          icon: Icon(Icons.message),
-          onPressed: onMessageTap ??
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ChatListPage()),
-                );
-              },
-          color: iconColor,
+        // 메시지(채팅)
+        StreamBuilder<int>(
+          stream: getUnreadMessageCountStream(uid),
+          builder: (context, snapshot) {
+            int unreadMsgCount = snapshot.data ?? 0;
+            return InkWell(
+              borderRadius: BorderRadius.circular(25),
+              onTap: onMessageTap ??
+                      () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ChatListPage()),
+                    );
+                  },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.message, color: iconColor, size: 27),
+                  ),
+                  if (unreadMsgCount > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 15,
+                          minHeight: 15,
+                        ),
+                        child: Text(
+                          unreadMsgCount > 99 ? '99+' : unreadMsgCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
-        IconButton(
-          icon: Icon(Icons.notifications),
-          onPressed: onNotificationTap ??
-                  () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => NotificationPage(userId: '',)), // ← 알림페이지로 이동
-                );
-              },
-          color: iconColor,
+        // 알림(Notification) - 벽과의 여백 추가!
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('notifications')
+              .where('uid', isEqualTo: uid)
+              .where('isRead', isEqualTo: false)
+              .snapshots(),
+          builder: (context, snapshot) {
+            final unreadNotiCount = snapshot.hasData ? snapshot.data!.docs.length : 0;
+            return Padding(
+              padding: const EdgeInsets.only(right: 10.0), // ← 벽이랑 여백 확보!
+              child: InkWell(
+                borderRadius: BorderRadius.circular(25),
+                onTap: onNotificationTap ??
+                        () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotificationPage(uid: uid),
+                        ),
+                      );
+                    },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(Icons.notifications, color: iconColor, size: 27),
+                    ),
+                    if (unreadNotiCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 15,
+                            minHeight: 15,
+                          ),
+                          child: Text(
+                            unreadNotiCount > 99 ? '99+' : unreadNotiCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              height: 1.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
-        // IconButton(
-        //   icon: Icon(Icons.color_lens_outlined),
-        //   tooltip: '색상 테마 변경',
-        //   color: iconColor,
-        //   onPressed: () {
-        //     final current = themeProvider.colorTheme;
-        //     ColorTheme newTheme;
-        //     if (current == ColorTheme.defaultTheme) {
-        //       newTheme = ColorTheme.blueTheme;
-        //     } else if (current == ColorTheme.blueTheme) {
-        //       newTheme = ColorTheme.blackTheme;
-        //     } else {
-        //       newTheme = ColorTheme.defaultTheme;
-        //     }
-        //     themeProvider.setColorTheme(newTheme);
-        //   },
-        // ),
       ],
     );
   }
