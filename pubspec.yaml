@@ -51,8 +51,9 @@ dependencies:
   flutter_web_auth_2:
   google_sign_in:
   kakao_flutter_sdk_user:
-  flutter_naver_login:
+  flutter_naver_login: ^2.1.1
   firebase_app_check:
+  flutter_dotenv:
   flutter_localizations:
     sdk: flutter
   # The following adds the Cupertino Icons font to your application.
