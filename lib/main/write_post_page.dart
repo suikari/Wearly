@@ -28,7 +28,6 @@ class _WritePostPageState extends State<WritePostPage> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController contentController = TextEditingController();
   String selectedWeather = '맑음';
-  double selectedTemperature = 20;
   String selectedFeeling = '적당해요';
   bool isPublic = true;
 
@@ -152,7 +151,6 @@ class _WritePostPageState extends State<WritePostPage> {
       selectedTags.clear();
       selectedImages.clear();
       selectedWeather = '맑음';
-      selectedTemperature = 20;
       isPublic = true;
       currentPageIndex = 0;
     });
@@ -174,10 +172,10 @@ class _WritePostPageState extends State<WritePostPage> {
                 selectedTemp = null;
               });
               final grid = convertGRID_GPS(37.5665, 126.9780); // 서울
-              int? temp = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
-
+              int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
+              print("온도 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $temperature");
               setState(() {
-                selectedTemp = temp;
+                selectedTemp = temperature;
               });
 
               Navigator.of(context).pop();
@@ -366,14 +364,6 @@ class _WritePostPageState extends State<WritePostPage> {
                     ),
                     Row(
                         children: [
-                          DropdownButton<double>(
-                            value: selectedTemperature,
-                            items: [10.0, 15.0, 20.0, 25.0, 30.0]
-                                .map((t) => DropdownMenuItem(value: t, child: Text('${t.toDouble()}℃')))
-                                .toList(),
-                            onChanged: (val) => setState(() => selectedTemperature = val!),
-                          ),
-                          const SizedBox(width: 8),
                           Row(
                             children: [
                               const Text('공개 여부: '),
@@ -392,7 +382,7 @@ class _WritePostPageState extends State<WritePostPage> {
                           onPressed: _openDateClockPicker,
                           child: selectedDateTime != null
                               ? Text('선택된 시간: ${dateTimeFormat.format(selectedDateTime!)}')
-                              : Text('날짜 선택'),
+                              : Text('시간 선택'),
                         ),
                       ],
                     ),
@@ -400,7 +390,7 @@ class _WritePostPageState extends State<WritePostPage> {
                       children: [
                         if (selectedTemp != null)
                           Text(
-                            '해당 시간의 기온: ${selectedTemp}°C',
+                            '해당 시간의 기온: $selectedTemp°C',
                             style: const TextStyle(fontSize: 22, color: Colors.blue),
                           )
                       ],
@@ -447,7 +437,7 @@ class _WritePostPageState extends State<WritePostPage> {
                       "content": contentController.text,
                       "cdatetime": Timestamp.now(),
                       "isPublic": isPublic,
-                      "temperature": selectedTemperature,
+                      "temperature": selectedTemp,
                       "feeling": selectedFeeling,
                       "imageUrls": imageUrls,
                       "tags": selectedTags,
@@ -540,6 +530,7 @@ class _DateClockPickerState extends State<DateClockPicker> {
       hour24,
       0,
     );
+
     widget.onDateTimeSelected(combined);
   }
 
@@ -550,10 +541,7 @@ class _DateClockPickerState extends State<DateClockPicker> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ElevatedButton(
-          onPressed: () => _pickDate(context),
-          child: Text('날짜 선택: ${DateFormat('yyyy-MM-dd').format(selectedDate)}'),
-        ),
+        Text("시간 선택", style: TextStyle(fontSize: 40),),
         const SizedBox(height: 16),
         GestureDetector(
           onTapDown: (details) => _onTapDown(details, Size(size, size)),
@@ -677,15 +665,15 @@ class ClockPainter extends CustomPainter {
 }
 
 Future<int?> fetchTemperatureFromKMA(DateTime dateTime, int nx, int ny) async {
-  String date = DateFormat('yyyyMMdd').format(dateTime);
+  DateTime now = DateTime.now();
+  String date = DateFormat('yyyyMMdd').format(now.subtract(Duration(days: 1)));
   String time = DateFormat('HH00').format(dateTime);
-  String baseTime = _getNearestBaseTime(dateTime);
 
   final url = Uri.parse(
     'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst'
         '?serviceKey=$KMA_API_KEY'
         '&numOfRows=1000&pageNo=1&dataType=JSON'
-        '&base_date=$date&base_time=$baseTime'
+        '&base_date=$date&base_time=2300'
         '&nx=$nx&ny=$ny',
   );
 
@@ -702,13 +690,6 @@ Future<int?> fetchTemperatureFromKMA(DateTime dateTime, int nx, int ny) async {
     }
   }
   return null;
-}
-
-String _getNearestBaseTime(DateTime dt) {
-  final times = [2, 5, 8, 11, 14, 17, 20, 23];
-  int hour = dt.hour;
-  int baseHour = times.lastWhere((t) => hour >= t, orElse: () => 23);
-  return baseHour.toString().padLeft(2, '0') + "00";
 }
 
 /// ▶ 위도, 경도 → 격자 좌표
