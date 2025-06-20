@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main.dart';
 import 'package:w2wproject/provider/custom_colors.dart';
 import 'package:w2wproject/provider/theme_provider.dart';
+import 'common/dialog_util.dart';
 import 'common/terms_page.dart';
 import 'page/find_account_page.dart';
 import 'home_page.dart';
@@ -166,6 +167,7 @@ class _LoginPageState extends State<LoginPage> {
               baseNickname: displayName,
               provider: 'google',
             );
+            await showDialogMessage(context, "이미 사용 중인 닉네임으로 확인되어 임시 닉네임으로 변경됩니다. \n프로필 설정에서 닉네임을 수정해주세요.");
           }
 
           await docRef.set({
@@ -178,14 +180,13 @@ class _LoginPageState extends State<LoginPage> {
             'isPublic': true,
             'socialAccount': 'google',
             'interest': [],
-            'follower': '',
-            'following': '',
+            'follower': [],
+            'following': [],
             'location': '',
             'profileImage': photoUrl,
             'mainCoordiId': '',
           });
         }
-
         // ✅ 홈 화면으로 이동
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => HomePage()),
@@ -198,25 +199,18 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> loginWithKakao() async {
-    print('loginWithKakao started');
     try {
       bool installed = await isKakaoTalkInstalled();
-      print('isKakaoTalkInstalled: $installed');
-      if (!installed) {
-        print('Trying loginWithKakaoAccount');
-      }
       OAuthToken kakaoToken = installed
           ? await UserApi.instance.loginWithKakaoTalk()
           : await UserApi.instance.loginWithKakaoAccount();
-      print('login success, token: ${kakaoToken.accessToken}');
+
       final user = await UserApi.instance.me();
-      final uid = 'kakao:${user.id}';
+      final uid = 'kakao_${user.id}';
       final email = user.id ?? '';
       final profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl ?? '';
       String nickname = user.kakaoAccount?.profile?.nickname ?? '';
-      print(email);
-      print(nickname);
-      print(profileImageUrl);
+
       // Firebase Functions에 요청
       final res = await http.post(
         Uri.parse('https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken'),
@@ -227,11 +221,10 @@ class _LoginPageState extends State<LoginPage> {
           'provider': 'kakao',
         }),
       );
-      print('Response status: ${res.statusCode}');
-      print('Response body: ${res.body}');
+
       final customToken = json.decode(res.body)['token'];
       final UserCredential userCredential = await _auth.signInWithCustomToken(customToken);
-      print(customToken);
+
       String? authUid = userCredential.user?.uid;
 
       if (authUid != null) {
@@ -247,6 +240,7 @@ class _LoginPageState extends State<LoginPage> {
               baseNickname: nickname,
               provider: 'kakao',
             );
+            await showDialogMessage(context, "이미 사용 중인 닉네임으로 확인되어 임시 닉네임으로 변경됩니다. \n프로필 설정에서 닉네임을 수정해주세요.");
           }
           await firestore.collection('users').doc(authUid).set({
             'email': email,
@@ -258,8 +252,8 @@ class _LoginPageState extends State<LoginPage> {
             'isPublic': true, // 기본 공개 여부, 수정 가능
             'socialAccount': 'kakao',
             'interest': [], // 사용자가 선택한 관심사 리스트
-            'follower': '', // 기본값 또는 []
-            'following': '',
+            'follower': [], // 기본값 또는 []
+            'following': [],
             'location': '',
             'profileImage': profileImageUrl ?? '',
             'mainCoordiId': '',
@@ -286,7 +280,7 @@ class _LoginPageState extends State<LoginPage> {
     print('signInWithNaver started');
     try {
       final NaverLoginResult result = await FlutterNaverLogin.logIn();
-      print('NaverLoginResult: $result');
+      print('NaverLoginResult: $result.');
       print("로그인 상태: ${result.status}");
       print("에러 메시지: ${result.errorMessage}");
       if (result.status == NaverLoginStatus.loggedIn) {
@@ -329,6 +323,7 @@ class _LoginPageState extends State<LoginPage> {
                 baseNickname: nickname,
                 provider: 'naver',
               );
+              await showDialogMessage(context, "이미 사용 중인 닉네임으로 확인되어 임시 닉네임으로 변경됩니다. \n프로필 설정에서 닉네임을 수정해주세요.");
             }
 
             await docRef.set({
@@ -341,8 +336,8 @@ class _LoginPageState extends State<LoginPage> {
               'isPublic': true,
               'socialAccount': 'naver',
               'interest': [],
-              'follower': '',
-              'following': '',
+              'follower': [],
+              'following': [],
               'location': '',
               'profileImage': profileImage,
               'mainCoordiId': '',

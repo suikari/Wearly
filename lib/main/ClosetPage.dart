@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
-import '../common/custom_bottom_navbar.dart';
 
-// 카드 배경색
 const kFeedBgColor = Color(0xFFfff5f8);
 
 class ClosetPage extends StatefulWidget {
   final List<Map<String, dynamic>> hourlyWeather;
-  // currentUserId는 실제로 Auth 등에서 받아와야 함!
   final String currentUserId;
+  final int? currentTemperature; // null 허용
+
   const ClosetPage({
     super.key,
     required this.hourlyWeather,
     required this.currentUserId,
+    this.currentTemperature,
   });
 
   @override
@@ -21,25 +21,20 @@ class ClosetPage extends StatefulWidget {
 }
 
 class _ClosetPageState extends State<ClosetPage> {
-  int _selectedNavIndex = 0;
   Timer? _timer;
   int? currentHour;
 
-  // "내 코디"/"다른 사람 코디" 탭
-  int _tabIndex = 0; // 0=내 코디, 1=다른 사람 코디
+  int _tabIndex = 0;
   final List<String> _mainTabs = ['내 코디', '다른 사람 코디'];
+  final List<String> _feelingTabs = ['적당해요', '추웠어요', '더웠어요'];
+  String _selectedFeeling = '적당해요';
 
-  // "추웠어요/적당해요/더웠어요"
-  final List<String> _feelingTabs = ['적당했어요', '추웠어요', '더웠어요'];
-  String _selectedFeeling = '적당했어요';
-
-  // for pull-to-refresh(온도 갱신)
   late List<Map<String, dynamic>> _hourlyWeather;
 
   @override
   void initState() {
     super.initState();
-    _hourlyWeather = widget.hourlyWeather;
+    _hourlyWeather = widget.hourlyWeather ?? [];
     _updateHour();
     _timer = Timer.periodic(const Duration(minutes: 1), (_) => _updateHour());
   }
@@ -66,7 +61,9 @@ class _ClosetPageState extends State<ClosetPage> {
     int minDiff = 25;
     double? temp;
     for (final item in _hourlyWeather) {
-      final fcstHour = int.parse(item['fcstTime'].substring(0, 2));
+      if (item['fcstTime'] == null || item['temp'] == null) continue;
+      final fcstHour = int.tryParse(item['fcstTime'].substring(0, 2));
+      if (fcstHour == null) continue;
       final diff = (fcstHour - targetHour).abs();
       if (diff < minDiff) {
         minDiff = diff;
@@ -76,15 +73,48 @@ class _ClosetPageState extends State<ClosetPage> {
     return temp;
   }
 
-  // [추가] 새로고침시 HomeContent로 pop했다가 다시 push하는 패턴(최신화, 권장)
+  int get displayTemperature {
+    // 0, null이 오면 시간별 데이터에서 보정
+    if (widget.currentTemperature != null && widget.currentTemperature != 0) {
+      return widget.currentTemperature!;
+    } else {
+      final nowHour = DateTime.now().hour;
+      final nowTemp = getClosestTempForHour(nowHour);
+      return nowTemp?.round() ?? 22; // 못 찾으면 22도
+    }
+  }
+
   Future<void> _onRefresh(BuildContext context) async {
-    Navigator.of(context).pop();
-    // 새로고침하면 HomeContent에서 최신 hourlyWeather로 다시 ClosetPage 진입하면 됨!
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('메인에서 새로고침 후 다시 옷장에 진입해주세요!')),
+    );
+    await Future.delayed(const Duration(milliseconds: 600));
+    Navigator.of(context).maybePop();
   }
 
   @override
   Widget build(BuildContext context) {
     final hourList = getHourList();
+
+    if (_hourlyWeather.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+        body: Center(
+          child: Text(
+            "날씨 데이터가 없습니다.\n메인에서 새로고침 후 다시 시도해주세요.",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.redAccent, fontSize: 16),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -216,95 +246,165 @@ class _ClosetPageState extends State<ClosetPage> {
                 ),
               ),
               const SizedBox(height: 10),
+
+              // ================= 피드 그리드 =================
               FeedGrid(
                 feeling: _selectedFeeling,
                 isMine: _tabIndex == 0,
                 currentUserId: widget.currentUserId,
+                temperature: displayTemperature, // ★★★
               ),
               const SizedBox(height: 16),
             ],
           ),
         ),
       ),
+
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedNavIndex,
         onTap: (i) {
           setState(() => _selectedNavIndex = i);
         }, nickname: '', profileImageUrl: '',
       ),
+
     );
   }
 }
 
-class FeedGrid extends StatelessWidget {
+// ================= FeedGrid =================
+
+class FeedGrid extends StatefulWidget {
   final String feeling;
-  final bool isMine; // true: 내 코디, false: 다른 사람 코디
+  final bool isMine;
   final String currentUserId;
+  final int temperature;
   const FeedGrid({
     super.key,
     required this.feeling,
     required this.isMine,
     required this.currentUserId,
+    required this.temperature,
   });
 
   @override
+  State<FeedGrid> createState() => _FeedGridState();
+}
+
+class _FeedGridState extends State<FeedGrid> {
+  List<Map<String, dynamic>> feedItems = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchFeeds();
+  }
+
+  Future<void> fetchFeeds() async {
+    setState(() { isLoading = true; });
+    try {
+      // print('---[FeedGrid] fetchFeeds start---');
+      // print('필터: feeling=${widget.feeling}, isMine=${widget.isMine}, currentUserId=${widget.currentUserId}, temperature=${widget.temperature}');
+      final snapshot = await FirebaseFirestore.instance
+          .collection('feeds')
+          .where('feeling', isEqualTo: widget.feeling)
+          .orderBy('cdatetime', descending: true)
+          .get();
+
+      // print('[Firestore] 받은 문서 개수: ${snapshot.docs.length}');
+      int filteredCount = 0;
+
+      final items = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).where((data) {
+        final tempRaw = data['temperature'];
+        final temp = tempRaw is int
+            ? tempRaw
+            : int.tryParse(tempRaw.toString().split('.').first ?? '');
+
+        final writeid = data['writeid'];
+        final bool tempMatch = temp != null && (temp - widget.temperature).abs() <= 2;
+        final bool idMatch = widget.isMine
+            ? writeid == widget.currentUserId
+            : writeid != widget.currentUserId;
+
+        // print('[doc ${data['id']}] temp=$temp, writeid=$writeid, tempMatch=$tempMatch, idMatch=$idMatch, 전체조건=${tempMatch && idMatch}');
+        // print('  Firestore feeling=${data['feeling']}, tags=${data['tags']}, content=${data['content']}');
+        if (tempMatch && idMatch) filteredCount++;
+        return tempMatch && idMatch;
+      }).toList();
+
+      // print('[FeedGrid] 필터링 후 피드 개수: $filteredCount');
+
+      setState(() {
+        feedItems = items;
+        isLoading = false;
+      });
+      // print('---[FeedGrid] fetchFeeds end---');
+    } catch (e) {
+      setState(() {
+        feedItems = [];
+        isLoading = false;
+      });
+      // print('[FeedGrid] 에러 발생: $e');
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant FeedGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.feeling != widget.feeling ||
+        oldWidget.isMine != widget.isMine ||
+        oldWidget.temperature != widget.temperature) {
+      fetchFeeds();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    Query<Map<String, dynamic>> baseQuery = FirebaseFirestore.instance
-        .collection('feeds')
-        .where('feeling', isEqualTo: feeling);
-
-    // Firestore에 피드 작성자 식별자 필드가 'userId'라고 가정!
-    baseQuery = isMine
-        ? baseQuery.where('userId', isEqualTo: currentUserId)
-        : baseQuery.where('userId', isNotEqualTo: currentUserId);
-
-    baseQuery = baseQuery.orderBy('cdatetime', descending: true);
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: baseQuery.snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(child: CircularProgressIndicator()),
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (feedItems.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 28),
+        child: Center(child: Text("피드가 없습니다.", style: TextStyle(color: Colors.black38))),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: feedItems.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.75,
+        ),
+        itemBuilder: (context, idx) {
+          final data = feedItems[idx];
+          final List<dynamic>? images = data['imageUrls'];
+          final tags = data['tags']?.cast<String>() ?? [];
+          final content = data['content'] ?? '';
+          return FeedCard(
+            imageUrl: (images != null && images.isNotEmpty) ? images[0] : null,
+            tags: tags,
+            content: content,
           );
-        }
-        final docs = snapshot.data!.docs;
-        if (docs.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 28),
-            child: Center(child: Text("피드가 없습니다.", style: TextStyle(color: Colors.black38))),
-          );
-        }
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: docs.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, // 2열 그리드
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.84,
-            ),
-            itemBuilder: (context, idx) {
-              final data = docs[idx].data() as Map<String, dynamic>;
-              final List<dynamic>? images = data['imageUrls'];
-              final tags = data['tags']?.cast<String>() ?? [];
-              final content = data['content'] ?? '';
-              return FeedCard(
-                imageUrl: (images != null && images.isNotEmpty) ? images[0] : null,
-                tags: tags,
-                content: content,
-              );
-            },
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 }
+
+// ================= FeedCard =================
 
 class FeedCard extends StatelessWidget {
   final String? imageUrl;
@@ -331,23 +431,21 @@ class FeedCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 이미지 (없으면 빈 박스)
+          // 이미지: 고정 height X, 비율만 맞춤!
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: imageUrl != null
-                ? Image.network(
-              imageUrl!,
-              height: 92,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            )
-                : Container(
-              height: 92,
-              color: Colors.white,
+            child: AspectRatio(
+              aspectRatio: 1, // 정사각형 사진(1:1), 세로로 길게 하고 싶으면 0.9~1.2
+              child: imageUrl != null
+                  ? Image.network(
+                imageUrl!,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              )
+                  : Container(color: Colors.white),
             ),
           ),
           const SizedBox(height: 8),
-          // 태그
           Wrap(
             spacing: 4,
             children: tags
@@ -361,7 +459,6 @@ class FeedCard extends StatelessWidget {
                 .toList(),
           ),
           const SizedBox(height: 4),
-          // 내용 (한줄)
           Text(
             content,
             style: const TextStyle(fontSize: 13, color: Colors.black87),

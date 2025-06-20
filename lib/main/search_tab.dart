@@ -65,6 +65,8 @@ class _SearchTabState extends State<SearchTab> {
                     MaterialPageRoute(
                       builder: (_) => SearchResultPage(
                         keyword: _searchController.text.trim(),
+                        minTemp : minTemp,
+                        maxTemp : maxTemp
                       ),
                     ),
                   );
