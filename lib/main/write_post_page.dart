@@ -173,7 +173,6 @@ class _WritePostPageState extends State<WritePostPage> {
               });
               final grid = convertGRID_GPS(37.5665, 126.9780); // 서울
               int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
-              print("온도 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $temperature");
               setState(() {
                 selectedTemp = temperature;
               });
@@ -665,9 +664,19 @@ class ClockPainter extends CustomPainter {
 }
 
 Future<int?> fetchTemperatureFromKMA(DateTime dateTime, int nx, int ny) async {
+  // GMT 기준 현재 시간
   DateTime now = DateTime.now();
   String date = DateFormat('yyyyMMdd').format(now.subtract(Duration(days: 1)));
   String time = DateFormat('HH00').format(dateTime);
+
+  // UTC 기준 시간대로 변경
+  DateTime utcTime = now.toUtc();
+
+  // KST 한국 시간대로 변경
+  DateTime kstTime = utcTime.add(Duration(hours: 9));
+
+  // YYYYMMDD 로 변경
+  String formatted = DateFormat('yyyyMMdd').format(kstTime);
 
   final url = Uri.parse(
     'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst'
@@ -681,13 +690,16 @@ Future<int?> fetchTemperatureFromKMA(DateTime dateTime, int nx, int ny) async {
   if (response.statusCode == 200) {
     final data = json.decode(response.body);
     final List items = data['response']['body']['items']['item'];
+
     for (var item in items) {
       if (item['category'] == 'TMP' &&
-          item['fcstDate'] == date &&
+          item['fcstDate'] == formatted &&
           item['fcstTime'] == time) {
+
         return double.tryParse(item['fcstValue'] ?? '')?.round();
       }
     }
+
   }
   return null;
 }
