@@ -31,7 +31,6 @@ class _HomePageState extends State<HomePage> {
 
               final grid = convertGRID_GPS(37.5665, 126.9780);
               int? temp = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
-
               setState(() {
                 selectedTemperature = temp;
               });
