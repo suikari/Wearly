@@ -630,11 +630,6 @@ class _WritePostPageState extends State<WritePostPage> {
                 ),
               ],
             ),
-            if (isSubmitting)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Center(child: CircularProgressIndicator()),
-              ),
           ],
         ),
       ),
