@@ -64,8 +64,8 @@ dependencies:
   permission_handler:
   screenshot: ^3.0.0
   android_intent_plus:
-
-
+  naver_login_sdk :
+  share_plus:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -100,7 +100,6 @@ flutter:
     - assets/profile3.jpg
     - assets/
     - assets/common/
-
   fonts:
     - family: reko
       fonts:
