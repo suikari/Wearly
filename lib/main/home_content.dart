@@ -22,7 +22,7 @@ class HomeContent extends StatefulWidget {
   State<HomeContent> createState() => _HomeContentState();
 }
 
-class _HomeContentState extends State<HomeContent> {
+class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
   static Map<String, dynamic>? cachedWeatherData;
   static DateTime? lastFetchTime;
   static const cacheDuration = Duration(minutes: 10);
@@ -40,6 +40,17 @@ class _HomeContentState extends State<HomeContent> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _tryUseCacheOrFetch();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _tryUseCacheOrFetch() {
     if (cachedWeatherData != null &&
         lastFetchTime != null &&
         DateTime.now().difference(lastFetchTime!) < cacheDuration) {
@@ -51,6 +62,19 @@ class _HomeContentState extends State<HomeContent> {
     } else {
       fetchWeather();
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      fetchWeather(force: true);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _tryUseCacheOrFetch();
   }
 
   static Future<String> getSidoFromLatLng(Position position) async {
@@ -176,7 +200,6 @@ class _HomeContentState extends State<HomeContent> {
       final Map<String, dynamic> yesterFcstData = json.decode(
         yesterFcstResponse.body,
       );
-      print("urlFcstYesterday>>$urlFcstYesterday");
 
       if (yesterFcstData['response']['header']['resultMsg'] == "NORMAL_SERVICE") {
         final List yesterFcstItems = yesterFcstData['response']['body']['items']['item'];
@@ -234,7 +257,6 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Future<void> fetchWeather({bool force = false}) async {
-    // force 옵션이 아니고, 캐시가 유효하면 캐시 사용
     if (!force &&
         cachedWeatherData != null &&
         lastFetchTime != null &&
@@ -324,9 +346,6 @@ class _HomeContentState extends State<HomeContent> {
       final tmxTmn = await fetchYesterdayTmxTmn(nx, ny, today, apiKey);
       int? tmx = tmxTmn['tmx'];
       int? tmn = tmxTmn['tmn'];
-      print('예보 기준 오늘 일교차: ${tmx != null && tmn != null ? (tmx - tmn) : "데이터 없음"}');
-      print('오늘 날짜(today): $today');
-      print('hourlyWeather: $hourlyWeather');
 
       int popMax = 0;
       int? curTemp;
@@ -339,7 +358,6 @@ class _HomeContentState extends State<HomeContent> {
       int? pty; // 강수형태
       int? sky; // 하늘상태
 
-      // ★ 습도/바람 시간별로 임시 리스트에 저장
       List<Map<String, dynamic>> rehList = [];
       List<Map<String, dynamic>> wsdList = [];
 
@@ -377,7 +395,6 @@ class _HomeContentState extends State<HomeContent> {
         }
       }
 
-      // ★ curHour 값이 없으면 가장 가까운 시간값 사용
       if (curHumidity == null) {
         final match = rehList.firstWhere(
               (e) => e['fcstTime'] == curHour,
@@ -408,7 +425,6 @@ class _HomeContentState extends State<HomeContent> {
         airApiKey,
       );
 
-      // 태그도 weatherData에 같이 저장
       final allData = {
         'location': displayLocationName,
         'temp': curTemp,
@@ -430,6 +446,13 @@ class _HomeContentState extends State<HomeContent> {
         loading = false;
         _hourlyWeather = hourlyWeather;
       });
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      String encoded = jsonEncode(_hourlyWeather); // JSON 문자열로 변환
+      await prefs.setString('hourlyWeather', encoded);
+
+
       cachedWeatherData = allData;
       lastFetchTime = DateTime.now();
     } catch (e) {
@@ -478,7 +501,7 @@ class _HomeContentState extends State<HomeContent> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
           child: Card(
-            color: Color(0xfffdeeee),
+            // color: Color(0xfffdeeee),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -527,17 +550,60 @@ class _HomeContentState extends State<HomeContent> {
                         tooltip: '내 옷장',
                         onPressed: () async {
                           String? userId = await getCurrentUserId();
-                          if (userId != null) {
+
+                          if (userId != null && _hourlyWeather != null && _hourlyWeather.isNotEmpty) {
+                            int nowTemp = 0;
+                            try {
+                              nowTemp = int.tryParse(_hourlyWeather.first['temp'].toString()) ?? 0;
+                            } catch (e) {
+                              nowTemp = 0;
+                            }
+
                             Navigator.of(context).push(MaterialPageRoute(
                               builder: (context) => ClosetPage(
                                 hourlyWeather: _hourlyWeather,
                                 currentUserId: userId,
+                                currentTemperature: nowTemp,
                               ),
                             ));
-                          } else {
+                          } else if (userId == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('로그인이 필요합니다.')),
                             );
+                          } else {
+                            SharedPreferences prefs = await SharedPreferences.getInstance();
+                            String? encoded = prefs.getString('hourlyWeather');
+                            List<Map<String, dynamic>> loadedHourlyWeather = [];
+                            if (encoded != null) {
+                              List<dynamic> decoded = jsonDecode(encoded);
+                              loadedHourlyWeather = decoded.cast<Map<String, dynamic>>();
+                              // 또는 List<Map<String, dynamic>>.from(decoded)
+                            }
+
+                            int nowTemp = 0;
+                            try {
+                              nowTemp = int.tryParse(loadedHourlyWeather.first['temp'].toString()) ?? 0;
+                            } catch (e) {
+                              nowTemp = 0;
+                            }
+
+                            Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) => ClosetPage(
+                                hourlyWeather: loadedHourlyWeather,
+                                currentUserId: userId,
+                                currentTemperature: nowTemp,
+                              ),
+                            ));
+
+
+                            // print("userId >> $userId");
+                            // print("_hourlyWeather >> $_hourlyWeather");
+                            // print("_hourlyWeather.isNotEmpty >> ${_hourlyWeather.isNotEmpty}");
+
+                            // ScaffoldMessenger.of(context).showSnackBar(
+                            //   SnackBar(content: Text('날씨 데이터가 아직 준비되지 않았습니다.')),
+                            // );
+
                           }
                         },
                       ),

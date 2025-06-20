@@ -76,7 +76,7 @@ class WearlyWeatherCard extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      color: Color(0xFFFFF3F6),
+      // color: Color(0xFFFFF3F6),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 220),
         padding: EdgeInsets.only(

@@ -33,10 +33,20 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
       setState(() => feedList = []);
       return;
     }
+
     final feedSnapshot = await FirebaseFirestore.instance.collection('feeds').get();
-    List<Map<String, dynamic>> allFeeds = feedSnapshot.docs
-        .map((doc) => doc.data() as Map<String, dynamic>)
-        .toList();
+    List<Map<String, dynamic>> allFeeds = [];
+
+    for (var doc in feedSnapshot.docs) {
+      var feedData = doc.data();
+      var userDoc = await FirebaseFirestore.instance.collection('users').doc(feedData['writeid']).get();
+      var userData = userDoc.data();
+
+      feedData['profileImgUrl'] = userData?['profileImageUrl']; // 프로필 이미지 URL 추가
+      feedData['nickname'] = userData?['nickname']; // 닉네임 추가
+
+      allFeeds.add(feedData);
+    }
 
     List<Map<String, dynamic>> matchedFeeds = allFeeds.where((feed) {
       if (feed['tags'] == null) return false;
