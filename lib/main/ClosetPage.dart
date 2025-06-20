@@ -259,14 +259,6 @@ class _ClosetPageState extends State<ClosetPage> {
           ),
         ),
       ),
-
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedNavIndex,
-        onTap: (i) {
-          setState(() => _selectedNavIndex = i);
-        }, nickname: '', profileImageUrl: '',
-      ),
-
     );
   }
 }

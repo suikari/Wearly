@@ -51,7 +51,7 @@ dependencies:
   flutter_web_auth_2:
   google_sign_in:
   kakao_flutter_sdk_user:
-  flutter_naver_login: ^2.1.1
+  naver_login_sdk:
   firebase_app_check:
   flutter_dotenv:
   flutter_localizations:
@@ -90,6 +90,7 @@ flutter:
     - assets/profile3.jpg
     - assets/
     - assets/common/
+    - assets/.env
 
   fonts:
     - family: reko
