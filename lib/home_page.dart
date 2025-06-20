@@ -1,7 +1,10 @@
-// lib/pages/home_page.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'common/deep_link_handler.dart';
+import 'main/detail_page.dart';
 import 'main/feed_list_page.dart';
 import 'main/gemini_chat.dart'; // ⬅ 추가
 import 'common/custom_app_bar.dart';
@@ -26,33 +29,40 @@ class _HomePageState extends State<HomePage> {
 
   Key _myPageKey = ValueKey('initial');
 
+  final DeepLinkHandler _deepLinkHandler = DeepLinkHandler();
+
+  bool _hasProcessedDeepLink = false; // 딥링크 중복 처리 방지 플래그
 
   @override
   void initState() {
     super.initState();
-    _loadUserInfo(); // 사용자 정보 불러오기
-  }
+    _loadUserInfo();
 
-  void _onItemTapped(int index) {
-    setState(() {
-      if (index == 4) {
-        _selectedUserId = null; // 기본 내 마이페이지
-        _myPageKey = ValueKey(DateTime.now().millisecondsSinceEpoch.toString());
+    _handleInitialDeepLink();
+
+    // 딥링크 실시간 처리 콜백 등록 및 초기화
+    _deepLinkHandler.onFeedIdReceived = (feedId) {
+      if (!_hasProcessedDeepLink) {
+        _hasProcessedDeepLink = true;
+        _openDetailPage(feedId);
       }
-      _selectedIndex = index;
-    });
+    };
+    _deepLinkHandler.init();
   }
 
-  void openUserPage(String userId) {
-    setState(() {
-      print("userId=-=-=-=>$userId");
-      _selectedUserId = userId;
-      _myPageKey = ValueKey(userId + DateTime.now().millisecondsSinceEpoch.toString());
-      _selectedIndex = 4; // MyPageTab 탭으로 전환
-    });
+  Future<void> _handleInitialDeepLink() async {
+    final uri = await _deepLinkHandler.getInitialUri();
+    if (!_hasProcessedDeepLink &&
+        uri != null &&
+        uri.scheme == 'wearly' &&
+        uri.host == 'deeplink' &&
+        uri.path == '/feedid' &&
+        uri.queryParameters.containsKey('id')) {
+      _hasProcessedDeepLink = true;
+      final feedId = uri.queryParameters['id']!;
+      _openDetailPage(feedId);
+    }
   }
-
-  final FirebaseFirestore fs = FirebaseFirestore.instance;
 
   Future<void> _loadUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
@@ -63,20 +73,59 @@ class _HomePageState extends State<HomePage> {
         _selectedUserId = uid;
       });
 
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
       if (userDoc.exists) {
         setState(() {
           _nickname = userDoc['nickname'] ?? '';
-          _profileImageUrl  = userDoc['profileImage'] ?? null ;
+          _profileImageUrl = userDoc['profileImage'] ?? null;
           prefs.setString('nickname', userDoc['nickname'] ?? '');
           prefs.setString('profileImage', userDoc['profileImage'] ?? '');
         });
       }
     }
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      if (index == 4) {
+        _selectedUserId = null;
+        _myPageKey = ValueKey(DateTime.now().millisecondsSinceEpoch.toString());
+      }
+      _selectedIndex = index;
+    });
+  }
+
+  void openUserPage(String userId) {
+    setState(() {
+      _selectedUserId = userId;
+      _myPageKey = ValueKey(userId + DateTime.now().millisecondsSinceEpoch.toString());
+      _selectedIndex = 4; // MyPageTab 탭으로 전환
+    });
+  }
+
+  void openFeecPage() {
+    setState(() {
+      _selectedIndex = 3; // MyPageTab 탭으로 전환
+    });
+  }
+
+  void _openDetailPage(String feedId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DetailPage(
+          feedId: feedId,
+          currentUserId: _selectedUserId ?? '',
+          showAppBar: true,
+          onBack: () {
+            Navigator.of(context).pop();
+            // 상세페이지에서 뒤로가면 딥링크 처리 플래그 리셋
+            _deepLinkHandler.resetProcessedFlag();
+            _hasProcessedDeepLink = false;
+          },
+        ),
+      ),
+    );
   }
 
   void _goToGeminiPage() {
@@ -86,24 +135,26 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget buildMyPageTab({String? userId, required Function onUserTap }) {
+  Widget buildMyPageTab({String? userId, required Function onUserTap}) {
     return MyPageTab(
       key: ValueKey(userId ?? _myPageKey),
       userId: userId,
-      onUserTap : onUserTap ,
+      onUserTap: onUserTap,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-  final List<Widget> _pages = [
-    HomeContent(key: ValueKey(DateTime.now().millisecondsSinceEpoch) ),  // 콜백 전달
-    SearchTab(onUserTap: openUserPage),    // 콜백 전달
-    WritePostPage(),
-    FeedListPage(key: ValueKey(DateTime.now().millisecondsSinceEpoch) , onUserTap: openUserPage), // 콜백 전달
-    //WeatherTab(),
-    buildMyPageTab(userId: _selectedUserId,  onUserTap: openUserPage),
-  ];
+    final List<Widget> _pages = [
+      HomeContent(key: ValueKey(DateTime.now().millisecondsSinceEpoch)),
+      SearchTab(onUserTap: openUserPage),
+      WritePostPage(),
+      //onUserTap: openFeecPage),
+      FeedListPage(
+          key: ValueKey(DateTime.now().millisecondsSinceEpoch),
+          onUserTap: openUserPage),
+      buildMyPageTab(userId: _selectedUserId, onUserTap: openUserPage),
+    ];
 
     return Scaffold(
       appBar: CustomAppBar(),
