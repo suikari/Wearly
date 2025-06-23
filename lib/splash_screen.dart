@@ -32,17 +32,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller = AnimationController(
       vsync: this,
-
       duration: Duration(seconds: 2),
     )..forward();
 
-
-    _animation = Tween<double>(begin: -0.5, end: 1.5).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-
-
-    _startInitProcess();
+    Timer(Duration(seconds: 3), () {
+      _startInitProcess();
+    });
   }
 
   Future<void> _loadTheme() async {
