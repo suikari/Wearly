@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 import '../common/custom_app_bar.dart';
 import '../provider/custom_colors.dart';
-import '../provider/theme_provider.dart';
+import 'chat_list_page.dart';
+
 
 class SearchResultPage extends StatefulWidget {
   final String keyword;
@@ -750,23 +750,51 @@ class _SearchResultPageState extends State<SearchResultPage>
                       ),
                     )
                   ] else if (tabIndex == 3) ...[
-                    Text("닉네임: ${data['nickname'] ?? '없음'}"),
-                    Text("관심사: ${data['interest'] ?? '없음'}"),
-                    Text("자기소개: ${data['bio'] ?? '없음'}"),
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundImage: NetworkImage(
-                              'https://i.pravatar.cc/100?img=3'), // 댓글 유저 프로필
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 28,
+                        backgroundImage: (data['profileImageUrl'] != null && data['profileImageUrl'].toString().isNotEmpty)
+                            ? NetworkImage(data['profileImageUrl'])
+                            : const AssetImage('assets/noimg.jpg') as ImageProvider,
+                        backgroundColor: Colors.transparent,
+                      ),
+                      title: Row(
+                        children: [
+                          Text(
+                            data['nickname'] ?? '닉네임 없음',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 6),
+                          if (data['interest'] != null)
+                            Flexible(
+                              child: Text(
+                                "#${data['interest']}", // interest가 쉼표로 구분된 문자열이라면 더 파싱 가능
+                                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
+                      ),
+                      subtitle: Text(
+                        data['bio'] ?? '',
+                        style: const TextStyle(fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: ElevatedButton(
+                        onPressed: () {
+
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: mainColor,
+                          foregroundColor: subColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          textStyle: const TextStyle(fontSize: 12),
                         ),
-                        Column(
-                          children: [
-                            Text("닉네임: ${data['nickname'] ?? '없음'}"),
-                          ],
-                        )
-                      ],
-                    )
+                        child: const Text('팔로우'),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    ),
                   ],
                 ],
               ),
