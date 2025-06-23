@@ -164,32 +164,57 @@ class _SearchResultPageState extends State<SearchResultPage>
               if (tags is! List) return false;
 
               final tagStrings = tags.map((e) => e.toString().toLowerCase()).toList();
-              print("tagString >>>>>>>>>>>>>>>>> $tagStrings");
-              // 🔸 1. 키워드 포함 여부 확인
               final keywordMatched = tagStrings.any((tag) => tag.contains(kw));
-
-              print("keywordMatched >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $keywordMatched");
-
               if (!keywordMatched) return false;
 
-              // 🔸 2. 선택된 태그 필터 (있을 경우)
+              if (widget.selectedTags.isNotEmpty) {
+                final hasSelectedTag = widget.selectedTags.any(
+                        (selected) => tagStrings.contains(selected.toLowerCase()));
+                print("selectedTags >>>>>>>>>>>>>>>>>>>>$hasSelectedTag");
+                if (!hasSelectedTag) return false;
+              }
+
+              return true;
+            case 1:
+              final tags = data['tags'];
+              if (tags is! List) return false;
+
+              final tagStrings = tags.map((e) => e.toString().toLowerCase()).toList();
+
+              // 선택된 태그 필터
               if (widget.selectedTags.isNotEmpty) {
                 final hasSelectedTag = widget.selectedTags.any(
                         (selected) => tagStrings.contains(selected.toLowerCase()));
                 if (!hasSelectedTag) return false;
               }
 
-              return true;
-            case 1:
+              // 키워드가 지역에 포함되어야 함
               final location = (data['location'] ?? '').toString().toLowerCase();
               return location.contains(kw);
+
             case 2:
+              final tags = data['tags'];
+              if (tags is! List) return false;
+
+              final tagStrings = tags.map((e) => e.toString().toLowerCase()).toList();
+
+              // 선택된 태그 필터
+              if (widget.selectedTags.isNotEmpty) {
+                final hasSelectedTag = widget.selectedTags.any(
+                        (selected) => tagStrings.contains(selected.toLowerCase()));
+                if (!hasSelectedTag) return false;
+              }
+
+              // 키워드가 title 또는 content에 포함되어야 함
               final title = (data['title'] ?? '').toString().toLowerCase();
               final content = (data['content'] ?? '').toString().toLowerCase();
+
               return title.contains(kw) || content.contains(kw);
+
             case 3:
               final nickname = (data['nickname'] ?? '').toString().toLowerCase();
               return nickname.contains(kw);
+
             default:
               return false;
           }
