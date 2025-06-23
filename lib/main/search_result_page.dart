@@ -1,15 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../common/custom_app_bar.dart';
+import '../provider/custom_colors.dart';
+import '../provider/theme_provider.dart';
 
 class SearchResultPage extends StatefulWidget {
   final String keyword;
   final double minTemp;
   final double maxTemp;
   final List<String> selectedTags;
-  const SearchResultPage({super.key, required this.keyword, required this.minTemp, required this.maxTemp, required this.selectedTags});
 
+  const SearchResultPage({super.key, required this.keyword, required this.minTemp, required this.maxTemp, required this.selectedTags});
   @override
   State<SearchResultPage> createState() => _SearchResultPageState();
 }
@@ -22,6 +25,7 @@ class _SearchResultPageState extends State<SearchResultPage>
 
   final List<String> tabs = ['태그', '지역', '내용', '유저'];
   final List<String> sortOptions = ['최신순', '온도순'];
+
 
   @override
   void initState() {
@@ -51,6 +55,10 @@ class _SearchResultPageState extends State<SearchResultPage>
     final kw = widget.keyword.toLowerCase().trim();
     final minTemp = widget.minTemp;
     final maxTemp = widget.maxTemp;
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white;
 
     return Scaffold(
       appBar: CustomAppBar(title: '검색 결과'),
@@ -76,9 +84,9 @@ class _SearchResultPageState extends State<SearchResultPage>
             ),
             child: TabBar(
               controller: _tabController,
-              labelColor: Colors.redAccent,
+              labelColor: mainColor,
               unselectedLabelColor: Colors.black87,
-              indicatorColor: Colors.redAccent,
+              indicatorColor: subColor,
               tabs: tabs.map((t) => Tab(text: t)).toList(),
             ),
           ),
@@ -121,6 +129,10 @@ class _SearchResultPageState extends State<SearchResultPage>
 
   /// 각 탭별 콘텐츠 위젯 빌더
   Widget buildTabContent(int tabIndex, String kw, FirebaseFirestore fs) {
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white;
     late Stream<QuerySnapshot> stream;
     switch (tabIndex) {
       case 0:
@@ -170,7 +182,6 @@ class _SearchResultPageState extends State<SearchResultPage>
               if (widget.selectedTags.isNotEmpty) {
                 final hasSelectedTag = widget.selectedTags.any(
                         (selected) => tagStrings.contains(selected.toLowerCase()));
-                print("selectedTags >>>>>>>>>>>>>>>>>>>>$hasSelectedTag");
                 if (!hasSelectedTag) return false;
               }
 
@@ -228,6 +239,9 @@ class _SearchResultPageState extends State<SearchResultPage>
           itemCount: docs.length,
           itemBuilder: (context, index) {
             final data = docs[index].data() as Map<String, dynamic>;
+            final customColors = Theme.of(context).extension<CustomColors>();
+            Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+            Color subColor = customColors?.subColor ?? Colors.white;
             return ListTile(
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,7 +250,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: Colors.pink.shade50,
+                      color: mainColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -257,7 +271,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     margin: const EdgeInsets.only(right: 6),
                                     decoration: BoxDecoration(
-                                      color: Colors.redAccent,
+                                      color: mainColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -269,7 +283,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.pink.shade100,
+                                      color: subColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -344,35 +358,13 @@ class _SearchResultPageState extends State<SearchResultPage>
                             // 댓글 예시 (고정된 더미 데이터)
                             Row(
                               children: [
-                                const CircleAvatar(
-                                  radius: 14,
-                                  backgroundImage: NetworkImage(
-                                      'https://i.pravatar.cc/100?img=3'), // 댓글 유저 프로필
-                                ),
                                 const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    '이두나: 빈티지 하면 사나야 사나하면 빈티지!',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                )
                               ],
                             ),
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const CircleAvatar(
-                                  radius: 14,
-                                  backgroundImage: NetworkImage(
-                                      'https://i.pravatar.cc/100?img=5'), // 댓글 유저 프로필
-                                ),
                                 const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    '세세나: 빈티지 하면 사나야 사나하면 빈티지!',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                )
                               ],
                             )
                           ],
@@ -383,7 +375,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: Colors.pink.shade50,
+                      color: mainColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -404,7 +396,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     margin: const EdgeInsets.only(right: 6),
                                     decoration: BoxDecoration(
-                                      color: Colors.redAccent,
+                                      color: pointColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -416,7 +408,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.pink.shade100,
+                                      color: pointColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -487,40 +479,82 @@ class _SearchResultPageState extends State<SearchResultPage>
                             ),
 
                             const Divider(height: 20),
+                            FutureBuilder<QuerySnapshot>(
+                              future: fs
+                                  .collection('feeds')
+                                  .doc(docs[index].id)
+                                  .collection('comment')
+                                  .orderBy('cdatetime', descending: true)
+                                  .limit(3)
+                                  .get(),
+                              builder: (context, commentSnapshot) {
+                                if (!commentSnapshot.hasData) return const CircularProgressIndicator();
 
-                            // 댓글 예시 (고정된 더미 데이터)
-                            Row(
-                              children: [
-                                const CircleAvatar(
-                                  radius: 14,
-                                  backgroundImage: NetworkImage(
-                                      'https://i.pravatar.cc/100?img=3'), // 댓글 유저 프로필
-                                ),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    '이두나: 빈티지 하면 사나야 사나하면 빈티지!',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                )
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const CircleAvatar(
-                                  radius: 14,
-                                  backgroundImage: NetworkImage(
-                                      'https://i.pravatar.cc/100?img=5'), // 댓글 유저 프로필
-                                ),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    '세세나: 빈티지 하면 사나야 사나하면 빈티지!',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                )
-                              ],
+                                final commentDocs = commentSnapshot.data!.docs;
+
+                                if (commentDocs.isEmpty) {
+                                  return const Text("댓글이 없습니다", style: TextStyle(fontSize: 13, color: Colors.grey));
+                                }
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: commentDocs.map((commentDoc) {
+                                    final comment = commentDoc.data() as Map<String, dynamic>;
+                                    final userId = comment['userId'];
+
+                                    return FutureBuilder<DocumentSnapshot>(
+                                      future: fs.collection('users').doc(userId).get(),
+                                      builder: (context, userSnapshot) {
+                                        String nickname = comment['userName'] ?? '익명';
+                                        String profileUrl = '';
+
+                                        if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                                          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                                          nickname = userData['nickname'] ?? nickname;
+                                          profileUrl = userData['profileImageUrl'] ?? '';
+                                        }
+
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 20,
+                                                backgroundImage: profileUrl.isNotEmpty
+                                                    ? NetworkImage(profileUrl)
+                                                    : const AssetImage('assets/default_profile.png') as ImageProvider,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      nickname,
+                                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                                    ),
+                                                    Text(
+                                                      comment['comment'] ?? '',
+                                                      style: const TextStyle(fontSize: 13),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (comment['cdatetime'] != null)
+                                                Text(
+                                                  DateFormat('MM/dd HH:mm').format(
+                                                      (comment['cdatetime'] as Timestamp).toDate()),
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                                ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  }).toList(),
+                                );
+                              },
                             )
                           ],
                         ),
@@ -530,7 +564,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: Colors.pink.shade50,
+                      color: mainColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -551,7 +585,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     margin: const EdgeInsets.only(right: 6),
                                     decoration: BoxDecoration(
-                                      color: Colors.redAccent,
+                                      color: mainColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -563,7 +597,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.pink.shade100,
+                                      color: pointColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -634,40 +668,82 @@ class _SearchResultPageState extends State<SearchResultPage>
                             ),
 
                             const Divider(height: 20),
+                            FutureBuilder<QuerySnapshot>(
+                              future: fs
+                                  .collection('feeds')
+                                  .doc(docs[index].id)
+                                  .collection('comment')
+                                  .orderBy('cdatetime', descending: true)
+                                  .limit(3)
+                                  .get(),
+                              builder: (context, commentSnapshot) {
+                                if (!commentSnapshot.hasData) return const CircularProgressIndicator();
 
-                            // 댓글 예시 (고정된 더미 데이터)
-                            Row(
-                              children: [
-                                const CircleAvatar(
-                                  radius: 14,
-                                  backgroundImage: NetworkImage(
-                                      'https://i.pravatar.cc/100?img=3'), // 댓글 유저 프로필
-                                ),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    '이두나: 빈티지 하면 사나야 사나하면 빈티지!',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                )
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const CircleAvatar(
-                                  radius: 14,
-                                  backgroundImage: NetworkImage(
-                                      'https://i.pravatar.cc/100?img=5'), // 댓글 유저 프로필
-                                ),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text(
-                                    '세세나: 빈티지 하면 사나야 사나하면 빈티지!',
-                                    style: TextStyle(fontSize: 13),
-                                  ),
-                                )
-                              ],
+                                final commentDocs = commentSnapshot.data!.docs;
+
+                                if (commentDocs.isEmpty) {
+                                  return const Text("댓글이 없습니다", style: TextStyle(fontSize: 13, color: Colors.grey));
+                                }
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: commentDocs.map((commentDoc) {
+                                    final comment = commentDoc.data() as Map<String, dynamic>;
+                                    final userId = comment['userId'];
+
+                                    return FutureBuilder<DocumentSnapshot>(
+                                      future: fs.collection('users').doc(userId).get(),
+                                      builder: (context, userSnapshot) {
+                                        String nickname = comment['userName'] ?? '익명';
+                                        String profileUrl = '';
+
+                                        if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                                          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                                          nickname = userData['nickname'] ?? nickname;
+                                          profileUrl = userData['profileImage'] ?? '';
+                                        }
+
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 20,
+                                                backgroundImage: profileUrl.isNotEmpty
+                                                    ? NetworkImage(profileUrl)
+                                                    : const AssetImage('assets/default_profile.png') as ImageProvider,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      nickname,
+                                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                                    ),
+                                                    Text(
+                                                      comment['comment'] ?? '',
+                                                      style: const TextStyle(fontSize: 13),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (comment['cdatetime'] != null)
+                                                Text(
+                                                  DateFormat('MM/dd HH:mm').format(
+                                                      (comment['cdatetime'] as Timestamp).toDate()),
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                                ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  }).toList(),
+                                );
+                              },
                             )
                           ],
                         ),

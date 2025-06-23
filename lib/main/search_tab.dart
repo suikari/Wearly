@@ -91,6 +91,7 @@ class _SearchTabState extends State<SearchTab> {
                     divisions: 60,
                     value: minTemp,
                     label: minTemp.toInt().toString(),
+                    activeColor: Colors.blue,
                     onChanged: (value) {
                       setState(() {
                         if (value <= maxTemp) minTemp = value;
@@ -110,6 +111,7 @@ class _SearchTabState extends State<SearchTab> {
                     divisions: 60,
                     value: maxTemp,
                     label: maxTemp.toInt().toString(),
+                    activeColor: Colors.red,
                     onChanged: (value) {
                       setState(() {
                         if (value >= minTemp) maxTemp = value;
