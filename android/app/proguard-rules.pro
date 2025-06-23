@@ -24,6 +24,19 @@
 -keepattributes *Annotation*
 -keep class kotlin.Metadata { *; }
 
-# Flutter 메서드 채널 보호
--keep class io.flutter.** { *; }
--dontwarn io.flutter.**
+# NaverLogin 관련
+-keep public class com.nhn.android.naverlogin.** {
+  public protected *;
+}
+-keep public class com.navercorp.nid.** {
+  public *;
+}
+
+# 코루틴 Continuation 유지
+-keep,allowobfuscation,allowshrinking class kotlin.coroutines.Continuation
+
+# Retrofit 관련 유지
+-keep interface * {
+    @retrofit2.http.* <methods>;
+}
+-keep class retrofit2.Response { *; }
