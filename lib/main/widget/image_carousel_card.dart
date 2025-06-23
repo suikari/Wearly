@@ -6,6 +6,7 @@ class ImageCarouselCard extends StatelessWidget {
   final String profileImageUrl;
   final String userName;
   final VoidCallback onUserTap;
+  final VoidCallback? onShareTap;  // 추가
 
   // ✅ 추가
   final bool isLiked;
@@ -21,6 +22,7 @@ class ImageCarouselCard extends StatelessWidget {
     required this.isLiked,
     required this.likeCount,
     required this.onLikeToggle,
+    required this.onShareTap,
   }) : super(key: key);
 
   @override
@@ -137,7 +139,11 @@ class ImageCarouselCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(Icons.share, size: 20),
+              GestureDetector(
+                onTap: onShareTap,
+                child: Icon(Icons.share, size: 20)
+              ),
+
               const SizedBox(width: 16),
             ],
           ),
