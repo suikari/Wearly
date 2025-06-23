@@ -113,6 +113,7 @@ class ThemeProvider extends ChangeNotifier {
         scaffoldBackgroundColor: Colors.white,
         fontFamily: 'seoul', // 기본 본문 폰트
         textTheme: TextTheme(
+
           bodyLarge: TextStyle(fontFamily: 'seoul', fontSize: 16),
           bodyMedium: TextStyle(fontFamily: 'seoul'),
           bodySmall: TextStyle(fontFamily: 'seoul'),

@@ -7,7 +7,8 @@ class SearchResultPage extends StatefulWidget {
   final String keyword;
   final double minTemp;
   final double maxTemp;
-  const SearchResultPage({super.key, required this.keyword, required this.minTemp, required this.maxTemp});
+  final List<String> selectedTags;
+  const SearchResultPage({super.key, required this.keyword, required this.minTemp, required this.maxTemp, required this.selectedTags});
 
   @override
   State<SearchResultPage> createState() => _SearchResultPageState();
@@ -159,8 +160,26 @@ class _SearchResultPageState extends State<SearchResultPage>
 
           switch (tabIndex) {
             case 0:
-              final content = (data['tags'] ?? '').toString().toLowerCase();
-              return content.contains(kw);
+              final tags = data['tags'];
+              if (tags is! List) return false;
+
+              final tagStrings = tags.map((e) => e.toString().toLowerCase()).toList();
+              print("tagString >>>>>>>>>>>>>>>>> $tagStrings");
+              // 🔸 1. 키워드 포함 여부 확인
+              final keywordMatched = tagStrings.any((tag) => tag.contains(kw));
+
+              print("keywordMatched >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> $keywordMatched");
+
+              if (!keywordMatched) return false;
+
+              // 🔸 2. 선택된 태그 필터 (있을 경우)
+              if (widget.selectedTags.isNotEmpty) {
+                final hasSelectedTag = widget.selectedTags.any(
+                        (selected) => tagStrings.contains(selected.toLowerCase()));
+                if (!hasSelectedTag) return false;
+              }
+
+              return true;
             case 1:
               final location = (data['location'] ?? '').toString().toLowerCase();
               return location.contains(kw);

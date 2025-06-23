@@ -477,6 +477,13 @@ class _WritePostPageState extends State<WritePostPage> {
               children: [
                 Column(
                   children: [
+                    Row(children: [
+                      Text("날씨"),
+                      SizedBox(width: 50,),
+                      Text("체감온도"),
+                      SizedBox(width: 150,),
+                    ],),
+
                     Row(
                       children: [
                         const Icon(Icons.wb_sunny_outlined),
