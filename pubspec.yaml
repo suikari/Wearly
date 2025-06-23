@@ -51,10 +51,17 @@ dependencies:
   flutter_web_auth_2:
   google_sign_in:
   kakao_flutter_sdk_user:
-  flutter_naver_login:
+  naver_login_sdk:
   firebase_app_check:
+  flutter_dotenv:
   flutter_localizations:
     sdk: flutter
+  flutter_local_notifications: ^17.0.0
+  timezone:
+  permission_handler:
+  screenshot: ^3.0.0
+  android_intent_plus:
+  share_plus:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -89,7 +96,7 @@ flutter:
     - assets/profile3.jpg
     - assets/
     - assets/common/
-
+    - assets/.env
   fonts:
     - family: reko
       fonts:

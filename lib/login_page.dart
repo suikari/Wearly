@@ -4,18 +4,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_naver_login/flutter_naver_login.dart';
-import 'package:flutter_naver_login/interface/types/naver_account_result.dart';
-import 'package:flutter_naver_login/interface/types/naver_login_result.dart';
-import 'package:flutter_naver_login/interface/types/naver_login_status.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+import 'package:naver_login_sdk/naver_login_sdk.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main.dart';
 import 'package:w2wproject/provider/custom_colors.dart';
 import 'package:w2wproject/provider/theme_provider.dart';
+import 'common/dialog_util.dart';
 import 'common/terms_page.dart';
 import 'page/find_account_page.dart';
 import 'home_page.dart';
@@ -26,7 +24,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
@@ -57,14 +54,14 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setString('userId', uid);
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('로그인 성공!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('로그인 성공!')));
 
         // 로그인 성공 → 홈으로 이동
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => HomePage()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
       } on FirebaseAuthException catch (e) {
         String errorMessage = '';
 
@@ -82,9 +79,9 @@ class _LoginPageState extends State<LoginPage> {
             errorMessage = '로그인에 실패했습니다. (${e.code})';
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       } finally {
         // 로딩 종료
         setState(() {
@@ -95,22 +92,21 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _goToSignup() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => TermsPage()),
-    );
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => TermsPage()));
   }
 
   void _goToFindidpass() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => FindAccountPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => FindAccountPage()));
   }
 
   Future<bool> isNicknameTaken(String nickname) async {
-    final result = await FirebaseFirestore.instance
-        .collection('users')
-        .where('nickname', isEqualTo: nickname)
-        .get();
+    final result =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .where('nickname', isEqualTo: nickname)
+            .get();
 
     return result.docs.isNotEmpty;
   }
@@ -120,7 +116,8 @@ class _LoginPageState extends State<LoginPage> {
     required String provider, // 'google', 'kakao', 'naver' 등
   }) {
     final now = DateTime.now();
-    final timestamp = '${now.year}'
+    final timestamp =
+        '${now.year}'
         '${now.month.toString().padLeft(2, '0')}'
         '${now.day.toString().padLeft(2, '0')}'
         '${now.hour.toString().padLeft(2, '0')}'
@@ -135,14 +132,17 @@ class _LoginPageState extends State<LoginPage> {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return; // 취소한 경우
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
 
       String? uid = userCredential.user?.uid;
 
@@ -158,13 +158,17 @@ class _LoginPageState extends State<LoginPage> {
           // ✅ 최초 로그인: Firestore에 유저 정보 저장
           final email = userCredential.user?.email ?? '';
           final photoUrl = userCredential.user?.photoURL ?? '';
-          String displayName  = userCredential.user?.displayName ?? '';
+          String displayName = userCredential.user?.displayName ?? '';
 
           bool taken = await isNicknameTaken(displayName);
           if (taken || displayName.trim().isEmpty) {
             displayName = generateSocialNickname(
               baseNickname: displayName,
               provider: 'google',
+            );
+            await showDialogMessage(
+              context,
+              "이미 사용 중인 닉네임으로 확인되어 임시 닉네임으로 변경됩니다. \n프로필 설정에서 닉네임을 수정해주세요.",
             );
           }
 
@@ -178,48 +182,42 @@ class _LoginPageState extends State<LoginPage> {
             'isPublic': true,
             'socialAccount': 'google',
             'interest': [],
-            'follower': '',
-            'following': '',
+            'follower': [],
+            'following': [],
             'location': '',
             'profileImage': photoUrl,
             'mainCoordiId': '',
           });
         }
-
         // ✅ 홈 화면으로 이동
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => HomePage()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
       }
-
     } catch (e) {
       print('구글 로그인 에러: $e');
     }
   }
 
   Future<void> loginWithKakao() async {
-    print('loginWithKakao started');
     try {
       bool installed = await isKakaoTalkInstalled();
-      print('isKakaoTalkInstalled: $installed');
-      if (!installed) {
-        print('Trying loginWithKakaoAccount');
-      }
-      OAuthToken kakaoToken = installed
-          ? await UserApi.instance.loginWithKakaoTalk()
-          : await UserApi.instance.loginWithKakaoAccount();
-      print('login success, token: ${kakaoToken.accessToken}');
+      OAuthToken kakaoToken =
+          installed
+              ? await UserApi.instance.loginWithKakaoTalk()
+              : await UserApi.instance.loginWithKakaoAccount();
+
       final user = await UserApi.instance.me();
-      final uid = 'kakao:${user.id}';
+      final uid = 'kakao_${user.id}';
       final email = user.id ?? '';
       final profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl ?? '';
       String nickname = user.kakaoAccount?.profile?.nickname ?? '';
-      print(email);
-      print(nickname);
-      print(profileImageUrl);
+
       // Firebase Functions에 요청
       final res = await http.post(
-        Uri.parse('https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken'),
+        Uri.parse(
+          'https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'uid': uid,
@@ -227,15 +225,15 @@ class _LoginPageState extends State<LoginPage> {
           'provider': 'kakao',
         }),
       );
-      print('Response status: ${res.statusCode}');
-      print('Response body: ${res.body}');
+
       final customToken = json.decode(res.body)['token'];
-      final UserCredential userCredential = await _auth.signInWithCustomToken(customToken);
-      print(customToken);
+      final UserCredential userCredential = await _auth.signInWithCustomToken(
+        customToken,
+      );
+
       String? authUid = userCredential.user?.uid;
 
       if (authUid != null) {
-
         // Firestore 저장
         final firestore = FirebaseFirestore.instance;
         final doc = await firestore.collection('users').doc(authUid).get();
@@ -246,6 +244,10 @@ class _LoginPageState extends State<LoginPage> {
             nickname = generateSocialNickname(
               baseNickname: nickname,
               provider: 'kakao',
+            );
+            await showDialogMessage(
+              context,
+              "이미 사용 중인 닉네임으로 확인되어 임시 닉네임으로 변경됩니다. \n프로필 설정에서 닉네임을 수정해주세요.",
             );
           }
           await firestore.collection('users').doc(authUid).set({
@@ -258,8 +260,8 @@ class _LoginPageState extends State<LoginPage> {
             'isPublic': true, // 기본 공개 여부, 수정 가능
             'socialAccount': 'kakao',
             'interest': [], // 사용자가 선택한 관심사 리스트
-            'follower': '', // 기본값 또는 []
-            'following': '',
+            'follower': [], // 기본값 또는 []
+            'following': [],
             'location': '',
             'profileImage': profileImageUrl ?? '',
             'mainCoordiId': '',
@@ -269,9 +271,9 @@ class _LoginPageState extends State<LoginPage> {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('userId', authUid);
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => HomePage()),
-        );
+        Navigator.of(
+          context,
+        ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
       }
     } catch (e) {
       if (e is PlatformException && e.code == 'CANCELED') {
@@ -285,84 +287,119 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> signInWithNaver() async {
     print('signInWithNaver started');
     try {
-      final NaverLoginResult result = await FlutterNaverLogin.logIn();
-      print('NaverLoginResult: $result');
-      print("로그인 상태: ${result.status}");
-      print("에러 메시지: ${result.errorMessage}");
-      if (result.status == NaverLoginStatus.loggedIn) {
-        final NaverAccountResult? account = result.account;
-        final String uid = 'naver:${account?.id ?? ''}';
-        final String email = account?.email ?? '';
-        final String nickname = account?.nickname ?? '';
-        final String profileImage = account?.profileImage ?? '';
-        print(uid);
-        print(email);
-        print(profileImage);
-        // 👉 Firebase 커스텀 토큰 발급 요청 후 로그인
-        final res = await http.post(
-          Uri.parse('https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'uid': uid,
-            'email': email,
-            'nickname': nickname,
-            'provider': 'naver',
-          }),
-        );
+      await NaverLoginSDK.authenticate();
+      print('Naver authentication successful');
 
-        final token = jsonDecode(res.body)['token'];
-        final credential = await _auth.signInWithCustomToken(token);
-        final String? authUid = credential.user?.uid;
-
-        if (authUid != null) {
-          final firestore = FirebaseFirestore.instance;
-          final docRef = firestore.collection('users').doc(authUid);
-          final doc = await docRef.get();
-
-          // 최초 로그인 시 유저 정보 저장
-          if (!doc.exists) {
-            // 닉네임 중복 검사
-            String finalNickname = nickname;
-            final taken = await isNicknameTaken(nickname);
-            if (taken || nickname.trim().isEmpty) {
-              finalNickname = generateSocialNickname(
-                baseNickname: nickname,
-                provider: 'naver',
-              );
+      NaverLoginSDK.profile(
+        callback: ProfileCallback(
+          onSuccess: (
+            String resultCode,
+            String message,
+            dynamic response,
+          ) async {
+            print("📌 profile resultCode:$resultCode, message:$message");
+            String responseJson;
+            if (response is String) {
+              responseJson = response;
+            } else if (response is Map) {
+              responseJson = jsonEncode(response);
+            } else {
+              print("Unknown response type: ${response.runtimeType}");
+              return;
             }
 
-            await docRef.set({
-              'email': email,
-              'nickname': finalNickname,
-              'bio': '',
-              'agreeTerm': true,
-              'allowNotification': true,
-              'cdatetime': FieldValue.serverTimestamp(),
-              'isPublic': true,
-              'socialAccount': 'naver',
-              'interest': [],
-              'follower': '',
-              'following': '',
-              'location': '',
-              'profileImage': profileImage,
-              'mainCoordiId': '',
-            }, SetOptions(merge: true));
-          }
+            // fromJson 함수는 String JSON을 받는다고 가정
+            final profile = NaverLoginProfile.fromJson(response: responseJson);
+            print("profile: $profile");
 
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('userId', authUid);
+            final String uid = 'naver:${profile.id ?? ''}';
+            final String email = profile.id ?? '';
+            final String? nickname = profile.nickName ?? profile.name;
+            final String profileImage = profile.profileImage ?? '';
 
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => HomePage()),
-          );
-        }
-      }
+            print("👤 uid: $uid, nickname: $nickname");
+
+            // 👉 Firebase 커스텀 토큰 발급 요청 후 로그인
+            final res = await http.post(
+              Uri.parse(
+                'https://us-central1-wearly-d6a32.cloudfunctions.net/createCustomToken',
+              ),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'uid': uid,
+                'nickname': nickname,
+                'provider': 'naver',
+              }),
+            );
+
+            final token = jsonDecode(res.body)['token'];
+            final credential = await _auth.signInWithCustomToken(token);
+            final String? authUid = credential.user?.uid;
+
+            if (authUid != null) {
+              final firestore = FirebaseFirestore.instance;
+              final docRef = firestore.collection('users').doc(authUid);
+              final doc = await docRef.get();
+
+              // 최초 로그인 시 유저 정보 저장
+              if (!doc.exists) {
+                // 닉네임 중복 검사
+                String? finalNickname = nickname;
+                final taken = await isNicknameTaken(nickname!);
+                if (taken || nickname.trim().isEmpty) {
+                  finalNickname = generateSocialNickname(
+                    baseNickname: nickname,
+                    provider: 'naver',
+                  );
+                  await showDialogMessage(
+                    context,
+                    "이미 사용 중인 닉네임으로 확인되어 임시 닉네임으로 변경됩니다. \n프로필 설정에서 닉네임을 수정해주세요.",
+                  );
+                }
+
+                await docRef.set({
+                  'email': email,
+                  'nickname': finalNickname,
+                  'bio': '',
+                  'agreeTerm': true,
+                  'allowNotification': true,
+                  'cdatetime': FieldValue.serverTimestamp(),
+                  'isPublic': true,
+                  'socialAccount': 'naver',
+                  'interest': [],
+                  'follower': [],
+                  'following': [],
+                  'location': '',
+                  'profileImage': profileImage,
+                  'mainCoordiId': '',
+                }, SetOptions(merge: true));
+              }
+
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.setString('userId', authUid);
+
+              Navigator.of(
+                context,
+              ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
+            }
+          },
+          onFailure: (int httpStatus, String message) {
+            print("❌ profile failure: $httpStatus, message: $message");
+          },
+          onError: (int errorCode, String message) {
+            print("❌ profile error: $errorCode, message: $message");
+          },
+        ),
+      );
     } catch (e) {
       print('Naver login failed: $e');
     }
   }
 
-  Widget _buildSocialButton(String text, Color bgColor, Color textColor, {
+  Widget _buildSocialButton(
+    String text,
+    Color bgColor,
+    Color textColor, {
     bool border = false,
     required VoidCallback onPressed,
   }) {
@@ -374,10 +411,15 @@ class _LoginPageState extends State<LoginPage> {
         style: OutlinedButton.styleFrom(
           backgroundColor: bgColor,
           side: border ? BorderSide(color: textColor) : BorderSide.none,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         onPressed: onPressed,
-        child: Text(text, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        child: Text(
+          text,
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -430,7 +472,7 @@ class _LoginPageState extends State<LoginPage> {
           color: mainColor,
           child: Column(
             children: [
-              SizedBox(height: 5, child: Center()),        // 고정된 10픽셀 높이 공간
+              SizedBox(height: 5, child: Center()), // 고정된 10픽셀 높이 공간
               Container(height: 3, color: bgColor),
               Expanded(flex: 8, child: Center()),
             ],
@@ -482,13 +524,16 @@ class _LoginPageState extends State<LoginPage> {
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         hintText: '이메일',
-                        hintStyle: TextStyle(color: Grey,fontSize: 14),
+                        hintStyle: TextStyle(color: Grey, fontSize: 14),
                         border: InputBorder.none,
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
-                        if (value == null || value.isEmpty) return '이메일을 입력해주세요.';
-                        if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        if (value == null || value.isEmpty)
+                          return '이메일을 입력해주세요.';
+                        if (!RegExp(
+                          r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(value)) {
                           return '올바른 이메일 형식이 아닙니다.';
                         }
                         return null;
@@ -515,11 +560,12 @@ class _LoginPageState extends State<LoginPage> {
                       obscureText: true,
                       decoration: InputDecoration(
                         hintText: '비밀번호',
-                        hintStyle: TextStyle(color: Grey,fontSize: 14),
+                        hintStyle: TextStyle(color: Grey, fontSize: 14),
                         border: InputBorder.none,
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) return '비밀번호를 입력해주세요.';
+                        if (value == null || value.isEmpty)
+                          return '비밀번호를 입력해주세요.';
                         if (value.length < 4) return '비밀번호는 4자리 이상이어야 합니다.';
                         return null;
                       },
@@ -543,11 +589,21 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       onPressed: _isLoading ? null : _tryLogin,
-                      child: _isLoading
-                          ? CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      )
-                          : Text('로그인', style: TextStyle(color: White, fontSize: 20, fontWeight: FontWeight.bold),),
+                      child:
+                          _isLoading
+                              ? CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              )
+                              : Text(
+                                '로그인',
+                                style: TextStyle(
+                                  color: White,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                     ),
                   ),
                   SizedBox(height: 30),
@@ -556,9 +612,31 @@ class _LoginPageState extends State<LoginPage> {
                   SizedBox(height: 20),
 
                   // 소셜 로그인 버튼들
-                  _buildSocialButton('구글로 로그인', Colors.white, Colors.black, border: true, onPressed: (){signInWithGoogle();}),
-                  _buildSocialButton('카카오로 로그인', Colors.yellow[600]!, Colors.black, onPressed: (){loginWithKakao();}),
-                  _buildSocialButton('네이버로 로그인', Colors.green, Colors.white, onPressed:(){signInWithNaver();}),
+                  _buildSocialButton(
+                    '구글로 로그인',
+                    Colors.white,
+                    Colors.black,
+                    border: true,
+                    onPressed: () {
+                      signInWithGoogle();
+                    },
+                  ),
+                  _buildSocialButton(
+                    '카카오로 로그인',
+                    Colors.yellow[600]!,
+                    Colors.black,
+                    onPressed: () {
+                      loginWithKakao();
+                    },
+                  ),
+                  _buildSocialButton(
+                    '네이버로 로그인',
+                    Colors.green,
+                    Colors.white,
+                    onPressed: () {
+                      signInWithNaver();
+                    },
+                  ),
                   SizedBox(height: 30),
 
                   // 하단 링크
@@ -590,7 +668,11 @@ class _LoginPageState extends State<LoginPage> {
                             onTap: _goToSignup,
                             child: Text(
                               "회원가입하기",
-                              style: TextStyle(color: pointColor, fontSize: 12, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: pointColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           SizedBox(height: 5),
@@ -598,7 +680,11 @@ class _LoginPageState extends State<LoginPage> {
                             onTap: _goToFindidpass,
                             child: Text(
                               "이메일/비밀번호 찾기",
-                              style: TextStyle(color: pointColor, fontSize: 12, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: pointColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],

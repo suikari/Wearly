@@ -3,11 +3,15 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+import 'package:naver_login_sdk/naver_login_sdk.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
+import 'common/notification_service.dart';
 import 'firebase_options.dart';
 import 'splash_screen.dart';
 import 'provider/theme_provider.dart';
@@ -17,7 +21,7 @@ import 'provider/theme_provider.dart';
 Future<void> main() async {
 
   WidgetsFlutterBinding.ensureInitialized(); // Flutter 엔진 초기화 보장
-
+  await dotenv.load(fileName: 'assets/.env');
   // Firebase 초기화
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -34,8 +38,16 @@ Future<void> main() async {
   // 익명 로그인
   // await FirebaseAuth.instance.signInAnonymously();
   KakaoSdk.init(
-    nativeAppKey: '102bf4d0a6bfeeab56fd2d28f7573cc1',
+    nativeAppKey: dotenv.env['kakao_app_key'] ?? '',
   );
+  NaverLoginSDK.initialize(
+    clientId: dotenv.env['NAVER_CLIENT_ID'] ?? '',
+    clientSecret: dotenv.env['NAVER_CLIENT_SECRET'] ?? '',
+    clientName: dotenv.env['NAVER_CLIENT_NAME'] ?? 'Wearly',
+  );
+
+  tz.initializeTimeZones();
+  await NotificationService.init(); // 알림 초기화
 
   runApp(
     ChangeNotifierProvider(

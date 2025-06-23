@@ -10,14 +10,15 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <application
         android:label="w2wproject"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
 
-    <activity
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
@@ -36,11 +37,16 @@
             </intent-filter>
 
             <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="wearly" android:host="deeplink" />
+
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="wearly"
+                    android:host="deeplink"
+                    android:pathPrefix="/feedid"/>
             </intent-filter>
+
         </activity>
 
         <meta-data
@@ -55,26 +61,25 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider"
                 android:resource="@xml/my_widget_info" />
-
-            <meta-data
-                android:name="com.naver.oauth.client_id"
-                android:value="${NAVER_CLIENT_ID}" />
-            <meta-data
-                android:name="com.naver.oauth.client_secret"
-                android:value="${NAVER_CLIENT_SECRET}" />
-            <meta-data
-                android:name="com.naver.oauth.client_name"
-                android:value="${NAVER_CLIENT_NAME}" />
         </receiver>
 
-        <activity android:name="com.navercorp.nid.oauth.NidOAuthLoginActivity"
-            android:exported="true"
-            android:launchMode="singleTop">
+        <meta-data
+            android:name="com.naver.sdk.client_id"
+            android:value="@string/NAVER_CLIENT_ID" />
+        <meta-data
+            android:name="com.naver.sdk.client_secret"
+            android:value="@string/NAVER_CLIENT_SECRET" />
+        <meta-data
+            android:name="com.naver.sdk.client_name"
+            android:value="@string/NAVER_CLIENT_NAME" />
+        <activity
+            android:name="com.navercorp.nid.oauth.NidOAuthLoginActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="your_custom_scheme" android:host="oauth"/>
+                <data android:scheme="wearly" android:host="oauth"/>
             </intent-filter>
         </activity>
         <meta-data
@@ -89,7 +94,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="${kakao_app_key}" android:host="oauth"/>
+                <data android:scheme="${kakao_scheme}" android:host="oauth"/>
             </intent-filter>
         </activity>
     </application>

@@ -15,6 +15,12 @@ val localProperties = Properties().apply {
     load(FileInputStream(File(rootDir, "local.properties")))
 }
 
+val kakaoKey = localProperties["kakao_app_key"] as String
+val kakaoScheme = localProperties["kakao_scheme"] as String
+val naverClientId = localProperties["NAVER_CLIENT_ID"] as String
+val naverClientSecret = localProperties["NAVER_CLIENT_SECRET"] as String
+val naverClientName = localProperties["NAVER_CLIENT_NAME"] as String
+
 android {
     namespace = "com.example.w2wproject"
     compileSdk = flutter.compileSdkVersion
@@ -23,6 +29,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true // ✅ 이 줄 추가
     }
 
     kotlinOptions {
@@ -48,23 +55,23 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        manifestPlaceholders += mapOf(
-            "NAVER_CLIENT_ID" to "G0sonEyPthLnRvkvNR7j",
-            "NAVER_CLIENT_SECRET" to "Xdef_o0yOx",
-            "NAVER_CLIENT_NAME" to "wearly",
-            "kakao_app_key" to "102bf4d0a6bfeeab56fd2d28f7573cc1",
-            "kakao_scheme" to "kakao102bf4d0a6"
-        )
+        manifestPlaceholders["kakao_app_key"] = kakaoKey
+        manifestPlaceholders["kakao_scheme"] = kakaoScheme
+        manifestPlaceholders["NAVER_CLIENT_ID"] = naverClientId
+        manifestPlaceholders["NAVER_CLIENT_SECRET"] = naverClientSecret
+        manifestPlaceholders["NAVER_CLIENT_NAME"] = naverClientName
     }
 
     dependencies {
         implementation("com.squareup.okhttp3:okhttp:4.12.0")
         implementation("androidx.work:work-runtime:2.8.1")
         implementation("com.kakao.sdk:v2-user:2.21.4")
+        implementation("com.navercorp.nid:oauth:5.10.0")
         implementation("com.google.guava:guava:31.1-android")
         implementation("com.google.android.gms:play-services-location:21.0.1")
         // 예: kotlin stdlib
         implementation(kotlin("stdlib"))
+        coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
         // 기타 의존성들 ...
     }
