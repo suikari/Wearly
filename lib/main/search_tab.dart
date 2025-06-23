@@ -18,11 +18,11 @@ class _SearchTabState extends State<SearchTab> {
   final TextEditingController _searchController = TextEditingController();
 
   List<String> popularTags = [
-    '비 오는 날',
-    '맑은 하늘',
-    '따뜻한 옷',
-    '바람 부는 날',
-    '눈 오는 날',
+    '반바지',
+    '민소매/반팔',
+    '자켓',
+    '미니멀',
+    '클래식',
   ];
   Set<String> selectedTags = {};
 
@@ -66,7 +66,8 @@ class _SearchTabState extends State<SearchTab> {
                       builder: (_) => SearchResultPage(
                         keyword: _searchController.text.trim(),
                         minTemp : minTemp,
-                        maxTemp : maxTemp
+                        maxTemp : maxTemp,
+                        selectedTags: selectedTags.toList()
                       ),
                     ),
                   );
@@ -90,6 +91,7 @@ class _SearchTabState extends State<SearchTab> {
                     divisions: 60,
                     value: minTemp,
                     label: minTemp.toInt().toString(),
+                    activeColor: Colors.blue,
                     onChanged: (value) {
                       setState(() {
                         if (value <= maxTemp) minTemp = value;
@@ -109,6 +111,7 @@ class _SearchTabState extends State<SearchTab> {
                     divisions: 60,
                     value: maxTemp,
                     label: maxTemp.toInt().toString(),
+                    activeColor: Colors.red,
                     onChanged: (value) {
                       setState(() {
                         if (value >= minTemp) maxTemp = value;
