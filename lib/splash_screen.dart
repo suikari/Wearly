@@ -2,18 +2,28 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_links/app_links.dart';
 import 'dart:async';
-import 'login_page.dart'; // 반드시 LoginPage가 구현되어 있어야 합니다.
+
+import 'login_page.dart';
+import 'home_page.dart';
+import 'main/detail_page.dart';
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
+
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   String logoimg = 'assets/logo/plogo.png';
 
+
   late AnimationController _controller;
+
+  final AppLinks _appLinks = AppLinks();
 
   @override
   void initState() {
@@ -22,14 +32,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller = AnimationController(
       vsync: this,
+
       duration: Duration(seconds: 2),
     )..forward();
 
-    Timer(Duration(seconds: 3), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => LoginPage()),
-      );
-    });
+
+    _animation = Tween<double>(begin: -0.5, end: 1.5).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+
+    _startInitProcess();
   }
 
   Future<void> _loadTheme() async {
@@ -47,6 +60,39 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     });
   }
 
+  Future<void> _startInitProcess() async {
+    await Future.delayed(const Duration(seconds: 2)); // 기존 대기 유지
+
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+
+    Uri? initialUri;
+    try {
+      initialUri = await _appLinks.getInitialLink();
+    } catch (e) {
+      initialUri = null;
+    }
+
+    if (userId == null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => LoginPage()),
+      );
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const HomePage()),
+    );
+  }
+
+  bool _isFeedLink(Uri? uri) {
+    return uri != null &&
+        uri.scheme == 'wearly' &&
+        uri.host == 'deeplink' &&
+        uri.path == '/feedid' &&
+        uri.queryParameters.containsKey('id');
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -58,6 +104,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final bgColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
       body: Center(
+
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -77,6 +124,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   painter: RevealWavePainter(
                     animationValue: _controller.value,
                     backgroundColor: bgColor,
+
                   ),
                 );
               },

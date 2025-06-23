@@ -382,8 +382,10 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
   }
 }
 
-// (3) 위클리 랭킹 - 날짜 자동 표시
-class WeeklyBestWidget extends StatelessWidget {
+
+
+
+class WeeklyBestWidget extends StatefulWidget {
   const WeeklyBestWidget({super.key});
 
   // 이번 주 월요일~일요일 날짜 반환
@@ -396,7 +398,79 @@ class WeeklyBestWidget extends StatelessWidget {
   }
 
   @override
+  State<WeeklyBestWidget> createState() => _WeeklyBestWidgetState();
+}
+
+class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
+  List<Map<String, dynamic>> weeklyBest = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadWeeklyBest();
+  }
+
+  Future<void> loadWeeklyBest() async {
+    final feedsSnap = await FirebaseFirestore.instance.collection('feeds').get();
+
+    List<Map<String, dynamic>> feedList = [];
+    for (var doc in feedsSnap.docs) {
+      var feedData = doc.data();
+      var feedId = doc.id;
+
+      // 좋아요 수
+      var likesSnap = await FirebaseFirestore.instance
+          .collection('feeds')
+          .doc(feedId)
+          .collection('likes')
+          .get();
+      int likeCount = likesSnap.docs.length;
+
+      // 유저 정보
+      var userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(feedData['writeid'])
+          .get();
+      var userData = userDoc.data();
+
+      feedList.add({
+        ...feedData,
+        'feedId': feedId,
+        'likeCount': likeCount,
+        'profileImgUrl': userData?['profileImageUrl'],
+        'nickname': userData?['nickname'],
+      });
+    }
+
+    feedList.sort((a, b) => b['likeCount'].compareTo(a['likeCount']));
+    setState(() {
+      weeklyBest = feedList.take(3).toList();
+      loading = false;
+    });
+  }
+
+  String getCurrentWeekRange() {
+    DateTime now = DateTime.now();
+    DateTime monday = now.subtract(Duration(days: now.weekday - 1));
+    DateTime sunday = monday.add(const Duration(days: 6));
+    final formatter = DateFormat('yyyy.MM.dd');
+    return '${formatter.format(monday)} ~ ${formatter.format(sunday)}';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return Center(child: CircularProgressIndicator());
+    }
+    if (weeklyBest.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(18.0),
+        child: Text('이번주 인기 피드가 없습니다.'),
+      );
+    }
+
+    // 1등 따로, 2~3등 한 줄
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -421,101 +495,86 @@ class WeeklyBestWidget extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 1등
-            Column(
-              children: [
-                Container(
-                  width: 160,
-                  height: 160,
-                  margin: EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    image: DecorationImage(
-                      image: AssetImage('assets/profile1.jpg'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.emoji_events, color: Colors.orange, size: 18),
-                    SizedBox(width: 4),
-                    Text('옆집악마', style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(width: 4),
-                    Icon(Icons.favorite, color: Colors.pink, size: 15),
-                    SizedBox(width: 2),
-                    Text('1,253'),
-                  ],
-                ),
-              ],
-            ),
+            if (weeklyBest.length > 0)
+              _buildRankingBox(weeklyBest[0], 1, 160, 30),
           ],
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 2등
-            Column(
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  margin: EdgeInsets.only(top: 10, right: 14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
-                    image: DecorationImage(
-                      image: AssetImage('assets/profile2.jpg'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.account_circle, size: 16, color: Colors.grey),
-                    SizedBox(width: 2),
-                    Text(
-                      'Ranez',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(Icons.favorite, color: Colors.pink, size: 13),
-                    SizedBox(width: 2),
-                    Text('1,111', style: TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ],
-            ),
-            // 3등
-            Column(
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  margin: EdgeInsets.only(top: 10, left: 14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(22),
-                    image: DecorationImage(
-                      image: AssetImage('assets/profile3.jpg'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.account_circle, size: 16, color: Colors.grey),
-                    SizedBox(width: 2),
-                    Text('이두나', style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(width: 4),
-                    Icon(Icons.favorite, color: Colors.pink, size: 13),
-                    SizedBox(width: 2),
-                    Text('987', style: TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ],
-            ),
+            if (weeklyBest.length > 1)
+              _buildRankingBox(weeklyBest[1], 2, 100, 22, margin: EdgeInsets.only(top: 10, right: 14)),
+            if (weeklyBest.length > 2)
+              _buildRankingBox(weeklyBest[2], 3, 100, 22, margin: EdgeInsets.only(top: 10, left: 14)),
           ],
         ),
         SizedBox(height: 28),
+      ],
+    );
+  }
+
+  Widget _buildRankingBox(
+      Map<String, dynamic> feed,
+      int rank,
+      double imgSize,
+      double borderRadius, {
+        EdgeInsets? margin,
+      }) {
+    final profileImg = feed['profileImgUrl'];
+    final nickname = feed['nickname'] ?? '익명';
+    final likeCount = feed['likeCount'] ?? 0;
+    final imageUrls = (feed['imageUrls'] as List?) ?? [];
+    final feedImg = imageUrls.isNotEmpty ? imageUrls[0] : null;
+
+    return Column(
+      children: [
+        // 피드 대표 이미지
+        Container(
+          width: imgSize,
+          height: imgSize,
+          margin: margin,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(borderRadius),
+            color: Colors.grey[200],
+          ),
+          child: feedImg != null
+              ? ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: Image.network(feedImg, fit: BoxFit.cover),
+          )
+              : Icon(Icons.image, size: imgSize / 2, color: Colors.white30),
+        ),
+        SizedBox(height: 10),
+        // 프로필+닉네임+좋아요
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // 프로필 사진
+            Container(
+              width: 38,
+              height: 38,
+              margin: EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey[300]!, width: 1.4),
+              ),
+              child: CircleAvatar(
+                backgroundColor: Colors.white,
+                backgroundImage: profileImg != null && profileImg.toString().startsWith('http')
+                    ? NetworkImage(profileImg)
+                    : AssetImage('assets/profile1.jpg') as ImageProvider,
+              ),
+            ),
+            Text(
+              nickname,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            SizedBox(width: 7),
+            Icon(Icons.favorite, color: Colors.pink, size: 16),
+            SizedBox(width: 3),
+            Text('$likeCount', style: TextStyle(fontSize: 14)),
+          ],
+        ),
       ],
     );
   }

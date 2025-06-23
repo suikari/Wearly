@@ -37,21 +37,21 @@ class _ChatListPageState extends State<ChatListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.pink[100],
+        backgroundColor: Colors.white,
         title: const Text('채팅 리스트', style: TextStyle(color: Colors.black)),
         iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 0,
+        elevation: 1,
       ),
       body: Column(
         children: [
           buildRecommendedUsersBar(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: Colors.pink[50],
+            color: Colors.grey[100],
             child: TextField(
               decoration: InputDecoration(
                 hintText: "유저 닉네임/UID 검색...",
-                prefixIcon: Icon(Icons.search, color: Colors.pink[300]),
+                prefixIcon: Icon(Icons.search, color: Colors.blueGrey),
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -307,7 +307,7 @@ class _ChatListPageState extends State<ChatListPage> {
                                 child: Container(
                                   padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.pink[200],
+                                    color: Colors.blue[200],
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(color: Colors.white, width: 1),
                                   ),
@@ -376,9 +376,7 @@ class _ChatListPageState extends State<ChatListPage> {
 
       txn.update(userRef, {'following': following});
       txn.update(targetRef, {'follower': followers});
-    }).catchError((e) {
-
-    });
+    }).catchError((e) {});
 
     // 팔로우 알림 전송
     final mySnap = await FirebaseFirestore.instance.collection('users').doc(myUid).get();

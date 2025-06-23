@@ -9,7 +9,9 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:naver_login_sdk/naver_login_sdk.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
+import 'common/notification_service.dart';
 import 'firebase_options.dart';
 import 'splash_screen.dart';
 import 'provider/theme_provider.dart';
@@ -43,6 +45,9 @@ Future<void> main() async {
     clientSecret: dotenv.env['NAVER_CLIENT_SECRET'] ?? '',
     clientName: dotenv.env['NAVER_CLIENT_NAME'] ?? 'Wearly',
   );
+
+  tz.initializeTimeZones();
+  await NotificationService.init(); // 알림 초기화
 
   runApp(
     ChangeNotifierProvider(

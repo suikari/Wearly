@@ -47,7 +47,6 @@ class WearlyWeatherCard extends StatelessWidget {
     final hour = DateTime.now().hour;
     final isNight = hour >= 18 || hour < 6;
 
-
     if (weatherStatus == '맑음') {
       return isNight
           ? 'assets/weather_moon.gif'
@@ -94,7 +93,7 @@ class WearlyWeatherCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Color(0xFFFFDE7D),
-                    border: Border.all(color: Colors.orange.shade200, width: 2),
+                    border: Border.all(width: 2),
                   ),
                   child: ClipOval(
                     child: Image.asset(
@@ -278,20 +277,17 @@ class WearlyWeatherCard extends StatelessWidget {
             ),
             SizedBox(height: expanded ? 18 : 6),
             Center(
-              child: GestureDetector(
-                onTap: expanded ? onFold : onExpand,
-                child: Container(
-                  width: 46,
-                  height: 18,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200.withOpacity(0.75),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: expanded ? onFold : onExpand,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     child: Icon(
                       expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      size: 28,
-                      color: Colors.deepOrange,
+                      size: 32,
                     ),
                   ),
                 ),
