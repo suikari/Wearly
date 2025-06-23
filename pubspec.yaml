@@ -100,6 +100,7 @@ flutter:
     - assets/profile3.jpg
     - assets/
     - assets/common/
+    - assets/.env
 
   fonts:
     - family: reko
