@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_links/app_links.dart';
 import 'dart:async';
-import 'login_page.dart'; // 반드시 LoginPage가 구현되어 있어야 합니다.
+
+import 'login_page.dart';
+import 'home_page.dart';
+import 'main/detail_page.dart';
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   String logoimg = 'assets/plogo.png';
 
   late AnimationController _controller;
@@ -17,6 +24,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   final double boxWidth = 300;
   final double boxHeight = 150;
 
+  final AppLinks _appLinks = AppLinks();
+
   @override
   void initState() {
     super.initState();
@@ -24,18 +33,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 1),
+      duration: const Duration(seconds: 1),
     )..repeat();
 
     _animation = Tween<double>(begin: -0.5, end: 1.5).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    Timer(Duration(seconds: 3), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => LoginPage()),
-      );
-    });
+    _startInitProcess();
   }
 
   Future<void> _loadTheme() async {
@@ -47,6 +52,39 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         logoimg = 'assets/logo.png';
       }
     });
+  }
+
+  Future<void> _startInitProcess() async {
+    await Future.delayed(const Duration(seconds: 2)); // 기존 대기 유지
+
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+
+    Uri? initialUri;
+    try {
+      initialUri = await _appLinks.getInitialLink();
+    } catch (e) {
+      initialUri = null;
+    }
+
+    if (userId == null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => LoginPage()),
+      );
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const HomePage()),
+    );
+  }
+
+  bool _isFeedLink(Uri? uri) {
+    return uri != null &&
+        uri.scheme == 'wearly' &&
+        uri.host == 'deeplink' &&
+        uri.path == '/feedid' &&
+        uri.queryParameters.containsKey('id');
   }
 
   @override
@@ -61,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       height: boxHeight,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           colors: [
             Color(0xFF60A5FA), // 파랑
             Color(0xFFF472B6), // 핑크
@@ -92,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   Colors.white.withOpacity(0.2),
                   Colors.white.withOpacity(0.1),
                 ],
-                stops: [0.0, 0.5, 1.0],
+                stops: const [0.0, 0.5, 1.0],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -109,14 +147,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       body: Center(
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: Container(
+          child: SizedBox(
             width: boxWidth,
             height: boxHeight,
             child: Stack(
               children: [
-                _fixedGradientBackground(), // 고정된 그라데이션 배경
-                _shiningLight(), // 흐르는 하얀 빛
-                Center( // 로고 이미지 표시
+                _fixedGradientBackground(),
+                _shiningLight(),
+                Center(
                   child: Image.asset(
                     logoimg,
                     width: 80,

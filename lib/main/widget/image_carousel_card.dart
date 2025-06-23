@@ -6,6 +6,12 @@ class ImageCarouselCard extends StatelessWidget {
   final String profileImageUrl;
   final String userName;
   final VoidCallback onUserTap;
+  final VoidCallback? onShareTap;  // 추가
+
+  // ✅ 추가
+  final bool isLiked;
+  final int likeCount;
+  final VoidCallback onLikeToggle;
 
   const ImageCarouselCard({
     Key? key,
@@ -13,6 +19,10 @@ class ImageCarouselCard extends StatelessWidget {
     required this.profileImageUrl,
     required this.userName,
     required this.onUserTap,
+    required this.isLiked,
+    required this.likeCount,
+    required this.onLikeToggle,
+    required this.onShareTap,
   }) : super(key: key);
 
   @override
@@ -103,7 +113,7 @@ class ImageCarouselCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  userName,
+                  userName.length > 8 ? '${userName.substring(0, 8)}...' : userName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -112,12 +122,29 @@ class ImageCarouselCard extends StatelessWidget {
               ],
             ),
           ),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.favorite_border, size: 20),
-              SizedBox(width: 12),
-              Icon(Icons.share, size: 20),
-              SizedBox(width: 16),
+              GestureDetector(
+                onTap: onLikeToggle,
+                child: Row(
+                  children: [
+                    Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: isLiked ? Colors.red : Colors.grey,
+                      size: 20,
+                    ),
+                    SizedBox(width: 4),
+                    Text('$likeCount'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: onShareTap,
+                child: Icon(Icons.share, size: 20)
+              ),
+
+              const SizedBox(width: 16),
             ],
           ),
         ],

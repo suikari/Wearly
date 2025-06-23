@@ -47,7 +47,7 @@ class _UserEditPageState extends State<UserEditPage> {
         _allInterests = loadedTags;
       });
     } catch (e) {
-      print('관심 태그 불러오기 오류: $e');
+      //print('관심 태그 불러오기 오류: $e');
     }
   }
 
@@ -67,7 +67,7 @@ class _UserEditPageState extends State<UserEditPage> {
         _isPublic = data['isPublic'] ?? true;
         _location = data['location'] ?? '';
         _selectedInterests = List<String>.from(data['interest'] ?? []);
-        _profileImageUrl = data['profileImageUrl'] ?? '';
+        _profileImageUrl = data['profileImage'] ?? '';
         _loading = false;
       });
     }
@@ -76,11 +76,11 @@ class _UserEditPageState extends State<UserEditPage> {
   Future<void> _saveChanges() async {
     if (_formKey.currentState!.validate()) {
       await FirebaseFirestore.instance.collection('users').doc(widget.userId).update({
-        'introduction': _introduction,
+        'bio': _introduction,
         'isPublic': _isPublic,
         'location': _location,
-        'interests': _selectedInterests,
-        'profileImageUrl': _profileImageUrl,
+        'interest': _selectedInterests,
+        'profileImage': _profileImageUrl,
         'updatedAt': FieldValue.serverTimestamp(),
       });
       if (mounted) {
@@ -115,7 +115,7 @@ class _UserEditPageState extends State<UserEditPage> {
         });
       }
     } catch (e) {
-      print('위치 가져오기 오류: $e');
+      //print('위치 가져오기 오류: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('위치 가져오기 실패: $e')),
