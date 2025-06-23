@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'custom_colors.dart';
+import 'custom_fonts.dart';
 
 enum ColorTheme { defaultTheme, blueTheme, blackTheme }
 
@@ -52,19 +53,30 @@ class ThemeProvider extends ChangeNotifier {
     switch (_colorTheme) {
       case ColorTheme.blueTheme:
         return ThemeData(
-          fontFamily: 'reko',
+          fontFamily: 'IM_Hyemin', // 기본 본문 폰트
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
+            bodyMedium: TextStyle(fontFamily: 'IM_Hyemin'),
+            bodySmall: TextStyle(fontFamily: 'IM_Hyemin'),
+            labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
+            labelMedium: TextStyle(fontFamily: 'IM_Hyemin'),
+            labelSmall: TextStyle(fontFamily: 'IM_Hyemin'),
+            headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20),
+          ),
           brightness: Brightness.light,
           primarySwatch: bluetSwatch,
           scaffoldBackgroundColor: Colors.white,
           appBarTheme: AppBarTheme(
             backgroundColor: Color(0xFF4058A6),
             iconTheme: IconThemeData(color: Colors.white),
-            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+            titleTextStyle: TextStyle(fontFamily: 'Maplestory',color: Colors.white, fontSize: 20),
           ),
           bottomNavigationBarTheme: BottomNavigationBarThemeData(
             backgroundColor: Color(0xFF4058A6),
             selectedItemColor: Colors.blueAccent,
             unselectedItemColor: Colors.white70,
+            selectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
+            unselectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
           ),
           extensions: <ThemeExtension<dynamic>>[
             const CustomColors(
@@ -76,22 +88,37 @@ class ThemeProvider extends ChangeNotifier {
               textWhite: Colors.white,
               textBlack: Color(0xFF333333)
             ),
+            const CustomFonts(
+              bodyFont: 'IM_Hyemin',
+              titleFont: 'Maplestory',
+              labelFont: 'Hakgyoansim',
+            ),
           ],
         );
       case ColorTheme.blackTheme:
         return ThemeData.dark().copyWith(
-          textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'reko'),
           primaryColor: Colors.grey[900],
           scaffoldBackgroundColor: Color.fromRGBO(51, 51, 51, 1.0),
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
+            bodyMedium: TextStyle(fontFamily: 'IM_Hyemin'),
+            bodySmall: TextStyle(fontFamily: 'IM_Hyemin'),
+            labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
+            labelMedium: TextStyle(fontFamily: 'IM_Hyemin'),
+            labelSmall: TextStyle(fontFamily: 'IM_Hyemin'),
+            headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20),
+          ),
           appBarTheme: AppBarTheme(
             backgroundColor: Colors.grey[900],
             iconTheme: IconThemeData(color: Colors.white),
-            titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+            titleTextStyle: TextStyle(fontFamily: 'Maplestory',color: Colors.white, fontSize: 20),
           ),
           bottomNavigationBarTheme: BottomNavigationBarThemeData(
             backgroundColor: Colors.grey[900],
             selectedItemColor: Color.fromRGBO(85,85,85, 1.0),
             unselectedItemColor: Colors.white70,
+            selectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
+            unselectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
           ),
           extensions: <ThemeExtension<dynamic>>[
             const CustomColors(
@@ -103,6 +130,11 @@ class ThemeProvider extends ChangeNotifier {
                 textWhite: Colors.white,
                 textBlack: Color(0xCC000000)
             ),
+            const CustomFonts(
+              bodyFont: 'IM_Hyemin',
+              titleFont: 'Maplestory',
+              labelFont: 'Hakgyoansim',
+            ),
           ],
         );
 
@@ -111,22 +143,21 @@ class ThemeProvider extends ChangeNotifier {
       return ThemeData(
         primarySwatch: defaultSwatch,
         scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'seoul', // 기본 본문 폰트
+        fontFamily: 'IM_Hyemin', // 기본 본문 폰트
         textTheme: TextTheme(
-
-          bodyLarge: TextStyle(fontFamily: 'seoul', fontSize: 16),
-          bodyMedium: TextStyle(fontFamily: 'seoul'),
-          bodySmall: TextStyle(fontFamily: 'seoul'),
-          labelLarge: TextStyle(fontFamily: 'seoul', fontSize: 16),
-          labelMedium: TextStyle(fontFamily: 'seoul'),
-          labelSmall: TextStyle(fontFamily: 'seoul'),
-          headlineSmall: TextStyle(fontFamily: 'reko', fontSize: 20),
+          bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
+          bodyMedium: TextStyle(fontFamily: 'IM_Hyemin'),
+          bodySmall: TextStyle(fontFamily: 'IM_Hyemin'),
+          labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
+          labelMedium: TextStyle(fontFamily: 'IM_Hyemin'),
+          labelSmall: TextStyle(fontFamily: 'IM_Hyemin'),
+          headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20),
         ),
         appBarTheme: AppBarTheme(
           backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
           iconTheme: IconThemeData(color: Colors.white),
           titleTextStyle: TextStyle(
-            fontFamily: 'reko', // 헤더용 폰트
+            fontFamily: 'Maplestory', // 헤더용 폰트
             color: Colors.white,
             fontSize: 20,
           ),
@@ -135,8 +166,8 @@ class ThemeProvider extends ChangeNotifier {
           backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
           selectedItemColor: Color.fromRGBO(255, 111, 97, 1.0),
           unselectedItemColor: Colors.white,
-          selectedLabelStyle: TextStyle(fontFamily: 'reko'), // 네비게이션 선택 항목 폰트
-          unselectedLabelStyle: TextStyle(fontFamily: 'reko'),
+          selectedLabelStyle: TextStyle(fontFamily: 'Maplestory'), // 네비게이션 선택 항목 폰트
+          unselectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
         ),
           extensions: <ThemeExtension<dynamic>>[
             const CustomColors(
@@ -147,6 +178,11 @@ class ThemeProvider extends ChangeNotifier {
               textGrey: Colors.grey,
               textWhite: Colors.white,
               textBlack: Color(0xFF333333)
+            ),
+            const CustomFonts(
+              bodyFont: 'IM_Hyemin',
+              titleFont: 'Maplestory',
+              labelFont: 'Hakgyoansim',
             ),
           ],
         );

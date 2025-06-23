@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../page/signup_page.dart';
 import '../provider/custom_colors.dart';
+import '../provider/custom_fonts.dart';
 import '../provider/theme_provider.dart';
 
 class TermsModel {
@@ -72,7 +73,8 @@ class _TermsPageState extends State<TermsPage> {
       Color Grey,
       Color White,
       Color Black,
-      final isBlackTheme
+      final isBlackTheme,
+      String font,
     ) {
     showModalBottomSheet(
       context: context,
@@ -80,44 +82,47 @@ class _TermsPageState extends State<TermsPage> {
       backgroundColor: isBlackTheme ? Color(0xFF333333) : Colors.white,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        maxChildSize: 0.9,
-        initialChildSize: 0.7,
-        minChildSize: 0.4,
-        builder: (context, scrollController) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Container(
-                  width: 50,
-                  height: 5,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: isBlackTheme ? Grey : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                Text(
-                  term.title,
-                  style: TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold, color: isBlackTheme ? White : Black),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Text(
-                      term.content,
-                      style: TextStyle(fontSize: 16, color: Grey),
+      builder: (context) => SafeArea(
+        top: false,
+        child: DraggableScrollableSheet(
+          expand: false,
+          maxChildSize: 0.9,
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: isBlackTheme ? Grey : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                  Text(
+                    term.title,
+                    style: TextStyle(
+                        fontFamily: font, fontSize: 20, fontWeight: FontWeight.bold, color: isBlackTheme ? White : Black),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: Text(
+                        term.content,
+                        style: TextStyle(fontFamily: font, fontSize: 16, color: Grey),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -151,6 +156,7 @@ class _TermsPageState extends State<TermsPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isBlackTheme = themeProvider.colorTheme == ColorTheme.blackTheme;
     final bgColor = isBlackTheme ? Color(0xFF333333) : Colors.white;
+    final fonts = Theme.of(context).extension<CustomFonts>()!;
 
     return Scaffold(
       appBar: AppBar(
@@ -196,7 +202,7 @@ class _TermsPageState extends State<TermsPage> {
                 Divider(
                   thickness: 1,
                   height: 1,
-                  color: mainColor,
+                  color: highlightColor,
                 ),
                 // 약관 리스트
                 Expanded(
@@ -236,14 +242,14 @@ class _TermsPageState extends State<TermsPage> {
                                   Flexible(
                                     child: Text(
                                       term.title,
-                                      style: const TextStyle(fontSize: 16),
+                                      style: TextStyle(fontFamily: fonts.labelFont, fontSize: 16),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   TextButton.icon(
-                                    onPressed: () => _showTermsContent(term,Grey,White,Black,isBlackTheme),
-                                    icon: const Icon(Icons.expand_more),
-                                    label: const Text('전문보기'),
+                                    onPressed: () => _showTermsContent(term,Grey,White,Black,isBlackTheme, fonts.labelFont,),
+                                    icon: Icon(Icons.expand_more,color: Grey,),
+                                    label: Text('전문보기', style: TextStyle(fontFamily: fonts.labelFont, ),),
                                     style: TextButton.styleFrom(
                                       foregroundColor: Grey,
                                       padding: EdgeInsets.zero,
@@ -263,12 +269,12 @@ class _TermsPageState extends State<TermsPage> {
                 Divider(
                   thickness: 1,
                   height: 1,
-                  color: mainColor,
+                  color: highlightColor,
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: CheckboxListTile(
-                    title: const Text('전체 약관에 동의합니다', style: TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text('전체 약관에 동의합니다', style: TextStyle(fontFamily: fonts.labelFont, fontWeight: FontWeight.bold)),
                     value: _agreeAll,
                     onChanged: _toggleAgreeAll,
                     controlAffinity: ListTileControlAffinity.leading,
