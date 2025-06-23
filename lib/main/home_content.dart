@@ -613,13 +613,11 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
                           child: Container(
                             padding: EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: Colors.pink[100],
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Icon(
                               showAllTags ? Icons.expand_less_rounded : Icons.add,
                               size: 16,
-                              color: Colors.pink[700],
                             ),
                           ),
                         ),

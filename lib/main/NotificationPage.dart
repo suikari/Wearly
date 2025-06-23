@@ -18,21 +18,24 @@ class _NotificationPageState extends State<NotificationPage> {
   bool isLoading = false;
   bool hasMore = true;
   DocumentSnapshot? lastDoc;
+  bool firstFetchDone = false;
 
   @override
   void initState() {
     super.initState();
     fetchNotifications();
+    _scrollController.addListener(_onScroll);
+  }
 
-    _scrollController.addListener(() {
-      // 거의 끝까지 스크롤 됐을 때 추가 로드
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 100 &&
-          !isLoading &&
-          hasMore) {
-        fetchNotifications();
-      }
-    });
+  void _onScroll() {
+    // 스크롤이 바닥 근처(맨 아래) && not loading && more data available && 최소 한 페이지는 있음
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 100 &&
+        !isLoading &&
+        hasMore &&
+        notificationDocs.length >= pageSize) {
+      fetchNotifications();
+    }
   }
 
   Future<void> fetchNotifications() async {
@@ -53,17 +56,17 @@ class _NotificationPageState extends State<NotificationPage> {
 
     if (mounted) {
       setState(() {
-        notificationDocs.addAll(snap.docs);
         if (snap.docs.isNotEmpty) {
+          notificationDocs.addAll(snap.docs);
           lastDoc = snap.docs.last;
         }
         if (snap.docs.length < pageSize) hasMore = false;
         isLoading = false;
+        firstFetchDone = true;
       });
     }
   }
 
-  // ★ "모두 읽기" 기능 추가!
   Future<void> markAllAsRead() async {
     final unread = notificationDocs.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
@@ -73,14 +76,11 @@ class _NotificationPageState extends State<NotificationPage> {
     if (unread.isEmpty) return;
 
     WriteBatch batch = FirebaseFirestore.instance.batch();
-
     for (var doc in unread) {
       batch.update(doc.reference, {'isRead': true});
     }
-
     await batch.commit();
 
-    // 화면 즉시 갱신
     setState(() {
       for (var doc in unread) {
         (doc.data() as Map<String, dynamic>)['isRead'] = true;
@@ -90,18 +90,23 @@ class _NotificationPageState extends State<NotificationPage> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
   Widget buildItem(BuildContext context, int idx) {
-    if (idx == notificationDocs.length) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: CircularProgressIndicator(),
-        ),
-      );
+    if (idx >= notificationDocs.length) {
+      // 맨 아래 로딩 인디케이터 (더 불러올 게 있을 때만)
+      if (isLoading && hasMore) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      return SizedBox.shrink();
     }
 
     final doc = notificationDocs[idx];
@@ -137,13 +142,11 @@ class _NotificationPageState extends State<NotificationPage> {
       trailing: Text(dateStr, style: TextStyle(fontSize: 13, color: Colors.grey)),
       tileColor: isRead ? Colors.grey[100] : Colors.white,
       onTap: () async {
-        // 1. 읽음 처리
         await FirebaseFirestore.instance
             .collection('notifications')
             .doc(doc.id)
             .update({'isRead': true});
 
-        // 2. DM이면 채팅방 이동
         if (noti['type'] == 'dm' && noti['roomId'] != null) {
           Navigator.push(
             context,
@@ -157,8 +160,6 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         }
-
-        // 즉시 UI 반영
         setState(() {
           noti['isRead'] = true;
         });
@@ -185,8 +186,8 @@ class _NotificationPageState extends State<NotificationPage> {
           : Center(child: Text('알림이 없습니다.')))
           : ListView.separated(
         controller: _scrollController,
-        itemCount: notificationDocs.length + (hasMore ? 1 : 0),
-        separatorBuilder: (_, __) => Divider(height: 1, color: Colors.pink[100]),
+        itemCount: notificationDocs.length + ((isLoading && hasMore) ? 1 : 0),
+        separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: buildItem,
       ),
     );
