@@ -6,8 +6,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart' as path;
+import 'package:provider/provider.dart';
 import '../common/location_helper.dart';
 import '../login_page.dart';
+import '../provider/custom_fonts.dart';
+import '../provider/theme_provider.dart';
 import '/provider/custom_colors.dart';
 import '/common/dialog_util.dart';
 
@@ -361,6 +364,8 @@ class _SignupPageState extends State<SignupPage> {
       TextEditingController controller, {
         required Color subColor,
         required Color mainColor,
+        required Color textColor,
+        required Color Grey,
         bool obscure = false,
         Widget? suffix,
         String? buttonText,
@@ -377,7 +382,7 @@ class _SignupPageState extends State<SignupPage> {
               label,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.black87,
+                color: textColor,
               ),
             ),
           ),
@@ -484,6 +489,10 @@ class _SignupPageState extends State<SignupPage> {
     Color Grey = customColors?.textGrey ?? Colors.grey;
     Color White = customColors?.textWhite ?? Colors.white;
     Color Black = customColors?.textBlack ?? Colors.black;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isBlackTheme = themeProvider.colorTheme == ColorTheme.blackTheme;
+    final textColor = isBlackTheme ? White : Black;
+    final fonts = Theme.of(context).extension<CustomFonts>()!;
 
     return Scaffold(
       appBar: AppBar(title: Text('회원가입')),
@@ -507,15 +516,17 @@ class _SignupPageState extends State<SignupPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text("프로필 이미지", style: TextStyle(fontSize: 16),),
+              Text("프로필 이미지", style: TextStyle(color: textColor,fontSize: 16),),
               const SizedBox(height: 30),
-              Text("* 표시는 필수 입력 항목입니다.", style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text("* 표시는 필수 입력 항목입니다.", style: TextStyle(fontFamily: fonts.labelFont, fontSize: 12, color: Grey)),
               buildTextField(
                 '이메일 *',
                 '이메일을 입력하세요',
                 emailController,
                 subColor: subColor,
                 mainColor: mainColor,
+                textColor: textColor,
+                Grey: Grey,
                 buttonText: '중복확인',
                 onButtonPressed: checkEmail,
               ),
@@ -527,13 +538,15 @@ class _SignupPageState extends State<SignupPage> {
                 subColor: subColor,
                 obscure: true,
                 mainColor: mainColor,
+                textColor: textColor,
+                Grey: Grey,
               ),
               if (!_isValidPassword && passwordController.text.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     '8자 이상, 영문/숫자/특수문자를 포함해야 합니다.',
-                    style: TextStyle(color: pointColor, fontSize: 12),
+                    style: TextStyle(fontFamily: fonts.labelFont, color: pointColor, fontSize: 12),
                   ),
                 ),
               const SizedBox(height: 20),
@@ -544,13 +557,15 @@ class _SignupPageState extends State<SignupPage> {
                 subColor: subColor,
                 obscure: true,
                 mainColor: mainColor,
+                textColor: textColor,
+                Grey: Grey,
               ),
               if (!_isPasswordMatched && confirmPasswordController.text.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     '비밀번호가 일치하지 않습니다.',
-                    style: TextStyle(color: pointColor, fontSize: 12),
+                    style: TextStyle(fontFamily: fonts.labelFont, color: pointColor, fontSize: 12),
                   ),
                 ),
               const SizedBox(height: 20),
@@ -560,6 +575,8 @@ class _SignupPageState extends State<SignupPage> {
                 nicknameController,
                 subColor: subColor,
                 mainColor: mainColor,
+                textColor: textColor,
+                Grey: Grey,
                 buttonText: "중복확인",
                 onButtonPressed: checkNickname,
               ),
@@ -570,6 +587,8 @@ class _SignupPageState extends State<SignupPage> {
                 bioController,
                 subColor: subColor,
                 mainColor: mainColor,
+                textColor: textColor,
+                Grey: Grey,
               ),
               const SizedBox(height: 20),
 
@@ -579,11 +598,11 @@ class _SignupPageState extends State<SignupPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("공개 계정으로 설정", style: TextStyle(fontSize: 16)),
+                      Text("공개 계정으로 설정", style: TextStyle(color: textColor,fontSize: 16)),
                       Switch(
                         value: isPublic,
                         activeTrackColor: mainColor,
-                        activeColor: subColor,
+                        activeColor: isBlackTheme ? pointColor : subColor,
                         onChanged: (val) => setState(() => isPublic = val),
                       ),
                     ],
@@ -596,9 +615,9 @@ class _SignupPageState extends State<SignupPage> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.location_on, color: mainColor),
+                          Icon(Icons.location_on, color: isBlackTheme ? pointColor : mainColor),
                           const SizedBox(width: 8),
-                          const Text("현재 위치", style: TextStyle(fontSize: 16)),
+                          Text("현재 위치", style: TextStyle(color: textColor,fontSize: 16)),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -627,9 +646,9 @@ class _SignupPageState extends State<SignupPage> {
                       const SizedBox(height: 20),
                       Row(
                         children: [
-                          Text("관심사", style: TextStyle(fontSize: 16),),
+                          Text("관심사", style: TextStyle(color: textColor,fontSize: 16),),
                           SizedBox(width: 10,),
-                          Text("선택 없음 ~ 최대 3개 까지 선택 가능", style: TextStyle(fontSize: 12, color: Colors.grey,)),
+                          Text("선택 없음 ~ 최대 3개 까지 선택 가능", style: TextStyle(fontFamily: fonts.labelFont, fontSize: 12, color: Grey,)),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -704,7 +723,7 @@ class _SignupPageState extends State<SignupPage> {
                     interests: selectedInterestTags.toList(),
                   );
                 },
-                child: Text("회원가입", style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),),
+                child: Text("회원가입", style: TextStyle(fontFamily: fonts.titleFont, fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),),
               ),
             ],
           ),

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -9,13 +11,9 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  String logoimg = 'assets/plogo.png';
+  String logoimg = 'assets/logo/plogo.png';
 
   late AnimationController _controller;
-  late Animation<double> _animation;
-
-  final double boxWidth = 300;
-  final double boxHeight = 150;
 
   @override
   void initState() {
@@ -24,12 +22,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 1),
-    )..repeat();
-
-    _animation = Tween<double>(begin: -0.5, end: 1.5).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+      duration: Duration(seconds: 2),
+    )..forward();
 
     Timer(Duration(seconds: 3), () {
       Navigator.of(context).pushReplacement(
@@ -43,8 +37,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final colorThemeString = prefs.getString("colorTheme");
 
     setState(() {
-      if (colorThemeString != 'ColorTheme.defaultTheme') {
-        logoimg = 'assets/logo.png';
+      if (colorThemeString == 'ColorTheme.blackTheme') {
+        logoimg = 'assets/logo/wlogo.png';
+      } else if (colorThemeString == 'ColorTheme.blueTheme') {
+        logoimg = 'assets/logo/logo.png';
+      } else {
+        logoimg = 'assets/logo/plogo.png';
       }
     });
   }
@@ -55,80 +53,77 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  Widget _fixedGradientBackground() {
-    return Container(
-      width: boxWidth,
-      height: boxHeight,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFF60A5FA), // 파랑
-            Color(0xFFF472B6), // 핑크
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = Theme.of(context).scaffoldBackgroundColor;
+    return Scaffold(
+      body: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // 로고
+            Image.asset(
+              logoimg,
+              width: 150,
+              height: 150,
+              fit: BoxFit.cover,
+            ),
+
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return CustomPaint(
+                  size: Size(150, 150),
+                  painter: RevealWavePainter(
+                    animationValue: _controller.value,
+                    backgroundColor: bgColor,
+                  ),
+                );
+              },
+            ),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        )
       ),
     );
   }
+}
 
-  Widget _shiningLight() {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        final pos = _animation.value * boxWidth;
+class RevealWavePainter extends CustomPainter {
+  final double animationValue;
+  final Color backgroundColor;
 
-        return Positioned(
-          left: pos - boxWidth * 0.3,
-          top: 0,
-          child: Container(
-            width: boxWidth * 0.3,
-            height: boxHeight,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.white.withOpacity(0.1),
-                  Colors.white.withOpacity(0.2),
-                  Colors.white.withOpacity(0.1),
-                ],
-                stops: [0.0, 0.5, 1.0],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        );
-      },
-    );
+  RevealWavePainter({
+    required this.animationValue,
+    required this.backgroundColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = backgroundColor;
+
+    final path = Path();
+
+    final waveHeight = 15.0;
+    final progress = animationValue * pi * 2;
+
+    final yOffset = size.height * (1 - animationValue);
+
+    path.moveTo(0, 0);
+    path.lineTo(0, yOffset);
+
+    for (double x = 0.0; x <= size.width; x++) {
+      double y = waveHeight * sin((x / size.width * 2 * pi) + progress);
+      path.lineTo(x, yOffset + y);
+    }
+
+    path.lineTo(size.width, 0);
+    path.close();
+
+    canvas.drawPath(path, paint);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            width: boxWidth,
-            height: boxHeight,
-            child: Stack(
-              children: [
-                _fixedGradientBackground(), // 고정된 그라데이션 배경
-                _shiningLight(), // 흐르는 하얀 빛
-                Center( // 로고 이미지 표시
-                  child: Image.asset(
-                    logoimg,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  bool shouldRepaint(covariant RevealWavePainter oldDelegate) {
+    return animationValue != oldDelegate.animationValue;
   }
 }
