@@ -259,14 +259,6 @@ class _ClosetPageState extends State<ClosetPage> {
           ),
         ),
       ),
-
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedNavIndex,
-        onTap: (i) {
-          setState(() => _selectedNavIndex = i);
-        }, nickname: '', profileImageUrl: '',
-      ),
-
     );
   }
 }
@@ -386,7 +378,7 @@ class _FeedGridState extends State<FeedGrid> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 0.75,
+          childAspectRatio: 0.70,
         ),
         itemBuilder: (context, idx) {
           final data = feedItems[idx];
