@@ -52,7 +52,7 @@ dependencies:
   google_sign_in:
   kakao_flutter_sdk_user:
 
-  flutter_naver_login: ^2.1.1
+  naver_login_sdk:
 
   firebase_app_check:
   flutter_dotenv:
