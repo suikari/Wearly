@@ -1,10 +1,17 @@
+import 'dart:io';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main/widget/comment_list.dart';
 import 'package:w2wproject/main/widget/image_carousel_card.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 // Feed 전체 리스트 페이지
 class FeedListPage extends StatefulWidget {
@@ -253,8 +260,103 @@ class _FeedListPageState extends State<FeedListPage> {
     }
   }
 
+  void showShareBottomSheet(BuildContext context, String feedId) {
+    final url = 'wearly://deeplink/feedid?id=$feedId';
+    final qrKey = GlobalKey();
+
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('피드 공유하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              SizedBox(height: 20),
+              RepaintBoundary(
+                key: qrKey,
+                child: QrImageView(
+                  data: url,
+                  size: 200,
+                  backgroundColor: Colors.white, // ← 이거 꼭 지정
+                ),
+              ),
+              SizedBox(height: 20),
+              SelectableText(url, maxLines: 3),
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () async {
+                      try {
+                        await Future.delayed(Duration(milliseconds: 300)); // 렌더링 시간 확보
+
+                        RenderRepaintBoundary boundary =
+                        qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+                        ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+                        ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+                        Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+                        final tempDir = await getTemporaryDirectory();
+                        final file = await File('${tempDir.path}/qr.png').create();
+                        await file.writeAsBytes(pngBytes);
+
+                        await Share.shareXFiles([XFile(file.path)], text: 'QR 코드로 공유된 피드입니다');
+                      } catch (e) {
+                        print('QR 공유 실패: $e');
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('QR 공유 중 오류 발생')));
+                      }
+                    },
+                    child: Text('QR 공유'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: url));
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text('링크가 복사되었습니다')));
+                    },
+                    child: Text('링크 복사'),
+                  ),
+                ],
+              ),
+              SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
+  Future<void> deleteFeed(String feedId) async {
+    try {
+      await fs.collection('feeds').doc(feedId).delete();
+
+      print('test>>>test');
+
+      setState(() {
+        feeds.removeWhere((feed) => feed['id'] == feedId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('피드가 삭제되었습니다')),
+      );
+    } catch (e) {
+      print('피드 삭제 오류: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('피드 삭제 중 오류가 발생했습니다')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       body: ListView.builder(
         padding: const EdgeInsets.all(12),
@@ -299,7 +401,7 @@ class _FeedListPageState extends State<FeedListPage> {
                               if (value == 'edit') {
                                 print("Edit 선택됨");
                               } else if (value == 'del') {
-                                print("Delete 선택됨");
+                                deleteFeed(feed['id']);
                               } else if (value == 'main') {
                                 updateMainCoordiId(feed['id']);
                               }
@@ -382,6 +484,11 @@ class _FeedListPageState extends State<FeedListPage> {
                                   final docId =
                                       feed['writerInfo']?['docId'] ?? '';
                                   widget.onUserTap(docId);
+                                },
+                                onShareTap: () {
+                                  // feedid를 넘겨서 공유 다이얼로그 띄우기
+                                  final feedId = feed['id']?.toString() ?? '';
+                                  showShareBottomSheet(context,feedId);
                                 },
                                 isLiked: isLiked,
                                 likeCount: likeCount,

@@ -378,7 +378,7 @@ class _FeedGridState extends State<FeedGrid> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 0.75,
+          childAspectRatio: 0.7,
         ),
         itemBuilder: (context, idx) {
           final data = feedItems[idx];
