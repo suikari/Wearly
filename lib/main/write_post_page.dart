@@ -50,7 +50,6 @@ class _WritePostPageState extends State<WritePostPage> {
   String? displayLocationName;
   bool isSubmitting = false;
 
-
   @override
   void initState() {
     super.initState();
@@ -95,7 +94,7 @@ class _WritePostPageState extends State<WritePostPage> {
       }
 
       String result =
-      [area, dong].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
+        [area, dong].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
       return result.isEmpty ? '위치 정보 없음' : result;
     }
     return '주소를 찾을 수 없습니다.';
@@ -220,8 +219,6 @@ class _WritePostPageState extends State<WritePostPage> {
     DateTime kstTime = utcTime.add(Duration(hours: 9));
     Timestamp cdatetime = Timestamp.fromDate(kstTime);
 
-
-
     // YYYYMMDD 로 변경
     String formatted = DateFormat('yyyyMMdd').format(kstTime);
 
@@ -246,7 +243,6 @@ class _WritePostPageState extends State<WritePostPage> {
           return double.tryParse(item['fcstValue'] ?? '')?.round();
         }
       }
-
     }
     return null;
   }
@@ -260,47 +256,49 @@ class _WritePostPageState extends State<WritePostPage> {
           height: 600,
           child: DateClockPicker(
             onDateTimeSelected: (DateTime dt) async {
+              Navigator.of(context).pop(); // 먼저 선택 창 닫기
+              showWeatherLoadingDialog(context);
               setState(() {
                 selectedDateTime = dt;
                 selectedTemp = null;
               });
 
-                LocationPermission permission = await Geolocator
-                    .checkPermission();
+              try {LocationPermission permission = await Geolocator
+                  .checkPermission();
+              if (permission == LocationPermission.denied) {
+                permission = await Geolocator.requestPermission();
                 if (permission == LocationPermission.denied) {
-                  permission = await Geolocator.requestPermission();
-                  if (permission == LocationPermission.denied) {
-                    setState(() {
-                      errorMsg = '위치 권한이 필요합니다!';
-                    });
-                    return;
-                  }
-                }
-                if (permission == LocationPermission.deniedForever) {
                   setState(() {
-                    errorMsg = '앱 설정에서 위치 권한을 허용해주세요.';
+                    errorMsg = '위치 권한이 필요합니다!';
                   });
                   return;
                 }
-
-                Position position = await Geolocator.getCurrentPosition(
-                  desiredAccuracy: LocationAccuracy.high,
-                );
-                double lat = position.latitude;
-                double lon = position.longitude;
-                String locationNameForAPI = await getSidoFromLatLng(position);
-                String fullAddress = await getFullAddressFromLatLng(position);
-
+              }
+              if (permission == LocationPermission.deniedForever) {
                 setState(() {
-                  displayLocationName = fullAddress;
+                  errorMsg = '앱 설정에서 위치 권한을 허용해주세요.';
                 });
+                return;
+              }
+              Position position = await Geolocator.getCurrentPosition(
+                desiredAccuracy: LocationAccuracy.high,
+              );
+              double lat = position.latitude;
+              double lon = position.longitude;
+              String locationNameForAPI = await getSidoFromLatLng(position);
+              String fullAddress = await getFullAddressFromLatLng(position);
+              setState(() {
+                displayLocationName = fullAddress;
+              });
+              Map<String, int> grid = convertGRID_GPS(lat, lon);
+              int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
+              setState(() {
+                selectedTemp = temperature;
+              });
 
-                Map<String, int> grid = convertGRID_GPS(lat, lon);
-                int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
-                setState(() {
-                  selectedTemp = temperature;
-                });
-              Navigator.of(context).pop();
+              } finally {
+                Navigator.of(context, rootNavigator: true).pop();
+              }
             },
           ),
         ),
@@ -328,14 +326,35 @@ class _WritePostPageState extends State<WritePostPage> {
       ),
     );
   }
+
+  void showWeatherLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 바깥 터치로 닫히지 않음
+      useRootNavigator: true,    // 루트에서 다이얼로그 띄우기
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('날씨 정보를 불러오는 중입니다...', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     titleController.dispose();
     contentController.dispose();
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +363,6 @@ class _WritePostPageState extends State<WritePostPage> {
     Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
     Color subColor = customColors?.subColor ?? Colors.white;
     Color pointColor = customColors?.pointColor ?? Colors.white;
-
 
     final dateTimeFormat = DateFormat('yyyy-MM-dd HH:mm');
     return Scaffold(
@@ -538,11 +556,10 @@ class _WritePostPageState extends State<WritePostPage> {
                     ),
                     Row(
                       children: [
-                        Icon(Icons.thermostat, size : 40),
-                          Text(
-                            '해당 시간의 기온: ${selectedTemp ?? " "}°C',
-                            style: const TextStyle(fontSize: 22, color: Colors.blue),
-                          ),
+                        Text(
+                          '해당 시간의 기온: ${selectedTemp ?? " "}°C',
+                          style: const TextStyle(fontSize: 22, color: Colors.blue),
+                        ),
                       ],
                     ),
                     Row(
@@ -559,17 +576,6 @@ class _WritePostPageState extends State<WritePostPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                OutlinedButton(
-                  onPressed: () {
-                    resetForm();
-                    Navigator.pop(context);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: mainColor,
-                    side: const BorderSide(color: Colors.pink),
-                  ),
-                  child: const Text('취소'),
-                ),
                 ElevatedButton(
                   onPressed: isSubmitting ? null : () async {
                     if (titleController.text.trim().isEmpty &&
@@ -627,9 +633,6 @@ class _WritePostPageState extends State<WritePostPage> {
                       "writeid" : userId,
                       "location" : displayLocationName
                     });
-
-
-
                     Navigator.of(context).pop();
 
                     ScaffoldMessenger.of(context).showSnackBar(
