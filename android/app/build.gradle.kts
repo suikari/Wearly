@@ -38,7 +38,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("app/${localProperties["storeFile"]}")
+            storeFile = file(localProperties["storeFile"] as String)
             storePassword = localProperties["storePassword"] as String
             keyAlias = localProperties["keyAlias"] as String
             keyPassword = localProperties["keyPassword"] as String
@@ -86,11 +86,9 @@ android {
                 "proguard-rules.pro"
             )
         }
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
-        }
+//        release {
+//            signingConfig = signingConfigs.getByName("debug")
+//        }
         getByName("debug") {
             isMinifyEnabled = false
             isShrinkResources = false
