@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../provider/custom_colors.dart';
 import 'search_result_page.dart';
 
 
@@ -26,8 +27,19 @@ class _SearchTabState extends State<SearchTab> {
   ];
   Set<String> selectedTags = {};
 
+
+
+
+
   @override
   Widget build(BuildContext context) {
+
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white;
+    Color white = customColors?.textWhite ?? Colors.white;
+
     return Padding(
       padding: EdgeInsets.all(12),
       child: Column(
@@ -130,8 +142,10 @@ class _SearchTabState extends State<SearchTab> {
               children: popularTags.map((tag) {
                 final isSelected = selectedTags.contains(tag);
                 return ChoiceChip(
-                  label: Text(tag),
+                  label: Text(tag, style: TextStyle(color: white),),
                   selected: isSelected,
+                  backgroundColor: mainColor,
+                  selectedColor: pointColor,
                   onSelected: (selected) {
                     setState(() {
                       if (selected)
