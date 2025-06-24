@@ -21,7 +21,9 @@ import '../provider/custom_colors.dart';
 
 const String KMA_API_KEY = 'Wjb8zKkrrbUtY2pQXCNNv%2B5M2EqShPVq92B139bdclMwmJDylxQjPYUUF6cobHdRtf9Et%2Bq0MxDFn1Oh4tBLhg%3D%3D';
 class WritePostPage extends StatefulWidget {
-  const WritePostPage({super.key});
+  final void Function() onUserTap;
+  const WritePostPage({super.key, required this.onUserTap});
+
 
   @override
   State<WritePostPage> createState() => _WritePostPageState();
@@ -346,7 +348,6 @@ class _WritePostPageState extends State<WritePostPage> {
 
     final dateTimeFormat = DateFormat('yyyy-MM-dd HH:mm');
     return Scaffold(
-      appBar: AppBar(title: const Text('글 쓰기')),
       body: isLoadingTags
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -568,10 +569,6 @@ class _WritePostPageState extends State<WritePostPage> {
                 ),
                 ElevatedButton(
                   onPressed: isSubmitting ? null : () async {
-                    setState(() {
-                      isSubmitting = true;
-                    });
-
                     if (titleController.text.trim().isEmpty &&
                         contentController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -610,6 +607,10 @@ class _WritePostPageState extends State<WritePostPage> {
                       imageUrls = await uploadImages(selectedImages);
                     }
 
+                    setState(() {
+                      isSubmitting = true;
+                    });
+
                     await fs.collection("feeds").add({
                       "title": titleController.text,
                       "content": contentController.text,
@@ -624,6 +625,8 @@ class _WritePostPageState extends State<WritePostPage> {
                       "location" : displayLocationName
                     });
 
+
+
                     Navigator.of(context).pop();
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -632,11 +635,13 @@ class _WritePostPageState extends State<WritePostPage> {
                         backgroundColor: Colors.green,
                       ),
                     );
+                    widget.onUserTap();
                     resetForm();
                     setState(() {
                       isSubmitting = false;
                     });
                   },
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink,
                     foregroundColor: Colors.white,
