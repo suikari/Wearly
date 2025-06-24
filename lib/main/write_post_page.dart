@@ -550,6 +550,7 @@ class _WritePostPageState extends State<WritePostPage> {
                         ),
                       ]
                     ),
+                    SizedBox(height: 20,),
                     Row(
                       children: [
                         ElevatedButton(
