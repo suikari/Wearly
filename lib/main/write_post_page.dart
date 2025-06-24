@@ -250,59 +250,66 @@ class _WritePostPageState extends State<WritePostPage> {
   void _openDateClockPicker() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        content: SizedBox(
-          width: 350,
-          height: 600,
-          child: DateClockPicker(
-            onDateTimeSelected: (DateTime dt) async {
-              Navigator.of(context).pop(); // 먼저 선택 창 닫기
-              showWeatherLoadingDialog(context);
-              setState(() {
-                selectedDateTime = dt;
-                selectedTemp = null;
-              });
+      builder: (dialogContext) {
+        final navigator = Navigator.of(dialogContext); // ✅ 저장
+        return AlertDialog(
+          content: SizedBox(
+            width: 350,
+            height: 600,
+            child: DateClockPicker(
+              onDateTimeSelected: (DateTime dt) async {
+                navigator.pop(); // 먼저 닫기
 
-              try {LocationPermission permission = await Geolocator
-                  .checkPermission();
-              if (permission == LocationPermission.denied) {
-                permission = await Geolocator.requestPermission();
+                showWeatherLoadingDialog(dialogContext);
+
+                setState(() {
+                  selectedDateTime = dt;
+                  selectedTemp = null;
+                });
+
+                LocationPermission permission = await Geolocator.checkPermission();
                 if (permission == LocationPermission.denied) {
+                  permission = await Geolocator.requestPermission();
+                  if (permission == LocationPermission.denied) {
+                    setState(() {
+                      errorMsg = '위치 권한이 필요합니다!';
+                    });
+                    return;
+                  }
+                }
+                if (permission == LocationPermission.deniedForever) {
                   setState(() {
-                    errorMsg = '위치 권한이 필요합니다!';
+                    errorMsg = '앱 설정에서 위치 권한을 허용해주세요.';
                   });
                   return;
                 }
-              }
-              if (permission == LocationPermission.deniedForever) {
-                setState(() {
-                  errorMsg = '앱 설정에서 위치 권한을 허용해주세요.';
-                });
-                return;
-              }
-              Position position = await Geolocator.getCurrentPosition(
-                desiredAccuracy: LocationAccuracy.high,
-              );
-              double lat = position.latitude;
-              double lon = position.longitude;
-              String locationNameForAPI = await getSidoFromLatLng(position);
-              String fullAddress = await getFullAddressFromLatLng(position);
-              setState(() {
-                displayLocationName = fullAddress;
-              });
-              Map<String, int> grid = convertGRID_GPS(lat, lon);
-              int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
-              setState(() {
-                selectedTemp = temperature;
-              });
 
-              } finally {
-                Navigator.of(context, rootNavigator: true).pop();
-              }
-            },
+                Position position = await Geolocator.getCurrentPosition(
+                  desiredAccuracy: LocationAccuracy.high,
+                );
+                double lat = position.latitude;
+                double lon = position.longitude;
+
+                String locationNameForAPI = await getSidoFromLatLng(position);
+                String fullAddress = await getFullAddressFromLatLng(position);
+
+                setState(() {
+                  displayLocationName = fullAddress;
+                });
+
+                Map<String, int> grid = convertGRID_GPS(lat, lon);
+                int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
+
+                setState(() {
+                  selectedTemp = temperature;
+                });
+
+                navigator.pop(); // ✅ context 없이 pop
+              },
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -331,7 +338,6 @@ class _WritePostPageState extends State<WritePostPage> {
     showDialog(
       context: context,
       barrierDismissible: false, // 바깥 터치로 닫히지 않음
-      useRootNavigator: true,    // 루트에서 다이얼로그 띄우기
       builder: (_) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
@@ -556,12 +562,14 @@ class _WritePostPageState extends State<WritePostPage> {
                     ),
                     Row(
                       children: [
+                        if (selectedDateTime != null && selectedTemp != null)
                         Text(
                           '해당 시간의 기온: ${selectedTemp ?? " "}°C',
                           style: const TextStyle(fontSize: 22, color: Colors.blue),
                         ),
                       ],
                     ),
+                    if (selectedDateTime != null && displayLocationName != null)
                     Row(
                       children: [
                         Icon(Icons.location_on_outlined),
