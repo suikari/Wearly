@@ -371,8 +371,11 @@ class _WritePostPageState extends State<WritePostPage> {
                       onPageChanged: (index) => setState(() => currentPageIndex = index),
                       itemBuilder: (context, index) => Stack(
                         children: [
-                          SizedBox.expand(
-                            child: Image.file(selectedImages[index], fit: BoxFit.fill),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: SizedBox.expand(
+                              child: Image.file(selectedImages[index], fit: BoxFit.fill)
+                            ),
                           ),
                           Positioned(
                             top: 8,
