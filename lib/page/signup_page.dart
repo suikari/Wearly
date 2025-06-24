@@ -39,6 +39,7 @@ class _SignupPageState extends State<SignupPage> {
   File? _profileImage;
   bool _emailChecked = false;
   bool _emailDuplicate = false;
+  bool _nicknameChecked = false;
   bool _nicknameDuplicate = false;
   bool _isValidPassword = false;
   bool _isPasswordMatched = false;
@@ -154,18 +155,27 @@ class _SignupPageState extends State<SignupPage> {
 
     if (!isValidNickname(nickname)) {
       showDialogMessage(context, "닉네임은 최대 12자 이내의 영문, 한글, 숫자, 특수문자(._-)만 사용 가능합니다.");
+      setState(() {
+        _nicknameDuplicate = true;
+        _nicknameChecked = false;
+      });
       return;
     }
 
     bool isDuplicate = await isNicknameDuplicate(nickname);
 
-    setState(() {
-      _nicknameDuplicate = isDuplicate;
-    });
+
 
     if (isDuplicate) {
+      setState(() {
+        _nicknameDuplicate = true;
+      });
       showDialogMessage(context, "이미 사용 중인 닉네임입니다.");
     } else {
+      setState(() {
+        _nicknameDuplicate = false;
+        _nicknameChecked = true;
+      });
       showDialogMessage(context, "사용 가능한 닉네임입니다.");
     }
   }
@@ -229,8 +239,8 @@ class _SignupPageState extends State<SignupPage> {
       }
 
       // 닉네임이 중복이면
-      if (_nicknameDuplicate) {
-        await showDialogMessage(context, '이미 사용 중인 닉네임입니다.');
+      if (!_nicknameChecked || _nicknameDuplicate) {
+        await showDialogMessage(context, '닉네임 중복 확인을 완료해주세요.');
         return;
       }
 
@@ -444,6 +454,7 @@ class _SignupPageState extends State<SignupPage> {
     nicknameController.addListener(() {
       setState(() {
         _nicknameDuplicate = false;
+        _nicknameChecked = false;
       });
     });
 
