@@ -17,6 +17,8 @@ import 'package:uuid/uuid.dart';
 import 'dart:ui' as ui;
 import 'package:intl/intl.dart';
 
+import '../provider/custom_colors.dart';
+
 const String KMA_API_KEY = 'Wjb8zKkrrbUtY2pQXCNNv%2B5M2EqShPVq92B139bdclMwmJDylxQjPYUUF6cobHdRtf9Et%2Bq0MxDFn1Oh4tBLhg%3D%3D';
 class WritePostPage extends StatefulWidget {
   const WritePostPage({super.key});
@@ -39,16 +41,13 @@ class _WritePostPageState extends State<WritePostPage> {
   final int maxImageCount = 10;
   int currentPageIndex = 0;
   bool isLoadingTags = true;
-
   DateTime? selectedDT;
   int? selectedTemp;
-
   String? userId;
-
   DateTime now = DateTime.now();
   String? displayLocationName;
-
   bool isSubmitting = false;
+
 
   @override
   void initState() {
@@ -307,6 +306,26 @@ class _WritePostPageState extends State<WritePostPage> {
     );
   }
 
+  void showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 바깥 터치로 닫히지 않게
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('등록 중입니다...', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   @override
   void dispose() {
     titleController.dispose();
@@ -314,8 +333,17 @@ class _WritePostPageState extends State<WritePostPage> {
     super.dispose();
   }
 
+
+
   @override
   Widget build(BuildContext context) {
+
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white;
+
+
     final dateTimeFormat = DateFormat('yyyy-MM-dd HH:mm');
     return Scaffold(
       appBar: AppBar(title: const Text('글 쓰기')),
@@ -329,7 +357,7 @@ class _WritePostPageState extends State<WritePostPage> {
             Container(
               height: 500,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.pink.shade200),
+                border: Border.all(color: mainColor),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: selectedImages.isEmpty
@@ -381,7 +409,7 @@ class _WritePostPageState extends State<WritePostPage> {
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: currentPageIndex == index ? Colors.pink : Colors.grey,
+                          color: currentPageIndex == index ? mainColor : Colors.grey,
                         ),
                       )),
                     ),
@@ -395,7 +423,7 @@ class _WritePostPageState extends State<WritePostPage> {
               icon: const Icon(Icons.add_photo_alternate),
               label: const Text('이미지 추가 및 편집'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink.shade100,
+                backgroundColor: mainColor,
                 foregroundColor: Colors.black87,
               ),
             ),
@@ -404,7 +432,7 @@ class _WritePostPageState extends State<WritePostPage> {
               controller: titleController,
               decoration: InputDecoration(
                 hintText: '제목을 입력해주세요...',
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.pink.shade200)),
+                border: OutlineInputBorder(borderSide: BorderSide(color: mainColor)),
               ),
             ),
             const SizedBox(height: 12),
@@ -413,7 +441,7 @@ class _WritePostPageState extends State<WritePostPage> {
               maxLines: 5,
               decoration: InputDecoration(
                 hintText: '내용을 입력해주세요...',
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.pink.shade200)),
+                border: OutlineInputBorder(borderSide: BorderSide(color: mainColor)),
               ),
             ),
             const SizedBox(height: 20),
@@ -439,10 +467,10 @@ class _WritePostPageState extends State<WritePostPage> {
                             }
                           });
                         },
-                        selectedColor: Colors.pink.shade100,
+                        selectedColor: mainColor,
                         backgroundColor: Colors.grey.shade200,
                         shape: RoundedRectangleBorder(
-                          side: BorderSide(color: Colors.pink.shade200),
+                          side: BorderSide(color: mainColor),
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
@@ -457,6 +485,13 @@ class _WritePostPageState extends State<WritePostPage> {
               children: [
                 Column(
                   children: [
+                    Row(children: [
+                      Text("날씨"),
+                      SizedBox(width: 50,),
+                      Text("체감온도"),
+                      SizedBox(width: 150,),
+                    ],),
+
                     Row(
                       children: [
                         const Icon(Icons.wb_sunny_outlined),
@@ -483,7 +518,7 @@ class _WritePostPageState extends State<WritePostPage> {
                         Switch(
                           value: isPublic,
                           onChanged: (val) => setState(() => isPublic = val),
-                          activeColor: Colors.pink,
+                          activeColor: mainColor,
                         ),
                       ]
                     ),
@@ -526,7 +561,7 @@ class _WritePostPageState extends State<WritePostPage> {
                     Navigator.pop(context);
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.pink,
+                    foregroundColor: mainColor,
                     side: const BorderSide(color: Colors.pink),
                   ),
                   child: const Text('취소'),
@@ -568,6 +603,8 @@ class _WritePostPageState extends State<WritePostPage> {
                       return;
                     }
 
+                    showLoadingDialog(context);
+
                     List<String> imageUrls = [];
                     if (selectedImages.isNotEmpty) {
                       imageUrls = await uploadImages(selectedImages);
@@ -586,6 +623,8 @@ class _WritePostPageState extends State<WritePostPage> {
                       "writeid" : userId,
                       "location" : displayLocationName
                     });
+
+                    Navigator.of(context).pop();
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -606,11 +645,6 @@ class _WritePostPageState extends State<WritePostPage> {
                 ),
               ],
             ),
-            if (isSubmitting)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Center(child: CircularProgressIndicator()),
-              ),
           ],
         ),
       ),
