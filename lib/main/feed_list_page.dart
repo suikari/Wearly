@@ -7,11 +7,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main/widget/comment_list.dart';
 import 'package:w2wproject/main/widget/image_carousel_card.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
+import '../provider/custom_colors.dart';
+import '../provider/theme_provider.dart';
+import 'edit_post_page.dart';
 
 class FeedListPage extends StatefulWidget {
   final void Function(String userId) onUserTap;
@@ -370,6 +375,26 @@ class _FeedListPageState extends State<FeedListPage> {
   }
 
   Future<void> deleteFeed(String feedId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('피드 삭제'),
+        content: Text('정말 이 피드를 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     try {
       await fs.collection('feeds').doc(feedId).delete();
 
@@ -387,8 +412,27 @@ class _FeedListPageState extends State<FeedListPage> {
       );
     }
   }
+
+  Future<void> openEditPostPage(BuildContext context, String feedId) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EditPostPage(feedId: feedId),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white70;
+    Color highlightColor = customColors?.highlightColor ?? Colors.orange;
+    Color Grey = customColors?.textGrey ?? Colors.grey;
+    Color White = customColors?.textWhite ?? Colors.white;
+    Color Black = customColors?.textBlack ?? Colors.black;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       // 필터 해제용 플로팅 액션 버튼 (우하단)
       floatingActionButton: filteredTags.isNotEmpty
@@ -453,7 +497,7 @@ class _FeedListPageState extends State<FeedListPage> {
                               icon: Icon(Icons.more_vert, color: Colors.grey),
                               onSelected: (value) {
                                 if (value == 'edit') {
-                                  print("Edit 선택됨");
+                                  openEditPostPage(context,feed['id']);
                                 } else if (value == 'del') {
                                   deleteFeed(feed['id']);
                                 } else if (value == 'main') {
@@ -516,6 +560,8 @@ class _FeedListPageState extends State<FeedListPage> {
                           Center(
                             child: ImageCarouselCard(
                               key: ValueKey(feed['id']),
+                              cardcolor : subColor,
+                              pointColor : pointColor,
                               imageUrls:
                               (feed['imageUrls'] as List<dynamic>)
                                   .map((e) => e.toString())

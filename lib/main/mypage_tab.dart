@@ -226,6 +226,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
 
 
   void closeDetail() {
+    fetchFeeds();
     setState(() {
       showDetail = false;
     });
@@ -312,7 +313,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
     Color Black = customColors?.textBlack ?? Colors.black;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-  print("themeProvider>>${themeProvider.colorTheme}");
+    print("themeProvider>>${themeProvider.colorTheme}");
     final screenWidth = MediaQuery.of(context).size.width;
     final followerCount = (profile['follower'] )?.length ?? 0;
     final followingCount = (profile['following'] )?.length ?? 0;
@@ -409,7 +410,9 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: pointColor,
+                                  color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                      ? pointColor
+                                      : Colors.white,
                                 ),
                               ),
                             ],
@@ -489,9 +492,12 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                 Text(
                                   profile["nickname"] ?? '',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.bold,
-                                    color: pointColor,
+                                    color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                        ? pointColor
+                                        : Colors.white,
+
                                   ),
                                 ),
                               ],
@@ -504,6 +510,8 @@ class _MyPageWidgetState extends State<MyPageTab> {
                             profile: profile,
                             isExpanded: isExpanded,
                             selectedItemColor: mainColor,
+                            pointColor : pointColor,
+                            colorTheme : themeProvider.colorTheme,
                             pageController: _pageController,
                           ),
               
@@ -702,6 +710,8 @@ Widget buildExpandedFeedSection({
   required bool isExpanded,
   required Color selectedItemColor,
   required PageController pageController,
+  required ColorTheme colorTheme,
+  required Color pointColor,
 }) {
   return AnimatedCrossFade(
     duration: Duration(milliseconds: 300),
@@ -734,7 +744,10 @@ Widget buildExpandedFeedSection({
           ),
         ),
         SizedBox(height: 8),
-        Text(profile["bio"] ?? '', style: TextStyle(color: Colors.black , fontSize: 20)),
+        Text(profile["bio"] ?? '', style: TextStyle(
+            color: colorTheme != ColorTheme.blackTheme
+            ? pointColor
+            : Colors.white, fontSize: 20)),
         SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -749,7 +762,11 @@ Widget buildExpandedFeedSection({
             ),
             child: Text(
               item.toString(),
-              style: TextStyle(color: Colors.black),
+              style: TextStyle(
+                color: colorTheme != ColorTheme.blackTheme
+                    ? pointColor
+                    : Colors.white,
+              ),
             ),
           ))
               .toList(),

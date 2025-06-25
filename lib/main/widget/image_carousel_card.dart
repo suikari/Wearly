@@ -10,6 +10,8 @@ class ImageCarouselCard extends StatefulWidget {
   final bool isLiked;
   final int likeCount;
   final VoidCallback onLikeToggle;
+  final Color cardcolor;
+  final Color pointColor;
 
   const ImageCarouselCard({
     Key? key,
@@ -21,6 +23,8 @@ class ImageCarouselCard extends StatefulWidget {
     required this.likeCount,
     required this.onLikeToggle,
     required this.onShareTap,
+    required this.cardcolor,
+    required this.pointColor,
   }) : super(key: key);
 
   @override
@@ -32,6 +36,10 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
   int _currentPage = 0;
   bool _showPageNumber = false;
   Timer? _hideTimer;
+
+  get cardcolor => widget.cardcolor;
+
+  get pointColor => widget.pointColor;
 
   @override
   void initState() {
@@ -71,24 +79,12 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
         insetPadding: const EdgeInsets.all(12),
         child: GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: Center(
-            child: InteractiveViewer(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  height: MediaQuery.of(context).size.height * 0.7,
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain, // ✅ 모든 이미지가 박스 내에 맞게
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[300],
-                        child: const Center(child: Icon(Icons.broken_image)),
-                      );
-                    },
-                  ),
-                ),
+          child: InteractiveViewer(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
               ),
             ),
           ),
@@ -122,7 +118,6 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
       child: Column(
         children: [
           _buildHeader(),
-          const SizedBox(height: 8),
           Stack(
             children: [
               ClipRRect(
@@ -188,7 +183,7 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
 
   BoxDecoration _backgroundDecoration() {
     return BoxDecoration(
-      color: Colors.pink[50],
+      color: cardcolor,
       borderRadius: const BorderRadius.only(
         topLeft: Radius.circular(10),
         topRight: Radius.circular(50),
@@ -243,7 +238,7 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
                   children: [
                     Icon(
                       widget.isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: widget.isLiked ? Colors.red : Colors.grey,
+                      color: widget.isLiked ? pointColor : Colors.grey,
                       size: 20,
                     ),
                     const SizedBox(width: 4),
@@ -276,7 +271,7 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
           width: isActive ? 16 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: isActive ? Colors.pinkAccent : Colors.grey[300],
+            color: isActive ? pointColor : Colors.grey[300],
             borderRadius: BorderRadius.circular(4),
           ),
         );
