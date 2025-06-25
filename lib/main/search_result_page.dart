@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../common/custom_app_bar.dart';
 import '../provider/custom_colors.dart';
-import 'widget/followService.dart';
+import 'widget/follow_service.dart';
 
 class SearchResultPage extends StatefulWidget {
   final String keyword;
