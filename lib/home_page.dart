@@ -49,7 +49,7 @@ class _HomePageState extends State<HomePage> {
     _deepLinkHandler.onFeedIdReceived = (feedId) {
       if (!_hasProcessedDeepLink) {
         _hasProcessedDeepLink = true;
-        _openDetailPage(feedId);
+        _openDetailPage(feedId);(feedId);
       }
     };
     _deepLinkHandler.init();

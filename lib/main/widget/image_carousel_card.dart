@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 class ImageCarouselCard extends StatefulWidget {
@@ -5,9 +6,7 @@ class ImageCarouselCard extends StatefulWidget {
   final String profileImageUrl;
   final String userName;
   final VoidCallback onUserTap;
-  final VoidCallback? onShareTap; // 추가
-
-  // ✅ 추가
+  final VoidCallback? onShareTap;
   final bool isLiked;
   final int likeCount;
   final VoidCallback onLikeToggle;
@@ -31,6 +30,8 @@ class ImageCarouselCard extends StatefulWidget {
 class _ImageCarouselCardState extends State<ImageCarouselCard> {
   late final PageController _pageController;
   int _currentPage = 0;
+  bool _showPageNumber = false;
+  Timer? _hideTimer;
 
   @override
   void initState() {
@@ -41,39 +42,73 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
   @override
   void dispose() {
     _pageController.dispose();
+    _hideTimer?.cancel();
     super.dispose();
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentPage = index;
+      _showPageNumber = true;
+    });
+
+    // 타이머 리셋
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _showPageNumber = false;
+        });
+      }
+    });
+  }
+
+  void _showImageDialog(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Center(
+            child: InteractiveViewer(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain, // ✅ 모든 이미지가 박스 내에 맞게
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[300],
+                        child: const Center(child: Icon(Icons.broken_image)),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final bottomNavTheme = theme.bottomNavigationBarTheme;
-    final backgroundColor = theme.scaffoldBackgroundColor;
-    final navBackgroundColor = bottomNavTheme.backgroundColor ?? theme.primaryColor;
-    final selectedItemColor = bottomNavTheme.selectedItemColor ?? Colors.white;
-    final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
-    final screenWidth = MediaQuery.of(context).size.width;
-
     if (widget.imageUrls.isEmpty) {
       return Container(
-        height: 520, // 높이 늘림 (아래 인디케이터 공간 확보)
-        decoration: BoxDecoration(
-          color: Colors.pink[50],
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(60),
-            bottomLeft: Radius.circular(40),
-            bottomRight: Radius.circular(40),
-          ),
-        ),
+        height: 542,
+        decoration: _backgroundDecoration(),
         child: Column(
           children: [
             _buildHeader(),
             const Expanded(
               child: Center(
-                child: Text(
-                  '이미지가 없습니다',
-                  style: TextStyle(color: Colors.black45),
-                ),
+                child: Text('이미지가 없습니다', style: TextStyle(color: Colors.black45)),
               ),
             ),
           ],
@@ -81,55 +116,92 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
       );
     }
 
-    if (widget.imageUrls.length == 1) {
-      return SizedBox(
-        height: 520,
-        child: Column(
-          children: [
-            _buildImageCard(widget.imageUrls[0]),
-            const SizedBox(height: 12),
-            _buildPageIndicator(), // 1개라도 인디케이터 표시 가능
-          ],
-        ),
-      );
-    } else {
-      return SizedBox(
-        height: 520,
-        child: Column(
-          children: [
-            SizedBox(
-              height: 480,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: widget.imageUrls.length,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  return _buildImageCard(widget.imageUrls[index]);
-                },
+    return Container(
+      height: 542,
+      decoration: _backgroundDecoration(),
+      child: Column(
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 8),
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(50),
+                  topLeft: Radius.circular(10),
+                  bottomLeft: Radius.circular(50),
+                  bottomRight: Radius.circular(10),
+                ),
+                child: SizedBox(
+                  height: 460,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: widget.imageUrls.length,
+                    onPageChanged: _onPageChanged,
+                    itemBuilder: (context, index) {
+                      return GestureDetector(
+                        onTap: () => _showImageDialog(widget.imageUrls[index]),
+                        child: Image.network(
+                          widget.imageUrls[index],
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Center(child: Icon(Icons.broken_image)),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            _buildPageIndicator(),
-          ],
-        ),
-      );
-    }
+              // ✅ 슬라이드 중일 때만 페이지 번호 보이기
+              Positioned(
+                top: 12,
+                right: 16,
+                child: AnimatedOpacity(
+                  opacity: _showPageNumber ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${_currentPage + 1} / ${widget.imageUrls.length}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildPageIndicator(),
+        ],
+      ),
+    );
+  }
+
+  BoxDecoration _backgroundDecoration() {
+    return BoxDecoration(
+      color: Colors.pink[50],
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(10),
+        topRight: Radius.circular(50),
+        bottomLeft: Radius.circular(50),
+        bottomRight: Radius.circular(10),
+      ),
+    );
   }
 
   Widget _buildHeader() {
     return Container(
       height: 50,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(50),
-        ),
-      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -155,11 +227,10 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  widget.userName.length > 8 ? '${widget.userName.substring(0, 8)}...' : widget.userName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  widget.userName.length > 8
+                      ? '${widget.userName.substring(0, 8)}...'
+                      : widget.userName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ],
             ),
@@ -183,45 +254,11 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
               const SizedBox(width: 12),
               if (widget.onShareTap != null)
                 GestureDetector(
-                    onTap: widget.onShareTap,
-                    child: const Icon(Icons.share, size: 20)),
+                  onTap: widget.onShareTap,
+                  child: const Icon(Icons.share, size: 20),
+                ),
               const SizedBox(width: 16),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImageCard(String imageUrl) {
-    return Container(
-      height: 480,
-      decoration: BoxDecoration(
-        color: Colors.pink[50],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(50),
-          bottomLeft: Radius.circular(50),
-          bottomRight: Radius.circular(10),
-        ),
-      ),
-      child: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(50),
-                topLeft: Radius.circular(10),
-                bottomLeft: Radius.circular(50),
-                bottomRight: Radius.circular(10),
-              ),
-              child: Image.network(
-                imageUrl,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
           ),
         ],
       ),

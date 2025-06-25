@@ -49,7 +49,7 @@ dependencies:
   firebase_auth:
   firebase_storage:
   flutter_web_auth_2:
-  google_sign_in:
+  google_sign_in:  ^5.4.0
   kakao_flutter_sdk_user:
   naver_login_sdk:
   firebase_app_check:
