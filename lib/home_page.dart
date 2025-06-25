@@ -15,7 +15,10 @@ import 'main/search_tab.dart';
 import 'main/write_post_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final int initialIndex;
+
+  const HomePage({super.key, int? initialIndex})
+      : initialIndex = initialIndex ?? 0; // null이면 0으로 설정
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -36,6 +39,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialIndex;
+
     _loadUserInfo();
 
     _handleInitialDeepLink();
@@ -106,7 +111,7 @@ class _HomePageState extends State<HomePage> {
 
   void openFeedPage() {
     setState(() {
-      _selectedIndex = 3; // MyPageTab 탭으로 전환
+      _selectedIndex = 3; // FeedListPage 탭으로 전환
     });
   }
 
@@ -135,7 +140,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget buildMyPageTab({String? userId, required Function onUserTap}) {
+  Widget buildMyPageTab({String? userId, required Function(String) onUserTap}) {
     return MyPageTab(
       key: ValueKey(userId ?? _myPageKey),
       userId: userId,
@@ -143,36 +148,71 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<bool> _onWillPop() async {
+    if (_selectedIndex != 0) {
+      setState(() {
+        _selectedIndex = 0; // 홈 탭으로 이동
+      });
+      return false; // 뒤로가기 이벤트 취소
+    } else {
+      // 홈 탭에서 종료 확인 다이얼로그 띄우기
+      final shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('앱 종료'),
+          content: const Text('앱을 종료하시겠습니까?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('종료'),
+            ),
+          ],
+        ),
+      );
+      return shouldExit ?? false; // true면 앱 종료, false면 종료 취소
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> _pages = [
       HomeContent(key: ValueKey(DateTime.now().millisecondsSinceEpoch)),
       SearchTab(onUserTap: openUserPage),
+
       WritePostPage(key: ValueKey(DateTime.now().millisecondsSinceEpoch),
           onUserTap: openFeedPage),
+
       FeedListPage(
-          key: ValueKey(DateTime.now().millisecondsSinceEpoch),
-          onUserTap: openUserPage),
+        key: ValueKey(DateTime.now().millisecondsSinceEpoch),
+        onUserTap: openUserPage,
+      ),
       buildMyPageTab(userId: _selectedUserId, onUserTap: openUserPage),
     ];
 
-    return Scaffold(
-      appBar: CustomAppBar(),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: CustomAppBar(),
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: _pages,
+        ),
+        bottomNavigationBar: CustomBottomNavBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          nickname: _nickname,
+          profileImageUrl: _profileImageUrl,
+        ),
+        // floatingActionButton: FloatingActionButton(
+        //   onPressed: _goToGeminiPage,
+        //   child: const Icon(Icons.headset_mic),
+        //   tooltip: 'Gemini 테스트',
+        // ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        nickname: _nickname,
-        profileImageUrl: _profileImageUrl,
-      ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: _goToGeminiPage,
-      //   child: const Icon(Icons.headset_mic),
-      //   tooltip: 'Gemini 테스트',
-      // ),
     );
   }
 }

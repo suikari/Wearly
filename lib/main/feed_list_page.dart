@@ -13,7 +13,6 @@ import 'package:w2wproject/main/widget/comment_list.dart';
 import 'package:w2wproject/main/widget/image_carousel_card.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-// Feed 전체 리스트 페이지
 class FeedListPage extends StatefulWidget {
   final void Function(String userId) onUserTap;
 
@@ -25,7 +24,13 @@ class FeedListPage extends StatefulWidget {
 
 class _FeedListPageState extends State<FeedListPage> {
   List<Map<String, dynamic>> feeds = [];
+  Map<String, bool> likedStatus = {};
+  Map<String, int> likeCounts = {};
+
   String currentUserId = '';
+  String currentUserName = '';
+
+  String? filteredTag; // 태그 필터 상태
 
   final FirebaseFirestore fs = FirebaseFirestore.instance;
   bool isLoading = true;
@@ -38,17 +43,23 @@ class _FeedListPageState extends State<FeedListPage> {
 
   Future<void> _loadUserId() async {
     String? userId = await getSavedUserId();
+    String? userName = await getSavedUserName();
+
     setState(() {
-      currentUserId = userId!;
-      print("currentUserId====>$currentUserId");
+      currentUserId = userId ?? '';
+      currentUserName = userName ?? '';
     });
     await fetchFeedsWithWriter();
-
   }
 
   Future<String?> getSavedUserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString('userId');
+  }
+
+  Future<String?> getSavedUserName() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('nickname');
   }
 
   String _formatDate(dynamic timestamp) {
@@ -67,34 +78,46 @@ class _FeedListPageState extends State<FeedListPage> {
     }
   }
 
+  // 태그 필터 설정 함수
+  void setTagFilter(String? tag) {
+    setState(() {
+      filteredTag = tag;
+      isLoading = true;
+    });
+    fetchFeedsWithWriter();
+  }
+
   Future<void> fetchFeedsWithWriter() async {
     try {
-      // 🔐 현재 사용자 정보 가져오기
+      //print('fetchFeedsWithWriter 호출, 필터: $filteredTag');
+
       final userDoc = await fs.collection('users').doc(currentUserId).get();
+      if (!userDoc.exists) throw Exception('User not found');
 
-      if (!userDoc.exists) {
-        throw Exception('User not found');
-      }
-
-      final userData = userDoc.data()!;
+      final userData = userDoc.data() as Map<String, dynamic>? ?? {};
       final List<String> myInterests = List<String>.from(userData['interest'] ?? []);
       final List<String> followingUserIds = List<String>.from(userData['following'] ?? []);
 
-      // 🔁 모든 피드 가져오기
-      final snapshot = await fs
-          .collection('feeds')
-          .orderBy('cdatetime', descending: true)
-          .get();
+      Query query = fs.collection('feeds').orderBy('cdatetime', descending: true);
+
+      if (filteredTag != null && filteredTag!.isNotEmpty) {
+        query = query.where('tags', arrayContains: filteredTag);
+        //print('쿼리에 태그 필터 적용됨: $filteredTag');
+      }
+
+      final snapshot = await query.get();
+
+      //print('쿼리 결과 피드 개수: ${snapshot.docs.length}');
 
       final Map<String, Map<String, dynamic>> userCache = {};
 
       final futures = snapshot.docs.map((doc) async {
-        final data = doc.data();
+        final data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
 
-        final writeId = data['writeid'];
+        final writeId = data['writeid'] ?? '';
 
-        if (writeId != null && writeId.isNotEmpty) {
+        if (writeId.isNotEmpty) {
           if (userCache.containsKey(writeId)) {
             data['writerInfo'] = userCache[writeId];
           } else {
@@ -117,7 +140,7 @@ class _FeedListPageState extends State<FeedListPage> {
 
       final items = await Future.wait(futures);
 
-      // 🧠 관심사 및 팔로우 기반 분류
+      // 관심사 및 팔로우 기반 분류
       List<Map<String, dynamic>> interestFeeds = [];
       List<Map<String, dynamic>> followFeeds = [];
       List<Map<String, dynamic>> otherFeeds = [];
@@ -137,7 +160,6 @@ class _FeedListPageState extends State<FeedListPage> {
         }
       }
 
-      // Step 4: 정렬
       interestFeeds.sort((a, b) =>
           (b['interestScore'] as int).compareTo(a['interestScore'] as int));
       followFeeds.sort((a, b) =>
@@ -145,18 +167,24 @@ class _FeedListPageState extends State<FeedListPage> {
       otherFeeds.sort((a, b) =>
           (b['cdatetime'] as Timestamp).compareTo(a['cdatetime'] as Timestamp));
 
-      // Step 4-1: 안전하게 랜덤 섞기
       final random = Random();
       if (interestFeeds.isNotEmpty) interestFeeds.shuffle(random);
       if (followFeeds.isNotEmpty) followFeeds.shuffle(random);
       if (otherFeeds.isNotEmpty) otherFeeds.shuffle(random);
 
-      // Step 5: 병합
       final sortedFeeds = [...interestFeeds, ...followFeeds, ...otherFeeds];
 
       if (sortedFeeds.isEmpty) {
         print("⚠️ 전체 피드가 비어 있음 (필터 조건 확인 필요)");
       }
+
+      final likedDataFutures = sortedFeeds.map((feed) async {
+        final feedId = feed['id'];
+        final result = await getLikeStatusAndCount(feedId);
+        likedStatus[feedId] = result['isLiked'];
+        likeCounts[feedId] = result['likeCount'];
+      });
+      await Future.wait(likedDataFutures);
 
       setState(() {
         feeds = sortedFeeds;
@@ -172,6 +200,13 @@ class _FeedListPageState extends State<FeedListPage> {
 
   Future<void> toggleLike(String feedId) async {
     try {
+      final currentLiked = likedStatus[feedId] ?? false;
+
+      setState(() {
+        likedStatus[feedId] = !currentLiked;
+        likeCounts[feedId] = (likeCounts[feedId] ?? 0) + (currentLiked ? -1 : 1);
+      });
+
       final feedLikeRef = fs
           .collection('feeds')
           .doc(feedId)
@@ -185,25 +220,29 @@ class _FeedListPageState extends State<FeedListPage> {
       final doc = await feedLikeRef.get();
 
       if (doc.exists) {
-        // 좋아요 취소
-        await feedLikeRef.delete();
-        await userLikeRef.delete();
-        //print("좋아요 취소됨");
+        await Future.wait([
+          feedLikeRef.delete(),
+          userLikeRef.delete(),
+        ]);
       } else {
-        // 좋아요 추가
-        await feedLikeRef.set({
-          'userId': currentUserId,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        await userLikeRef.set({
-          'feedId': feedId,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        //print("좋아요 추가됨");
+        await Future.wait([
+          feedLikeRef.set({
+            'userId': currentUserId,
+            'createdAt': FieldValue.serverTimestamp(),
+          }),
+          userLikeRef.set({
+            'feedId': feedId,
+            'createdAt': FieldValue.serverTimestamp(),
+          }),
+        ]);
       }
-
-      // UI 리로드는 호출 쪽에서 처리
     } catch (e) {
+      // 롤백
+      setState(() {
+        final currentLiked = likedStatus[feedId] ?? false;
+        likedStatus[feedId] = !currentLiked;
+        likeCounts[feedId] = (likeCounts[feedId] ?? 0) + (currentLiked ? -1 : 1);
+      });
       print("toggleLike 오류: $e");
     }
   }
@@ -211,15 +250,15 @@ class _FeedListPageState extends State<FeedListPage> {
   Future<Map<String, dynamic>> getLikeStatusAndCount(String feedId) async {
     try {
       final likeDoc =
-          await fs
-              .collection('feeds')
-              .doc(feedId)
-              .collection('likes')
-              .doc(currentUserId)
-              .get();
+      await fs
+          .collection('feeds')
+          .doc(feedId)
+          .collection('likes')
+          .doc(currentUserId)
+          .get();
 
       final likeSnapshot =
-          await fs.collection('feeds').doc(feedId).collection('likes').get();
+      await fs.collection('feeds').doc(feedId).collection('likes').get();
 
       bool isLiked = likeDoc.exists;
       int likeCount = likeSnapshot.size;
@@ -232,7 +271,6 @@ class _FeedListPageState extends State<FeedListPage> {
   }
 
   Future<void> updateMainCoordiId(String newMainCoordiId) async {
-    //print("currentUserId>>>>>?$currentUserId");
     try {
       final docRef = FirebaseFirestore.instance
           .collection('users')
@@ -240,7 +278,6 @@ class _FeedListPageState extends State<FeedListPage> {
 
       await docRef.update({'mainCoordiId': newMainCoordiId});
 
-      // 업데이트 성공 시 스낵바 표시
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('대표 코디가 성공적으로 설정되었습니다.'),
@@ -249,7 +286,6 @@ class _FeedListPageState extends State<FeedListPage> {
         ),
       );
     } catch (e) {
-      // 오류 발생 시 스낵바 표시
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('대표 코디 설정 중 오류 발생: $e'),
@@ -282,7 +318,7 @@ class _FeedListPageState extends State<FeedListPage> {
                 child: QrImageView(
                   data: url,
                   size: 200,
-                  backgroundColor: Colors.white, // ← 이거 꼭 지정
+                  backgroundColor: Colors.white,
                 ),
               ),
               SizedBox(height: 20),
@@ -294,7 +330,7 @@ class _FeedListPageState extends State<FeedListPage> {
                   ElevatedButton(
                     onPressed: () async {
                       try {
-                        await Future.delayed(Duration(milliseconds: 300)); // 렌더링 시간 확보
+                        await Future.delayed(Duration(milliseconds: 300));
 
                         RenderRepaintBoundary boundary =
                         qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
@@ -332,12 +368,9 @@ class _FeedListPageState extends State<FeedListPage> {
     );
   }
 
-
   Future<void> deleteFeed(String feedId) async {
     try {
       await fs.collection('feeds').doc(feedId).delete();
-
-      print('test>>>test');
 
       setState(() {
         feeds.removeWhere((feed) => feed['id'] == feedId);
@@ -356,15 +389,28 @@ class _FeedListPageState extends State<FeedListPage> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      body: ListView.builder(
+      // 필터 해제용 플로팅 액션 버튼 (우하단)
+      floatingActionButton: filteredTag != null
+          ? FloatingActionButton.extended(
+        onPressed: () {
+          setTagFilter(null);
+        },
+        label: Text('필터 해제'),
+        icon: Icon(Icons.clear),
+      )
+          : null,
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : ListView.builder(
         padding: const EdgeInsets.all(12),
-        itemCount: feeds.length, // feeds -> feedItems
+        itemCount: feeds.where((feed) => feed['isPublic'] != false).length,
         itemBuilder: (context, index) {
-          final feed = feeds[index];
+          final visibleFeeds = feeds.where((feed) => feed['isPublic'] != false).toList();
+          final feed = visibleFeeds[index];
 
           return Padding(
+            key: ValueKey(feed['id']),
             padding: const EdgeInsets.only(bottom: 20),
             child: Card(
               shape: RoundedRectangleBorder(
@@ -397,7 +443,6 @@ class _FeedListPageState extends State<FeedListPage> {
                           PopupMenuButton<String>(
                             icon: Icon(Icons.more_vert, color: Colors.grey),
                             onSelected: (value) {
-                              // 메뉴 선택 시 동작
                               if (value == 'edit') {
                                 print("Edit 선택됨");
                               } else if (value == 'del') {
@@ -406,22 +451,21 @@ class _FeedListPageState extends State<FeedListPage> {
                                 updateMainCoordiId(feed['id']);
                               }
                             },
-                            itemBuilder:
-                                (BuildContext context) =>
-                                    <PopupMenuEntry<String>>[
-                                      PopupMenuItem<String>(
-                                        value: 'edit',
-                                        child: Text('수정'),
-                                      ),
-                                      PopupMenuItem<String>(
-                                        value: 'del',
-                                        child: Text('삭제'),
-                                      ),
-                                      PopupMenuItem<String>(
-                                        value: 'main',
-                                        child: Text('대표설정'),
-                                      ),
-                                    ],
+                            itemBuilder: (BuildContext context) =>
+                            <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                value: 'edit',
+                                child: Text('수정'),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'del',
+                                child: Text('삭제'),
+                              ),
+                              PopupMenuItem<String>(
+                                value: 'main',
+                                child: Text('대표설정'),
+                              ),
+                            ],
                           ),
                       ],
                     ),
@@ -447,7 +491,7 @@ class _FeedListPageState extends State<FeedListPage> {
                         ),
                         SizedBox(width: 4),
                         Text(
-                          feed['temperature'].toString() ?? '',
+                          feed['temperature']?.toString() ?? '',
                           style: TextStyle(
                             color: Colors.redAccent,
                             fontWeight: FontWeight.w600,
@@ -461,42 +505,27 @@ class _FeedListPageState extends State<FeedListPage> {
                     Stack(
                       children: [
                         Center(
-                          child: FutureBuilder<Map<String, dynamic>>(
-                            future: getLikeStatusAndCount(feed['id']),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) {
-                                return CircularProgressIndicator();
-                              }
-
-                              final isLiked = snapshot.data!['isLiked'];
-                              final likeCount = snapshot.data!['likeCount'];
-
-                              return ImageCarouselCard(
-                                imageUrls:
-                                    (feed['imageUrls'] as List<dynamic>)
-                                        .map((e) => e.toString())
-                                        .toList(),
-                                profileImageUrl:
-                                    feed['writerInfo']?['profileImage'] ?? '',
-                                userName:
-                                    feed['writerInfo']?['nickname'] ?? '닉네임',
-                                onUserTap: () {
-                                  final docId =
-                                      feed['writerInfo']?['docId'] ?? '';
-                                  widget.onUserTap(docId);
-                                },
-                                onShareTap: () {
-                                  // feedid를 넘겨서 공유 다이얼로그 띄우기
-                                  final feedId = feed['id']?.toString() ?? '';
-                                  showShareBottomSheet(context,feedId);
-                                },
-                                isLiked: isLiked,
-                                likeCount: likeCount,
-                                onLikeToggle: () async {
-                                  await toggleLike(feed['id']);
-                                  setState(() {}); // 좋아요 상태 반영
-                                },
-                              );
+                          child: ImageCarouselCard(
+                            key: ValueKey(feed['id']),
+                            imageUrls:
+                            (feed['imageUrls'] as List<dynamic>)
+                                .map((e) => e.toString())
+                                .toList(),
+                            profileImageUrl:
+                            feed['writerInfo']?['profileImage'] ?? '',
+                            userName: feed['writerInfo']?['nickname'] ?? '닉네임',
+                            onUserTap: () {
+                              final docId = feed['writerInfo']?['docId'] ?? '';
+                              widget.onUserTap(docId);
+                            },
+                            onShareTap: () {
+                              final feedId = feed['id']?.toString() ?? '';
+                              showShareBottomSheet(context, feedId);
+                            },
+                            isLiked: likedStatus[feed['id']] ?? false,
+                            likeCount: likeCounts[feed['id']] ?? 0,
+                            onLikeToggle: () {
+                              toggleLike(feed['id']);
                             },
                           ),
                         ),
@@ -505,43 +534,52 @@ class _FeedListPageState extends State<FeedListPage> {
 
                     SizedBox(height: 16),
 
-                    // 설명
                     Text(feed['content'] ?? '', style: TextStyle(fontSize: 16)),
                     SizedBox(height: 12),
                     feed['tags'] != null && feed['tags'] is List
                         ? Wrap(
-                          spacing: 6.0,
-                          runSpacing: 2.0,
-                          children:
-                              (feed['tags'] as List)
-                                  .map(
-                                    (tag) => Chip(
-                                      label: Text(
-                                        tag.toString(),
-                                        style: TextStyle(
-                                          // color: Colors.grey.shade700,
-                                          fontSize: 12, // ⬅️ 폰트 크기 축소
-                                        ),
-                                      ),
-                                      // backgroundColor: Colors.grey.shade200,
-                                      shape: StadiumBorder(),
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 0,
-                                      ),
-                                      // ⬅️ 내부 여백 축소
-                                      visualDensity: VisualDensity.compact,
-                                      // ⬅️ 전체 크기 컴팩트하게
-                                      materialTapTargetSize:
-                                          MaterialTapTargetSize
-                                              .shrinkWrap, // ⬅️ 터치 영역 축소
-                                    ),
-                                  )
-                                  .toList(),
-                        )
+                      spacing: 6.0,
+                      runSpacing: 2.0,
+                      children: (feed['tags'] as List)
+                          .map(
+                            (tag) => GestureDetector(
+                          onTap: () {
+                            // 태그 필터 설정
+                            if (filteredTag == tag) {
+                              // 이미 선택된 태그 클릭 시 해제
+                              setTagFilter(null);
+                            } else {
+                              setTagFilter(tag.toString());
+                            }
+                          },
+                          child: Chip(
+                            label: Text(
+                              tag.toString(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: filteredTag == tag
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ),
+                            backgroundColor: filteredTag == tag
+                                ? Colors.blueAccent
+                                : Colors.grey.shade200,
+                            shape: StadiumBorder(),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 0,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      )
+                          .toList(),
+                    )
                         : SizedBox.shrink(),
                     SizedBox(height: 6),
-                    // 위치, 날짜
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -560,7 +598,6 @@ class _FeedListPageState extends State<FeedListPage> {
 
                     Divider(color: Colors.grey.shade300),
 
-                    // 댓글 및 대댓글 -> CommentSection 위젯으로 교체
                     CommentSection(
                       key: ValueKey("comment_${feed['id']}"),
                       feedId: feed['id'],
