@@ -11,15 +11,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val localProperties = Properties().apply {
-    load(FileInputStream(File(rootDir, "local.properties")))
-}
+//val localProperties = Properties().apply {
+//    load(FileInputStream(File(rootDir, "local.properties")))
+//}
 
-val kakaoKey = localProperties["kakao_app_key"] as String
-val kakaoScheme = localProperties["kakao_scheme"] as String
-val naverClientId = localProperties["NAVER_CLIENT_ID"] as String
-val naverClientSecret = localProperties["NAVER_CLIENT_SECRET"] as String
-val naverClientName = localProperties["NAVER_CLIENT_NAME"] as String
+//val kakaoKey = localProperties["kakao_app_key"] as String
+//val kakaoScheme = localProperties["kakao_scheme"] as String
+//val naverClientId = localProperties["NAVER_CLIENT_ID"] as String
+//val naverClientSecret = localProperties["NAVER_CLIENT_SECRET"] as String
+//val naverClientName = localProperties["NAVER_CLIENT_NAME"] as String
 
 android {
     namespace = "com.example.w2wproject"
@@ -46,11 +46,11 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        manifestPlaceholders["kakao_app_key"] = kakaoKey
-        manifestPlaceholders["kakao_scheme"] = kakaoScheme
-        manifestPlaceholders["NAVER_CLIENT_ID"] = naverClientId
-        manifestPlaceholders["NAVER_CLIENT_SECRET"] = naverClientSecret
-        manifestPlaceholders["NAVER_CLIENT_NAME"] = naverClientName
+//        manifestPlaceholders["kakao_app_key"] = kakaoKey
+//        manifestPlaceholders["kakao_scheme"] = kakaoScheme
+//        manifestPlaceholders["NAVER_CLIENT_ID"] = naverClientId
+//        manifestPlaceholders["NAVER_CLIENT_SECRET"] = naverClientSecret
+//        manifestPlaceholders["NAVER_CLIENT_NAME"] = naverClientName
     }
 
     dependencies {

@@ -50,7 +50,7 @@ class _ChatListPageState extends State<ChatListPage> {
             color: Colors.grey[100],
             child: TextField(
               decoration: InputDecoration(
-                hintText: "유저 닉네임/UID 검색...",
+                hintText: "유저 닉네임/ID 검색...",
                 prefixIcon: Icon(Icons.search, color: Colors.blueGrey),
                 filled: true,
                 fillColor: Colors.white,
@@ -123,11 +123,11 @@ class _ChatListPageState extends State<ChatListPage> {
                           .get(),
                       builder: (context, userSnap) {
                         String nickname = '';
-                        String profileUrl = 'assets/profile1.jpg';
+                        String profileUrl = '';
                         if (userSnap.hasData && userSnap.data!.exists) {
                           final userData = userSnap.data!.data() as Map<String, dynamic>;
                           nickname = userData['nickname'] ?? '닉네임없음';
-                          profileUrl = userData['profileImage'] ?? 'assets/profile1.jpg';
+                          profileUrl = userData['profileImage'] ?? '';
                         }
 
                         if (searchText.isNotEmpty &&
@@ -138,12 +138,7 @@ class _ChatListPageState extends State<ChatListPage> {
 
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          leading: CircleAvatar(
-                            backgroundImage: profileUrl.toString().startsWith('http')
-                                ? NetworkImage(profileUrl)
-                                : AssetImage(profileUrl) as ImageProvider,
-                            radius: 22,
-                          ),
+                          leading: buildProfileAvatar(profileUrl, 22),
                           title: Text(
                             nickname,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -265,7 +260,7 @@ class _ChatListPageState extends State<ChatListPage> {
                   final doc = finalDocs[idx];
                   final user = doc.data() as Map<String, dynamic>;
                   final uid = doc.id;
-                  final profileUrl = user['profileImage'] ?? 'assets/profile1.jpg';
+                  final profileUrl = user['profileImage'] ?? '';
                   final nickname = user['nickname'] ?? '닉네임없음';
                   final isFollowing = following.contains(uid);
 
@@ -278,13 +273,7 @@ class _ChatListPageState extends State<ChatListPage> {
                         Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            CircleAvatar(
-                              backgroundImage: profileUrl.toString().startsWith('http')
-                                  ? NetworkImage(profileUrl)
-                                  : AssetImage(profileUrl) as ImageProvider,
-                              radius: 26,
-                              backgroundColor: isFollowing ? Colors.grey[200] : null,
-                            ),
+                            buildProfileAvatar(profileUrl, 26),
                             if (!isFollowing)
                               Positioned(
                                 bottom: -4, right: -4,
@@ -344,6 +333,30 @@ class _ChatListPageState extends State<ChatListPage> {
         },
       ),
     );
+  }
+
+  /// 프로필 이미지를 안전하게 그려주는 함수
+  Widget buildProfileAvatar(String? url, double radius) {
+    if (url == null || url.trim().isEmpty || url == 'null') {
+      return CircleAvatar(
+        backgroundColor: Colors.grey,
+        radius: radius,
+        child: Icon(Icons.person, color: Colors.white, size: radius),
+      );
+    } else if (url.startsWith('http')) {
+      return CircleAvatar(
+        backgroundImage: NetworkImage(url),
+        backgroundColor: Colors.grey[200],
+        radius: radius,
+      );
+    } else {
+      // asset 경로인데 없을 수 있으니 그냥 빈 원형만
+      return CircleAvatar(
+        backgroundColor: Colors.grey,
+        radius: radius,
+        child: Icon(Icons.person, color: Colors.white, size: radius),
+      );
+    }
   }
 
   /// 팔로우 함수 + 알림
