@@ -109,7 +109,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void openFeecPage() {
+  void openFeedPage() {
     setState(() {
       _selectedIndex = 3; // FeedListPage 탭으로 전환
     });
@@ -182,7 +182,10 @@ class _HomePageState extends State<HomePage> {
     final List<Widget> _pages = [
       HomeContent(key: ValueKey(DateTime.now().millisecondsSinceEpoch)),
       SearchTab(onUserTap: openUserPage),
-      WritePostPage(),
+
+      WritePostPage(key: ValueKey(DateTime.now().millisecondsSinceEpoch),
+          onUserTap: openFeedPage),
+
       FeedListPage(
         key: ValueKey(DateTime.now().millisecondsSinceEpoch),
         onUserTap: openUserPage,
