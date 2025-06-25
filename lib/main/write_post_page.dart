@@ -551,6 +551,59 @@ class _WritePostPageState extends State<WritePostPage> {
                       ]
                     ),
                     SizedBox(height: 20,),
+
+                    Row(
+                      children: [Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (selectedDateTime != null && displayLocationName != null)
+                          const Text("위치"),
+                          const SizedBox(height: 8),
+                          if (selectedDateTime != null && displayLocationName != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEAF3FF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined),
+                                const SizedBox(width: 8),
+                                if (selectedDateTime != null && displayLocationName != null)
+                                Text("${displayLocationName?.isNotEmpty == true ? displayLocationName : ''}"),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (selectedDateTime != null && selectedTemp != null)
+                            const Text("온도"),
+                            const SizedBox(height: 8),
+                            if (selectedDateTime != null && selectedTemp != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEAF3FF),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.thermostat_outlined, size: 20),
+                                  SizedBox(width: 8),
+                                  Text("${selectedTemp ?? " "}°C"),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+
                     Row(
                       children: [
                         ElevatedButton(
@@ -561,22 +614,6 @@ class _WritePostPageState extends State<WritePostPage> {
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        if (selectedDateTime != null && selectedTemp != null)
-                        Text(
-                          '해당 시간의 기온: ${selectedTemp ?? " "}°C',
-                          style: const TextStyle(fontSize: 22, color: Colors.blue),
-                        ),
-                      ],
-                    ),
-                    if (selectedDateTime != null && displayLocationName != null)
-                    Row(
-                      children: [
-                        Icon(Icons.location_on_outlined),
-                        Text("위치 : ${displayLocationName?.isNotEmpty == true ? displayLocationName : ''}")
-                      ],
-                    )
                   ],
                 ),
               ],
@@ -658,10 +695,10 @@ class _WritePostPageState extends State<WritePostPage> {
                   },
 
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.pink,
+                    backgroundColor: mainColor,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('등록'),
+                  child: const Text('기록 하기'),
                 ),
               ],
             ),
