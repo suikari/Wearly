@@ -18,7 +18,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool dmAllowed = true;
 
   int selectedThemeIndex = 0;
-  List<Color> themeColors = [Colors.pink, Colors.indigo, Colors.black];
+  List<Color> themeColors = [Color(0xFFFFC1CC), Color(0xFF4058A6), Color(0xCC000000)];
 
   static const String keyIsAlarmOn = 'isAlarmOn';
   static const String keyDmAllowed = 'dmAllowed';
@@ -122,15 +122,15 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildSectionTitle(Icons.notifications, '알림 설정'),
             Row(
               children: [
-                ElevatedButton(
-                  onPressed: _selectTime,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple[100],
-                  ),
-                  child: Text(
-                      '${selectedTime.hourOfPeriod.toString().padLeft(2, '0')} : ${selectedTime.minute.toString().padLeft(2, '0')} ${selectedTime.period == DayPeriod.am ? 'AM' : 'PM'}'),
-                ),
-                const SizedBox(width: 16),
+                // ElevatedButton(
+                //   onPressed: _selectTime,
+                //   style: ElevatedButton.styleFrom(
+                //     backgroundColor: Colors.purple[100],
+                //   ),
+                //   child: Text(
+                //       '${selectedTime.hourOfPeriod.toString().padLeft(2, '0')} : ${selectedTime.minute.toString().padLeft(2, '0')} ${selectedTime.period == DayPeriod.am ? 'AM' : 'PM'}'),
+                // ),
+                // const SizedBox(width: 16),
                 ElevatedButton(
                   onPressed: () {
                     setState(() {
@@ -141,7 +141,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isAlarmOn ? Colors.pink : Colors.grey[300],
                   ),
-                  child: const Text('설정', style: TextStyle(color: Colors.white)),
+                  child: const Text('숫자알림', style: TextStyle(color: Colors.white)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
@@ -154,32 +154,32 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: !isAlarmOn ? Colors.pink : Colors.grey[300],
                   ),
-                  child: const Text('해제', style: TextStyle(color: Colors.white)),
+                  child: const Text('알림안봄', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                '선택한 시간에 오늘의 날씨와 옷차림 알림을 보내드립니다.',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const NotificationPage()),
-                );
-              },
-              icon: const Icon(Icons.settings),
-              label: const Text('알림 상세 설정 열기'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-              ),
-            ),
+            // const Padding(
+            //   padding: EdgeInsets.symmetric(vertical: 8),
+            //   child: Text(
+            //     '선택한 시간에 오늘의 날씨와 옷차림 알림을 보내드립니다.',
+            //     style: TextStyle(color: Colors.grey),
+            //   ),
+            // ),
+            // const SizedBox(height: 12),
+            // ElevatedButton.icon(
+            //   onPressed: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (context) => const NotificationPage()),
+            //     );
+            //   },
+            //   icon: const Icon(Icons.settings),
+            //   label: const Text('알림 상세 설정 열기'),
+            //   style: ElevatedButton.styleFrom(
+            //     backgroundColor: Colors.deepPurple,
+            //     foregroundColor: Colors.white,
+            //   ),
+            // ),
             const Divider(height: 32),
             _buildSectionTitle(Icons.color_lens, '테마 설정'),
             Row(

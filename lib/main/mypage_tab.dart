@@ -8,8 +8,9 @@ import 'package:intl/intl.dart';
 
 class MyPageTab extends StatefulWidget {
   final String? userId;
+  final Function(String userId) onUserTap; // 여기에 추가
 
-  const MyPageTab({Key? key, this.userId, required Function onUserTap}) : super(key: key);
+  const MyPageTab({Key? key, this.userId, required this.onUserTap}) : super(key: key);
 
   @override
   State<MyPageTab> createState() => _MyPageWidgetState();
@@ -86,6 +87,20 @@ class _MyPageWidgetState extends State<MyPageTab> {
     }
   }
 
+  void _handleDragUpdate(DragUpdateDetails details) {
+    if (details.delta.dy < -5 && isExpanded) {
+      // 위로 스와이프 → 접기
+      setState(() {
+        isExpanded = false;
+      });
+    } else if (details.delta.dy > 5 && !isExpanded) {
+      // 아래로 스와이프 → 펼치기
+      setState(() {
+        isExpanded = true;
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -149,6 +164,10 @@ class _MyPageWidgetState extends State<MyPageTab> {
           } catch (e) {
             print('feeds 문서 가져오기 실패: $e');
           }
+        } else {
+          setState(() {
+            isExpanded = false; // 대표 피드 없으면 닫음
+          });
         }
 
         // 🔽 팔로우 상태 확인
@@ -223,7 +242,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
     );
   }
 
-  void openUserEditPage(BuildContext context) {
+  Future<void> openUserEditPage(BuildContext context) async {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -263,6 +282,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
   }
 
 
+
   @override
   Widget build(BuildContext context) {
 
@@ -273,12 +293,6 @@ class _MyPageWidgetState extends State<MyPageTab> {
     if (userProfiles.isEmpty) {
       return const Center(child: Text("프로필 데이터를 불러올 수 없습니다."));
     }
-
-
-    //print("widget.userId ==>${widget.userId }");
-    //print("currentUserId ==>${currentUserId }");
-    //print("viewedUserId==>$viewedUserId");
-
     final bool isOwnPage = viewedUserId == currentUserId;
 
     final Map<String, dynamic> profile = getUserProfile(viewedUserId);
@@ -294,200 +308,241 @@ class _MyPageWidgetState extends State<MyPageTab> {
     final followerCount = (profile['follower'] )?.length ?? 0;
     final followingCount = (profile['following'] )?.length ?? 0;
 
-
-
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             // 상단 프로필 UI
-            AnimatedContainer(
-              duration: Duration(milliseconds: 200),
-              width: screenWidth,
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: unselectedItemColor.withOpacity(0.95),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-                border: Border(bottom: BorderSide(color: navBackgroundColor, width: 7)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    offset: Offset(0, 2),
-                    blurRadius: 4,
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: showDetail
-                            ? Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // 팔로워 수
-                            Text(
-                              '팔로워 ${followerCount ?? 0}',
-                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                            ),
-                            const SizedBox(width: 8),
-
-                            // 팔로잉 수
-                            Text(
-                              '팔로잉 ${followingCount ?? 0}',
-                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                            ),
-                            const SizedBox(width: 12),
-
-                            // 프로필 이미지
-                            if (profile["profileImage"] != null &&
-                                profile["profileImage"].toString().isNotEmpty)
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundImage: NetworkImage(profile["profileImage"]),
-                              )
-                            else
-                              const CircleAvatar(
-                                radius: 20,
-                                backgroundColor: Colors.grey,
-                                child: Icon(Icons.person, color: Colors.white),
-                              ),
-                            const SizedBox(width: 12),
-
-                            // 닉네임
-                            Text(
-                              profile["nickname"].length > 6
-                                  ? '${profile["nickname"].substring(0, 6)}...'
-                                  : profile["nickname"],
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: selectedItemColor,
-                              ),
-                            ),
-                          ],
-                        )
-                        : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 좌측 상단 팔로워/팔로잉 표시
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12, bottom: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            GestureDetector(
+              onVerticalDragUpdate: _handleDragUpdate,
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                width: screenWidth,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: unselectedItemColor.withOpacity(0.95),
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  border: Border(bottom: BorderSide(color: navBackgroundColor, width: 7)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      offset: Offset(0, 2),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Align(
+                      alignment: Alignment.center,
+                      child: showDetail
+                              ? Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Row(
-                                children: const [
-                                  Text(
-                                    '팔로워',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                  ),
-                                  SizedBox(width: 16),
-                                  Text(
-                                    '팔로잉',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+                              // 팔로워 수
+                              GestureDetector(
+                                onTap: () {
+                                  showFollowerFollowingDialog(
+                                    context: context,
+                                    userIds: List<String>.from(profile['follower'] ?? []),
+                                    title: '팔로워',
+                                    onUserTap: widget.onUserTap, // 이미 상위에서 받은 콜백 넘김
+                                  );
+                                },
+                                child: Text(
+                                  '팔로워 ${followerCount ?? 0}',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                                ),
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text(
-                                    '${followerCount ?? 0}',
-                                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                                  ),
-                                  const SizedBox(width: 32),
-                                  Text(
-                                    '${followingCount ?? 0}',
-                                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                                  ),
-                                ],
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
+                                  showFollowerFollowingDialog(
+                                    context: context,
+                                    userIds: List<String>.from(profile['following'] ?? []),
+                                    title: '팔로잉',
+                                    onUserTap: widget.onUserTap, // 이미 상위에서 받은 콜백 넘김
+                                  );
+                                },
+                                child: Text(
+                                  '팔로잉 ${followingCount ?? 0}',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                                ),
                               ),
-                            ],
-                          ),
-                        ),
+                              // 팔로잉 수
 
-                        // 프로필 이미지 (중앙 정렬 유지)
-                        Center(
-                          child: Column(
-                            children: [
+                              const SizedBox(width: 12),
+              
+                              // 프로필 이미지
                               if (profile["profileImage"] != null &&
                                   profile["profileImage"].toString().isNotEmpty)
                                 CircleAvatar(
-                                  radius: 32,
+                                  radius: 20,
                                   backgroundImage: NetworkImage(profile["profileImage"]),
+                                )
+                              else
+                                const CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: Colors.grey,
+                                  child: Icon(Icons.person, color: Colors.white),
                                 ),
-                              const SizedBox(height: 8),
+                              const SizedBox(width: 12),
+              
+                              // 닉네임
                               Text(
-                                profile["nickname"] ?? '',
+                                profile["nickname"].length > 6
+                                    ? '${profile["nickname"].substring(0, 6)}...'
+                                    : profile["nickname"],
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: selectedItemColor,
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-
-                        // 피드 섹션
-                        buildExpandedFeedSection(
-                          imageUrls: mainCoordiFeed["imageUrls"] ?? [],
-                          profile: profile,
-                          isExpanded: isExpanded,
-                          selectedItemColor: selectedItemColor,
-                          pageController: _pageController,
-                        ),
-
-                        // 펼치기 버튼
-                        Center(
-                          child: TextButton(
-                            onPressed: () => setState(() => isExpanded = !isExpanded),
-                            child: Icon(
-                              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                              size: 32,
-                              color: selectedItemColor,
+                          )
+                          : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 좌측 상단 팔로워/팔로잉 표시
+                          Padding(
+                            padding: const EdgeInsets.only(left: 12, bottom: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        showFollowerFollowingDialog(
+                                          context: context,
+                                          userIds: List<String>.from(profile['follower'] ?? []),
+                                          title: '팔로워',
+                                          onUserTap: widget.onUserTap, // 이미 상위에서 받은 콜백 넘김
+                                        );
+                                      },
+                                      child: Text(
+                                        '팔로워',
+                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    SizedBox(width: 16),
+                                    GestureDetector(
+                                      onTap: () {
+                                        showFollowerFollowingDialog(
+                                          context: context,
+                                          userIds: List<String>.from(profile['following'] ?? []),
+                                          title: '팔로잉',
+                                          onUserTap: widget.onUserTap, // 이미 상위에서 받은 콜백 넘김
+                                        );
+                                      },
+                                      child: Text(
+                                        '팔로잉',
+                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${followerCount ?? 0}',
+                                      style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                    ),
+                                    const SizedBox(width: 32),
+                                    Text(
+                                      '${followingCount ?? 0}',
+                                      style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
+              
+                          // 프로필 이미지 (중앙 정렬 유지)
+                          Center(
+                            child: Column(
+                              children: [
+                                if (profile["profileImage"] != null &&
+                                    profile["profileImage"].toString().isNotEmpty)
+                                  CircleAvatar(
+                                    radius: 32,
+                                    backgroundImage: NetworkImage(profile["profileImage"]),
+                                  ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  profile["nickname"] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: selectedItemColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+              
+                          // 피드 섹션
+                          buildExpandedFeedSection(
+                            imageUrls: mainCoordiFeed["imageUrls"] ?? [],
+                            profile: profile,
+                            isExpanded: isExpanded,
+                            selectedItemColor: selectedItemColor,
+                            pageController: _pageController,
+                          ),
+              
+                          // 펼치기 버튼
+                          Center(
+                            child: TextButton(
+                              onPressed: () => setState(() => isExpanded = !isExpanded),
+                              child: Icon(
+                                isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                size: 32,
+                                color: selectedItemColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    top: 2,
-                    right: 8,
-                    child: isOwnPage
-                        ? Row(
-                      children: [
-                        _buildIconBtn('assets/common/person_edit.png', () {
-                          openUserEditPage(context);
-                        }),
-                        _buildIconBtn(Icons.settings, () {
-                          openSettingsPage(context);
-                        }),
-                      ],
-                    )
-                        : ElevatedButton(
-                      onPressed: _toggleFollow,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _isFollowing ? selectedItemColor : unselectedItemColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // 내부 여백
-                        minimumSize: Size(0, 0), // 기본 크기 제한 없음
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 터치 영역 최소화
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                    Positioned(
+                      top: 2,
+                      right: 8,
+                      child: isOwnPage
+                          ? Row(
+                        children: [
+                          _buildIconBtn('assets/common/person_edit.png', () {
+                            openUserEditPage(context);
+                          }),
+                          _buildIconBtn(Icons.settings, () {
+                            openSettingsPage(context);
+                          }),
+                        ],
+                      )
+                          : ElevatedButton(
+                        onPressed: _toggleFollow,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isFollowing ? selectedItemColor : unselectedItemColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // 내부 여백
+                          minimumSize: Size(0, 0), // 기본 크기 제한 없음
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 터치 영역 최소화
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          _isFollowing ? '팔로우 중' : '팔로우',
+                          style: const TextStyle(fontSize: 12), // 글자 크기 축소
                         ),
                       ),
-                      child: Text(
-                        _isFollowing ? '팔로우 중' : '팔로우',
-                        style: const TextStyle(fontSize: 12), // 글자 크기 축소
-                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -498,6 +553,8 @@ class _MyPageWidgetState extends State<MyPageTab> {
                 children: [
                   isLoading
                       ? Center(child: CircularProgressIndicator())
+                      : feedItemsByMonth.isEmpty
+                      ? const Center(child: Text('등록한 피드가 없습니다.'))
                       : SingleChildScrollView(
                     child: Column(
                       children: feedItemsByMonth.entries.map((entry) {
@@ -692,4 +749,66 @@ Widget buildExpandedFeedSection({
     secondChild: SizedBox.shrink(),
   );
 }
+void showFollowerFollowingDialog({
+  required BuildContext context,
+  required List<String> userIds,
+  required String title,
+  required Function(String userId) onUserTap,
+}) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(title),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _fetchUserInfos(userIds),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final userInfos = snapshot.data!;
+              return ListView.builder(
+                shrinkWrap: true,
+                itemCount: userInfos.length,
+                itemBuilder: (context, index) {
+                  final user = userInfos[index];
+                  return ListTile(
+                    leading: user['profileImage'] != null &&
+                        user['profileImage'].toString().isNotEmpty
+                        ? CircleAvatar(
+                      backgroundImage: NetworkImage(user['profileImage']),
+                    )
+                        : const CircleAvatar(
+                      child: Icon(Icons.person),
+                    ),
+                    title: Text(user['nickname'] ?? ''),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onUserTap(user['id']);
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      );
+    },
+  );
+}
+Future<List<Map<String, dynamic>>> _fetchUserInfos(List<String> userIds) async {
+  final usersCollection = FirebaseFirestore.instance.collection('users');
 
+  final futures = userIds.map((id) => usersCollection.doc(id).get());
+  final snapshots = await Future.wait(futures);
+
+  return snapshots
+      .where((snap) => snap.exists)
+      .map((snap) => {
+    'id': snap.id,
+    ...?snap.data(),
+  })
+      .toList();
+}

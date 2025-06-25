@@ -17,9 +17,13 @@ import 'package:uuid/uuid.dart';
 import 'dart:ui' as ui;
 import 'package:intl/intl.dart';
 
+import '../provider/custom_colors.dart';
+
 const String KMA_API_KEY = 'Wjb8zKkrrbUtY2pQXCNNv%2B5M2EqShPVq92B139bdclMwmJDylxQjPYUUF6cobHdRtf9Et%2Bq0MxDFn1Oh4tBLhg%3D%3D';
 class WritePostPage extends StatefulWidget {
-  const WritePostPage({super.key});
+  final void Function() onUserTap;
+  const WritePostPage({super.key, required this.onUserTap});
+
 
   @override
   State<WritePostPage> createState() => _WritePostPageState();
@@ -39,15 +43,11 @@ class _WritePostPageState extends State<WritePostPage> {
   final int maxImageCount = 10;
   int currentPageIndex = 0;
   bool isLoadingTags = true;
-
   DateTime? selectedDT;
   int? selectedTemp;
-
   String? userId;
-
   DateTime now = DateTime.now();
   String? displayLocationName;
-
   bool isSubmitting = false;
 
   @override
@@ -94,7 +94,7 @@ class _WritePostPageState extends State<WritePostPage> {
       }
 
       String result =
-      [area, dong].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
+        [area, dong].where((x) => x.isNotEmpty).join(' ').replaceAll('대한민국', '').trim();
       return result.isEmpty ? '위치 정보 없음' : result;
     }
     return '주소를 찾을 수 없습니다.';
@@ -219,8 +219,6 @@ class _WritePostPageState extends State<WritePostPage> {
     DateTime kstTime = utcTime.add(Duration(hours: 9));
     Timestamp cdatetime = Timestamp.fromDate(kstTime);
 
-
-
     // YYYYMMDD 로 변경
     String formatted = DateFormat('yyyyMMdd').format(kstTime);
 
@@ -245,7 +243,6 @@ class _WritePostPageState extends State<WritePostPage> {
           return double.tryParse(item['fcstValue'] ?? '')?.round();
         }
       }
-
     }
     return null;
   }
@@ -253,19 +250,24 @@ class _WritePostPageState extends State<WritePostPage> {
   void _openDateClockPicker() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        content: SizedBox(
-          width: 350,
-          height: 600,
-          child: DateClockPicker(
-            onDateTimeSelected: (DateTime dt) async {
-              setState(() {
-                selectedDateTime = dt;
-                selectedTemp = null;
-              });
+      builder: (dialogContext) {
+        final navigator = Navigator.of(dialogContext); // ✅ 저장
+        return AlertDialog(
+          content: SizedBox(
+            width: 350,
+            height: 600,
+            child: DateClockPicker(
+              onDateTimeSelected: (DateTime dt) async {
+                navigator.pop(); // 먼저 닫기
 
-                LocationPermission permission = await Geolocator
-                    .checkPermission();
+                showWeatherLoadingDialog(dialogContext);
+
+                setState(() {
+                  selectedDateTime = dt;
+                  selectedTemp = null;
+                });
+
+                LocationPermission permission = await Geolocator.checkPermission();
                 if (permission == LocationPermission.denied) {
                   permission = await Geolocator.requestPermission();
                   if (permission == LocationPermission.denied) {
@@ -287,6 +289,7 @@ class _WritePostPageState extends State<WritePostPage> {
                 );
                 double lat = position.latitude;
                 double lon = position.longitude;
+
                 String locationNameForAPI = await getSidoFromLatLng(position);
                 String fullAddress = await getFullAddressFromLatLng(position);
 
@@ -296,11 +299,56 @@ class _WritePostPageState extends State<WritePostPage> {
 
                 Map<String, int> grid = convertGRID_GPS(lat, lon);
                 int? temperature = await fetchTemperatureFromKMA(dt, grid['x']!, grid['y']!);
+
                 setState(() {
                   selectedTemp = temperature;
                 });
-              Navigator.of(context).pop();
-            },
+
+                navigator.pop(); // ✅ context 없이 pop
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 바깥 터치로 닫히지 않게
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('등록 중입니다...', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void showWeatherLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 바깥 터치로 닫히지 않음
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('날씨 정보를 불러오는 중입니다...', style: TextStyle(fontSize: 16)),
+            ],
           ),
         ),
       ),
@@ -316,9 +364,14 @@ class _WritePostPageState extends State<WritePostPage> {
 
   @override
   Widget build(BuildContext context) {
+
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white;
+
     final dateTimeFormat = DateFormat('yyyy-MM-dd HH:mm');
     return Scaffold(
-      appBar: AppBar(title: const Text('글 쓰기')),
       body: isLoadingTags
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -329,7 +382,7 @@ class _WritePostPageState extends State<WritePostPage> {
             Container(
               height: 500,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.pink.shade200),
+                border: Border.all(color: mainColor),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: selectedImages.isEmpty
@@ -342,8 +395,11 @@ class _WritePostPageState extends State<WritePostPage> {
                       onPageChanged: (index) => setState(() => currentPageIndex = index),
                       itemBuilder: (context, index) => Stack(
                         children: [
-                          SizedBox.expand(
-                            child: Image.file(selectedImages[index], fit: BoxFit.fill),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: SizedBox.expand(
+                              child: Image.file(selectedImages[index], fit: BoxFit.fill)
+                            ),
                           ),
                           Positioned(
                             top: 8,
@@ -381,7 +437,7 @@ class _WritePostPageState extends State<WritePostPage> {
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: currentPageIndex == index ? Colors.pink : Colors.grey,
+                          color: currentPageIndex == index ? mainColor : Colors.grey,
                         ),
                       )),
                     ),
@@ -395,7 +451,7 @@ class _WritePostPageState extends State<WritePostPage> {
               icon: const Icon(Icons.add_photo_alternate),
               label: const Text('이미지 추가 및 편집'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pink.shade100,
+                backgroundColor: mainColor,
                 foregroundColor: Colors.black87,
               ),
             ),
@@ -404,7 +460,7 @@ class _WritePostPageState extends State<WritePostPage> {
               controller: titleController,
               decoration: InputDecoration(
                 hintText: '제목을 입력해주세요...',
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.pink.shade200)),
+                border: OutlineInputBorder(borderSide: BorderSide(color: mainColor)),
               ),
             ),
             const SizedBox(height: 12),
@@ -413,7 +469,7 @@ class _WritePostPageState extends State<WritePostPage> {
               maxLines: 5,
               decoration: InputDecoration(
                 hintText: '내용을 입력해주세요...',
-                border: OutlineInputBorder(borderSide: BorderSide(color: Colors.pink.shade200)),
+                border: OutlineInputBorder(borderSide: BorderSide(color: mainColor)),
               ),
             ),
             const SizedBox(height: 20),
@@ -439,10 +495,10 @@ class _WritePostPageState extends State<WritePostPage> {
                             }
                           });
                         },
-                        selectedColor: Colors.pink.shade100,
+                        selectedColor: mainColor,
                         backgroundColor: Colors.grey.shade200,
                         shape: RoundedRectangleBorder(
-                          side: BorderSide(color: Colors.pink.shade200),
+                          side: BorderSide(color: mainColor),
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
@@ -457,6 +513,13 @@ class _WritePostPageState extends State<WritePostPage> {
               children: [
                 Column(
                   children: [
+                    Row(children: [
+                      Text("날씨"),
+                      SizedBox(width: 50,),
+                      Text("체감온도"),
+                      SizedBox(width: 150,),
+                    ],),
+
                     Row(
                       children: [
                         const Icon(Icons.wb_sunny_outlined),
@@ -483,7 +546,7 @@ class _WritePostPageState extends State<WritePostPage> {
                         Switch(
                           value: isPublic,
                           onChanged: (val) => setState(() => isPublic = val),
-                          activeColor: Colors.pink,
+                          activeColor: mainColor,
                         ),
                       ]
                     ),
@@ -499,13 +562,14 @@ class _WritePostPageState extends State<WritePostPage> {
                     ),
                     Row(
                       children: [
-                        Icon(Icons.thermostat, size : 40),
-                          Text(
-                            '해당 시간의 기온: ${selectedTemp ?? " "}°C',
-                            style: const TextStyle(fontSize: 22, color: Colors.blue),
-                          ),
+                        if (selectedDateTime != null && selectedTemp != null)
+                        Text(
+                          '해당 시간의 기온: ${selectedTemp ?? " "}°C',
+                          style: const TextStyle(fontSize: 22, color: Colors.blue),
+                        ),
                       ],
                     ),
+                    if (selectedDateTime != null && displayLocationName != null)
                     Row(
                       children: [
                         Icon(Icons.location_on_outlined),
@@ -520,23 +584,8 @@ class _WritePostPageState extends State<WritePostPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                OutlinedButton(
-                  onPressed: () {
-                    resetForm();
-                    Navigator.pop(context);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.pink,
-                    side: const BorderSide(color: Colors.pink),
-                  ),
-                  child: const Text('취소'),
-                ),
                 ElevatedButton(
                   onPressed: isSubmitting ? null : () async {
-                    setState(() {
-                      isSubmitting = true;
-                    });
-
                     if (titleController.text.trim().isEmpty &&
                         contentController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -568,10 +617,16 @@ class _WritePostPageState extends State<WritePostPage> {
                       return;
                     }
 
+                    showLoadingDialog(context);
+
                     List<String> imageUrls = [];
                     if (selectedImages.isNotEmpty) {
                       imageUrls = await uploadImages(selectedImages);
                     }
+
+                    setState(() {
+                      isSubmitting = true;
+                    });
 
                     await fs.collection("feeds").add({
                       "title": titleController.text,
@@ -586,6 +641,7 @@ class _WritePostPageState extends State<WritePostPage> {
                       "writeid" : userId,
                       "location" : displayLocationName
                     });
+                    Navigator.of(context).pop();
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -593,11 +649,13 @@ class _WritePostPageState extends State<WritePostPage> {
                         backgroundColor: Colors.green,
                       ),
                     );
+                    widget.onUserTap();
                     resetForm();
                     setState(() {
                       isSubmitting = false;
                     });
                   },
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink,
                     foregroundColor: Colors.white,
@@ -606,11 +664,6 @@ class _WritePostPageState extends State<WritePostPage> {
                 ),
               ],
             ),
-            if (isSubmitting)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Center(child: CircularProgressIndicator()),
-              ),
           ],
         ),
       ),

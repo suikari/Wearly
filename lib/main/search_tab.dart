@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../provider/custom_colors.dart';
 import 'search_result_page.dart';
 
 
@@ -18,16 +19,27 @@ class _SearchTabState extends State<SearchTab> {
   final TextEditingController _searchController = TextEditingController();
 
   List<String> popularTags = [
-    '비 오는 날',
-    '맑은 하늘',
-    '따뜻한 옷',
-    '바람 부는 날',
-    '눈 오는 날',
+    '반바지',
+    '민소매/반팔',
+    '자켓',
+    '미니멀',
+    '클래식',
   ];
   Set<String> selectedTags = {};
 
+
+
+
+
   @override
   Widget build(BuildContext context) {
+
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white;
+    Color white = customColors?.textWhite ?? Colors.white;
+
     return Padding(
       padding: EdgeInsets.all(12),
       child: Column(
@@ -66,7 +78,8 @@ class _SearchTabState extends State<SearchTab> {
                       builder: (_) => SearchResultPage(
                         keyword: _searchController.text.trim(),
                         minTemp : minTemp,
-                        maxTemp : maxTemp
+                        maxTemp : maxTemp,
+                        selectedTags: selectedTags.toList()
                       ),
                     ),
                   );
@@ -90,6 +103,7 @@ class _SearchTabState extends State<SearchTab> {
                     divisions: 60,
                     value: minTemp,
                     label: minTemp.toInt().toString(),
+                    activeColor: Colors.blue,
                     onChanged: (value) {
                       setState(() {
                         if (value <= maxTemp) minTemp = value;
@@ -109,6 +123,7 @@ class _SearchTabState extends State<SearchTab> {
                     divisions: 60,
                     value: maxTemp,
                     label: maxTemp.toInt().toString(),
+                    activeColor: Colors.red,
                     onChanged: (value) {
                       setState(() {
                         if (value >= minTemp) maxTemp = value;
@@ -127,8 +142,10 @@ class _SearchTabState extends State<SearchTab> {
               children: popularTags.map((tag) {
                 final isSelected = selectedTags.contains(tag);
                 return ChoiceChip(
-                  label: Text(tag),
+                  label: Text(tag, style: TextStyle(color: white),),
                   selected: isSelected,
+                  backgroundColor: mainColor,
+                  selectedColor: pointColor,
                   onSelected: (selected) {
                     setState(() {
                       if (selected)

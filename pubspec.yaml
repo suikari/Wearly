@@ -76,7 +76,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^6.0.0
+  flutter_lints:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -84,7 +84,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
-    - assets/logo.png
+    - assets/logo/
     - assets/weather_sun.gif
     - assets/ad_banner1.jpg
     - assets/ad_banner2.jpg
@@ -98,22 +98,24 @@ flutter:
     - assets/common/
     - assets/.env
   fonts:
-    - family: reko
+    - family: Maplestory
       fonts:
-        - asset: assets/font/reko.otf
-    - family: cho
-      fonts:
-        - asset: assets/font/cho.otf
-    - family: seoul
-      fonts:
-        - asset: assets/font/SeoulAlrim-Medium.otf
-          weight: 500
-        - asset: assets/font/SeoulAlrim-Bold.otf
+        - asset: assets/font/Maplestory OTF Light.otf
+          weight: 300
+        - asset: assets/font/Maplestory OTF Bold.otf
           weight: 700
-        - asset: assets/font/SeoulAlrim-ExtraBold.otf
-          weight: 800
-        - asset: assets/font/SeoulAlrim-Heavy.otf
-          weight: 900
+    - family: IM_Hyemin
+      fonts:
+        - asset: assets/font/IM_Hyemin-Regular.ttf
+          weight: 400
+        - asset: assets/font/IM_Hyemin-Bold.ttf
+          weight: 700
+    - family: Hakgyoansim
+      fonts:
+        - asset: assets/font/Hakgyoansim Badasseugi OTF L.otf
+          weight: 300
+        - asset: assets/font/Hakgyoansim Badasseugi OTF B.otf
+          weight: 700
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
