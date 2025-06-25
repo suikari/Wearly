@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../common/custom_app_bar.dart';
 import '../provider/custom_colors.dart';
-import 'chat_list_page.dart';
-
 
 class SearchResultPage extends StatefulWidget {
   final String keyword;
@@ -69,7 +67,7 @@ class _SearchResultPageState extends State<SearchResultPage>
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Text(
-              '"${widget.keyword}"에 대한 검색 결과입니다.',
+              '"${widget.keyword}"에 대한 검색 결과입니다. 온도 범위 : $minTemp℃~$maxTemp℃',
               style: const TextStyle(fontSize: 16),
             ),
           ),
@@ -755,7 +753,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                         radius: 28,
                         backgroundImage: (data['profileImageUrl'] != null && data['profileImageUrl'].toString().isNotEmpty)
                             ? NetworkImage(data['profileImageUrl'])
-                            : const AssetImage('assets/noimg.jpg') as ImageProvider,
+                            : const AssetImage('assets/profile2.jpg') as ImageProvider,
                         backgroundColor: Colors.transparent,
                       ),
                       title: Row(
@@ -765,10 +763,10 @@ class _SearchResultPageState extends State<SearchResultPage>
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 6),
-                          if (data['interest'] != null)
+                          if (data['interest'] != null && data['interest'] is List && data['interest'].isNotEmpty)
                             Flexible(
                               child: Text(
-                                "#${data['interest']}", // interest가 쉼표로 구분된 문자열이라면 더 파싱 가능
+                                "#${(data['interest'] as List).join(', ')}",
                                 style: const TextStyle(color: Colors.grey, fontSize: 12),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -776,13 +774,12 @@ class _SearchResultPageState extends State<SearchResultPage>
                         ],
                       ),
                       subtitle: Text(
-                        data['bio'] ?? '',
+                        data['bio'] ?? '자기소개 없음',
                         style: const TextStyle(fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
                       trailing: ElevatedButton(
                         onPressed: () {
-
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: mainColor,
