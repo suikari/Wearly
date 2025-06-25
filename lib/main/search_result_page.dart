@@ -86,7 +86,7 @@ class _SearchResultPageState extends State<SearchResultPage>
               controller: _tabController,
               labelColor: mainColor,
               unselectedLabelColor: Colors.black87,
-              indicatorColor: subColor,
+              indicatorColor: pointColor,
               tabs: tabs.map((t) => Tab(text: t)).toList(),
             ),
           ),
@@ -250,7 +250,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: mainColor,
+                      color: subColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -271,19 +271,19 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     margin: const EdgeInsets.only(right: 6),
                                     decoration: BoxDecoration(
-                                      color: mainColor,
+                                      color: subColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       data['feeling'],
-                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      style: const TextStyle(color: Colors.black, fontSize: 12),
                                     ),
                                   ),
                                 if (data['temperature'] != null)
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: subColor,
+                                      color: pointColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -375,7 +375,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: mainColor,
+                      color: subColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -401,7 +401,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     ),
                                     child: Text(
                                       data['feeling'],
-                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      style: const TextStyle(color: Colors.black, fontSize: 12),
                                     ),
                                   ),
                                 if (data['temperature'] != null)
@@ -564,7 +564,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: mainColor,
+                      color: subColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -585,12 +585,12 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     margin: const EdgeInsets.only(right: 6),
                                     decoration: BoxDecoration(
-                                      color: mainColor,
+                                      color: subColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       data['feeling'],
-                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      style: const TextStyle(color: Colors.black, fontSize: 12),
                                     ),
                                   ),
                                 if (data['temperature'] != null)
