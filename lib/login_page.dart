@@ -182,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
           // ✅ 최초 로그인: Firestore에 유저 정보 저장
           final email = userCredential.user?.email ?? '';
           final photoUrl = userCredential.user?.photoURL ?? '';
-          String displayName = userCredential.user?.displayName ?? '';
+          String displayName = userCredential.user?.displayName.toString() ?? '';
 
           bool taken = await isNicknameTaken(displayName);
           if (taken || displayName.trim().isEmpty) {
@@ -238,9 +238,9 @@ class _LoginPageState extends State<LoginPage> {
 
       final user = await UserApi.instance.me();
       final uid = 'kakao_${user.id}';
-      final email = user.id ?? '';
+      final email = user.id.toString() ?? '';
       final profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl ?? '';
-      String nickname = user.kakaoAccount?.profile?.nickname ?? '';
+      String nickname = user.kakaoAccount?.profile?.nickname.toString() ?? '';
 
       // Firebase Functions에 요청
       final res = await http.post(
@@ -678,16 +678,16 @@ class _LoginPageState extends State<LoginPage> {
                             style: TextStyle(
                               fontFamily: fonts.labelFont,
                               color: Grey,
-                              fontSize: 12,
+                              fontSize: 14,
                             ),
                           ),
-                          SizedBox(height: 5),
+                          SizedBox(height: 10),
                           Text(
                             "이메일/비밀번호를 잊으셨나요?",
                             style: TextStyle(
                               fontFamily: fonts.labelFont,
                               color: Grey,
-                              fontSize: 12,
+                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -703,19 +703,19 @@ class _LoginPageState extends State<LoginPage> {
                               "회원가입하기",
                               style: TextStyle(
                                 color: pointColor,
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          SizedBox(height: 5),
+                          SizedBox(height: 10),
                           GestureDetector(
                             onTap: _goToFindidpass,
                             child: Text(
                               "이메일/비밀번호 찾기",
                               style: TextStyle(
                                 color: pointColor,
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

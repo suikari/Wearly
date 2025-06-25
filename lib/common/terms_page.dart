@@ -248,7 +248,7 @@ class _TermsPageState extends State<TermsPage> {
                                   ),
                                   TextButton.icon(
                                     onPressed: () => _showTermsContent(term,Grey,White,Black,isBlackTheme, fonts.labelFont,),
-                                    icon: Icon(Icons.expand_more,color: Grey,),
+                                    icon: Icon(Icons.expand_more,color: Colors.grey,),
                                     label: Text('전문보기', style: TextStyle(fontFamily: fonts.labelFont, ),),
                                     style: TextButton.styleFrom(
                                       foregroundColor: Grey,
