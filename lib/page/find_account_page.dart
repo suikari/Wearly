@@ -35,20 +35,12 @@ class FindAccountPage extends StatelessWidget {
                 unselectedLabelColor: Grey,
                 dividerColor: mainColor,
                 indicatorColor: pointColor,
-                tabs: const [
-                  Tab(text: '이메일 찾기'),
-                  Tab(text: '비밀번호 찾기'),
-                ],
+                tabs: const [Tab(text: '이메일 찾기'), Tab(text: '비밀번호 찾기')],
               ),
             ),
           ),
         ),
-        body: const TabBarView(
-          children: [
-            _FindEmailTab(),
-            _FindPasswordTab(),
-          ],
-        ),
+        body: const TabBarView(children: [_FindEmailTab(), _FindPasswordTab()]),
       ),
     );
   }
@@ -65,16 +57,19 @@ class _FindEmailTab extends StatefulWidget {
 class _FindEmailTabState extends State<_FindEmailTab> {
   final nicknameController = TextEditingController();
   String? maskedEmailResult;
+  String? socialAccountType;
+  bool isSocialLogin = false;
 
-  Future<String?> findEmailByNickname(String nickname) async {
-    final query = await FirebaseFirestore.instance
-        .collection('users')
-        .where('nickname', isEqualTo: nickname)
-        .limit(1)
-        .get();
+  Future<Map<String, dynamic>?> findEmailByNickname(String nickname) async {
+    final query =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .where('nickname', isEqualTo: nickname)
+            .limit(1)
+            .get();
 
     if (query.docs.isEmpty) return null;
-    return query.docs.first.data()['email'];
+    return query.docs.first.data();
   }
 
   String maskEmail(String email) {
@@ -104,17 +99,22 @@ class _FindEmailTabState extends State<_FindEmailTab> {
       return;
     }
 
-    final email = await findEmailByNickname(nickname);
-    if (email != null) {
-      final masked = maskEmail(email);
+    final userData = await findEmailByNickname(nickname);
+    if (userData != null) {
+      final email = userData['email'] as String?;
+      final social = userData['socialAccount'] as String?;
+
+      final isSocial = (social == 'kakao' || social == 'naver');
+      print(isSocial);
       setState(() {
-        maskedEmailResult = "$masked";
+        maskedEmailResult = isSocial ? null : maskEmail(email ?? '');
+        socialAccountType = social;
+        isSocialLogin = isSocial;
       });
     } else {
       await showDialogMessage(context, "일치하는 이메일을 찾을 수 없습니다.");
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -122,39 +122,67 @@ class _FindEmailTabState extends State<_FindEmailTab> {
       padding: const EdgeInsets.all(20),
       child: _SectionWrapper(
         children: [
-          const Text("닉네임으로 이메일 찾기", style: TextStyle(fontSize: 20,fontWeight: FontWeight.bold)),
+          const Text(
+            "닉네임으로 이메일 찾기",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 10),
           TextField(
             controller: nicknameController,
             decoration: themedInputDecoration(context, "닉네임을 입력하세요."),
+            onChanged: (value) {
+              setState(() {
+                isSocialLogin = false;
+                maskedEmailResult = null;
+                socialAccountType = null;
+              });
+            },
           ),
-          if (maskedEmailResult != null) ...[
+          if (isSocialLogin || maskedEmailResult != null) ...[
+            const SizedBox(height: 20),
+            const Divider(color: Colors.grey),
+            const SizedBox(height: 20),
             Center(
               child: Column(
                 children: [
-                  const SizedBox(height: 20),
-                  const Divider(color: Colors.grey,),
-                  const SizedBox(height: 20),
-                  Text("해당 닉네임으로 가입된 이메일은"),
-                  const SizedBox(height: 20),
-                  Text(
-                    maskedEmailResult!,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold,),
-                  ),
-                  const SizedBox(height: 20),
-                  Text("입니다."),
-                  const SizedBox(height: 20),
-                  const Divider(color: Colors.grey,),
+                  if (isSocialLogin) ...[
+                    Text(
+                      "해당 닉네임은 '${socialAccountType ?? "알 수 없음"}' 간편로그인으로 가입된 계정입니다.",
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text("해당 플랫폼의 간편로그인 버튼을 이용해 로그인해주세요."),
+                  ] else ...[
+                    const Text("해당 닉네임으로 가입된 이메일은"),
+                    const SizedBox(height: 20),
+                    Text(
+                      maskedEmailResult!,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text("입니다."),
+                  ],
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            const Divider(color: Colors.grey),
           ],
           const SizedBox(height: 20),
           Center(
             child: ElevatedButton(
               onPressed: _findEmail,
               style: elevatedButtonStyle(context),
-              child: const Text("이메일 찾기", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
+              child: const Text(
+                "이메일 찾기",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -195,8 +223,14 @@ class _FindPasswordTabState extends State<_FindPasswordTab> {
       padding: const EdgeInsets.all(20),
       child: _SectionWrapper(
         children: [
-          const Text("이메일로 비밀번호 찾기", style: TextStyle(fontSize: 20,fontWeight: FontWeight.bold)),
-          const Text("입력하신 이메일로 비밀번호 재설정 메일이 발송됩니다.", style: TextStyle(fontSize: 12, color: Colors.grey),),
+          const Text(
+            "이메일로 비밀번호 찾기",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const Text(
+            "입력하신 이메일로 비밀번호 재설정 메일이 발송됩니다.",
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
           const SizedBox(height: 10),
           TextField(
             controller: emailController,
@@ -207,7 +241,13 @@ class _FindPasswordTabState extends State<_FindPasswordTab> {
             child: ElevatedButton(
               onPressed: _sendPasswordResetEmail,
               style: elevatedButtonStyle(context),
-              child: const Text("전송",style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
+              child: const Text(
+                "전송",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -231,7 +271,7 @@ InputDecoration themedInputDecoration(BuildContext context, String hint) {
     fillColor: subColor,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide.none,  // 테두리 없애고 싶으면 추가
+      borderSide: BorderSide.none, // 테두리 없애고 싶으면 추가
     ),
   );
 }
@@ -249,6 +289,7 @@ ButtonStyle elevatedButtonStyle(BuildContext context) {
 
 class _SectionWrapper extends StatelessWidget {
   final List<Widget> children;
+
   const _SectionWrapper({required this.children});
 
   @override
