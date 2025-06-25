@@ -49,7 +49,7 @@ class _HomePageState extends State<HomePage> {
     _deepLinkHandler.onFeedIdReceived = (feedId) {
       if (!_hasProcessedDeepLink) {
         _hasProcessedDeepLink = true;
-        _openDetailPage(feedId);
+        _openDetailPage(feedId);(feedId);
       }
     };
     _deepLinkHandler.init();
@@ -180,7 +180,11 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> _pages = [
-      HomeContent(key: ValueKey(DateTime.now().millisecondsSinceEpoch)),
+      HomeContent(
+        key: ValueKey(DateTime.now().millisecondsSinceEpoch),
+        onUserTap: openUserPage,
+        onFeedTap: _openDetailPage,
+      ),
       SearchTab(onUserTap: openUserPage),
 
       WritePostPage(key: ValueKey(DateTime.now().millisecondsSinceEpoch),

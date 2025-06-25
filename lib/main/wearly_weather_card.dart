@@ -14,6 +14,36 @@ class WearlyWeatherCard extends StatelessWidget {
     super.key,
   });
 
+  // ------ 컬러 함수 추가 ------
+  Color getTempColor(num? temp) {
+    if (temp == null) return Colors.black87;
+    if (temp >= 30) return Colors.red[400]!;
+    if (temp >= 22) return Colors.orange[400]!;
+    if (temp >= 10) return Colors.blue[400]!;
+    return Colors.indigo[700]!;
+  }
+
+  Color getRainColor(num? rain) {
+    if (rain == null) return Colors.black87;
+    if (rain >= 70) return Colors.red[400]!;
+    if (rain >= 30) return Colors.orange[400]!;
+    return Colors.blue[400]!;
+  }
+
+  Color getHumidityColor(num? hum) {
+    if (hum == null) return Colors.black87;
+    if (hum >= 70) return Colors.green[700]!;
+    if (hum >= 30) return Colors.blue[400]!;
+    return Colors.orange[400]!;
+  }
+
+  Color getWindColor(num? wind) {
+    if (wind == null) return Colors.black87;
+    if (wind >= 10) return Colors.indigo[800]!;
+    if (wind >= 5) return Colors.blue[400]!;
+    return Colors.lightBlue[200]!;
+  }
+
   Color pm10Color(int value) {
     if (value <= 30) return Colors.green;
     if (value <= 80) return Colors.blue;
@@ -42,7 +72,6 @@ class WearlyWeatherCard extends StatelessWidget {
     return "매우나쁨";
   }
 
-  // ★ 상태 텍스트 → GIF 파일명 변환 함수
   String getWeatherImageFile(String weatherStatus) {
     final hour = DateTime.now().hour;
     final isNight = hour >= 18 || hour < 6;
@@ -75,7 +104,6 @@ class WearlyWeatherCard extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      // color: Color(0xFFFFF3F6),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 220),
         padding: EdgeInsets.only(
@@ -148,7 +176,7 @@ class WearlyWeatherCard extends StatelessWidget {
                       valueStyle: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 24,
-                        color: Colors.black87,
+                        color: getTempColor(data['temp']),
                       ),
                     ),
                     _centerInfoColumn(
@@ -179,7 +207,7 @@ class WearlyWeatherCard extends StatelessWidget {
                       valueStyle: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 24,
-                        color: Colors.black87,
+                        color: getRainColor(data['precipitation']),
                       ),
                     ),
                   ],
@@ -194,6 +222,7 @@ class WearlyWeatherCard extends StatelessWidget {
                       valueStyle: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
+                        color: getWindColor(data['wind']),
                       ),
                     ),
                     _centerInfoColumn(
@@ -202,6 +231,7 @@ class WearlyWeatherCard extends StatelessWidget {
                       valueStyle: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
+                        color: getHumidityColor(data['humidity']),
                       ),
                     ),
                     _centerInfoColumn(
@@ -239,7 +269,7 @@ class WearlyWeatherCard extends StatelessWidget {
                   valueStyle: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 22,
-                    color: Colors.black87,
+                    color: getTempColor(data['temp']),
                   ),
                 ),
                 _centerInfoColumn(
@@ -270,7 +300,7 @@ class WearlyWeatherCard extends StatelessWidget {
                   valueStyle: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 22,
-                    color: Colors.black87,
+                    color: getRainColor(data['precipitation']),
                   ),
                 ),
               ],

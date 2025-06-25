@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main/widget/settings_page.dart';
 import 'package:w2wproject/main/widget/user_edit_page.dart';
+import '../provider/custom_colors.dart';
+import '../provider/theme_provider.dart';
 import 'detail_page.dart';
 import 'package:intl/intl.dart';
 
@@ -223,6 +226,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
 
 
   void closeDetail() {
+    fetchFeeds();
     setState(() {
       showDetail = false;
     });
@@ -298,18 +302,24 @@ class _MyPageWidgetState extends State<MyPageTab> {
     final Map<String, dynamic> profile = getUserProfile(viewedUserId);
 
     //print("profile ==> $profile");
-    final theme = Theme.of(context);
-    final bottomNavTheme = theme.bottomNavigationBarTheme;
-    final backgroundColor = theme.scaffoldBackgroundColor;
-    final navBackgroundColor = bottomNavTheme.backgroundColor ?? theme.primaryColor;
-    final selectedItemColor = bottomNavTheme.selectedItemColor ?? Colors.white;
-    final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
+
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white70;
+    Color highlightColor = customColors?.highlightColor ?? Colors.orange;
+    Color Grey = customColors?.textGrey ?? Colors.grey;
+    Color White = customColors?.textWhite ?? Colors.white;
+    Color Black = customColors?.textBlack ?? Colors.black;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    print("themeProvider>>${themeProvider.colorTheme}");
     final screenWidth = MediaQuery.of(context).size.width;
     final followerCount = (profile['follower'] )?.length ?? 0;
     final followingCount = (profile['following'] )?.length ?? 0;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      // backgroundColor: White,
       body: SafeArea(
         child: Column(
           children: [
@@ -321,9 +331,11 @@ class _MyPageWidgetState extends State<MyPageTab> {
                 width: screenWidth,
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: unselectedItemColor.withOpacity(0.95),
+                  color: themeProvider.colorTheme != ColorTheme.blackTheme
+                      ? Colors.white
+                      : null,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
-                  border: Border(bottom: BorderSide(color: navBackgroundColor, width: 7)),
+                  border: Border(bottom: BorderSide(color: mainColor, width: 7)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
@@ -353,7 +365,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                 },
                                 child: Text(
                                   '팔로워 ${followerCount ?? 0}',
-                                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                                  style: TextStyle(fontSize: 14),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -368,7 +380,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                 },
                                 child: Text(
                                   '팔로잉 ${followingCount ?? 0}',
-                                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                                  style: TextStyle(fontSize: 14),
                                 ),
                               ),
                               // 팔로잉 수
@@ -398,7 +410,9 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: selectedItemColor,
+                                  color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                      ? pointColor
+                                      : Colors.white,
                                 ),
                               ),
                             ],
@@ -451,12 +465,12 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                   children: [
                                     Text(
                                       '${followerCount ?? 0}',
-                                      style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                      style: const TextStyle(fontSize: 14),
                                     ),
                                     const SizedBox(width: 32),
                                     Text(
                                       '${followingCount ?? 0}',
-                                      style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                      style: const TextStyle(fontSize: 14),
                                     ),
                                   ],
                                 ),
@@ -478,9 +492,12 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                 Text(
                                   profile["nickname"] ?? '',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.bold,
-                                    color: selectedItemColor,
+                                    color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                        ? pointColor
+                                        : Colors.white,
+
                                   ),
                                 ),
                               ],
@@ -492,7 +509,9 @@ class _MyPageWidgetState extends State<MyPageTab> {
                             imageUrls: mainCoordiFeed["imageUrls"] ?? [],
                             profile: profile,
                             isExpanded: isExpanded,
-                            selectedItemColor: selectedItemColor,
+                            selectedItemColor: mainColor,
+                            pointColor : pointColor,
+                            colorTheme : themeProvider.colorTheme,
                             pageController: _pageController,
                           ),
               
@@ -503,7 +522,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                               child: Icon(
                                 isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                                 size: 32,
-                                color: selectedItemColor,
+                                color: highlightColor,
                               ),
                             ),
                           ),
@@ -527,7 +546,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                           : ElevatedButton(
                         onPressed: _toggleFollow,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isFollowing ? selectedItemColor : unselectedItemColor,
+                          backgroundColor: _isFollowing ? pointColor : subColor,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // 내부 여백
                           minimumSize: Size(0, 0), // 기본 크기 제한 없음
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap, // 터치 영역 최소화
@@ -565,7 +584,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               child: Text(
                                 entry.key,
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: selectedItemColor),
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: pointColor),
                               ),
                             ),
                             GridView.builder(
@@ -590,7 +609,6 @@ class _MyPageWidgetState extends State<MyPageTab> {
                                   child: Container(
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(8),
-                                      color: Colors.grey[300],
                                     ),
                                     child: Stack(
                                       fit: StackFit.expand,
@@ -662,7 +680,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
       ),
       child: Text(
         text,
-        style: TextStyle(color: Colors.white, fontSize: 12),
+        style: TextStyle( fontSize: 12, color: Colors.white),
       ),
     );
   }
@@ -692,6 +710,8 @@ Widget buildExpandedFeedSection({
   required bool isExpanded,
   required Color selectedItemColor,
   required PageController pageController,
+  required ColorTheme colorTheme,
+  required Color pointColor,
 }) {
   return AnimatedCrossFade(
     duration: Duration(milliseconds: 300),
@@ -724,7 +744,10 @@ Widget buildExpandedFeedSection({
           ),
         ),
         SizedBox(height: 8),
-        Text(profile["bio"] ?? '', style: TextStyle(color: selectedItemColor)),
+        Text(profile["bio"] ?? '', style: TextStyle(
+            color: colorTheme != ColorTheme.blackTheme
+            ? pointColor
+            : Colors.white, fontSize: 20)),
         SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -734,12 +757,16 @@ Widget buildExpandedFeedSection({
               .map((item) => Container(
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.2),
+              color: selectedItemColor,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               item.toString(),
-              style: TextStyle(color: Colors.blue),
+              style: TextStyle(
+                color: colorTheme != ColorTheme.blackTheme
+                    ? pointColor
+                    : Colors.white,
+              ),
             ),
           ))
               .toList(),
@@ -749,6 +776,7 @@ Widget buildExpandedFeedSection({
     secondChild: SizedBox.shrink(),
   );
 }
+
 void showFollowerFollowingDialog({
   required BuildContext context,
   required List<String> userIds,
@@ -758,46 +786,147 @@ void showFollowerFollowingDialog({
   showDialog(
     context: context,
     builder: (context) {
-      return AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: FutureBuilder<List<Map<String, dynamic>>>(
-            future: _fetchUserInfos(userIds),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final userInfos = snapshot.data!;
-              return ListView.builder(
-                shrinkWrap: true,
-                itemCount: userInfos.length,
-                itemBuilder: (context, index) {
-                  final user = userInfos[index];
-                  return ListTile(
-                    leading: user['profileImage'] != null &&
-                        user['profileImage'].toString().isNotEmpty
-                        ? CircleAvatar(
-                      backgroundImage: NetworkImage(user['profileImage']),
-                    )
-                        : const CircleAvatar(
-                      child: Icon(Icons.person),
-                    ),
-                    title: Text(user['nickname'] ?? ''),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      onUserTap(user['id']);
-                    },
-                  );
-                },
-              );
-            },
-          ),
-        ),
+      return _FollowerFollowingDialogContent(
+        userIds: userIds,
+        title: title,
+        onUserTap: onUserTap,
       );
     },
   );
 }
+
+class _FollowerFollowingDialogContent extends StatefulWidget {
+  final List<String> userIds;
+  final String title;
+  final Function(String userId) onUserTap;
+
+  const _FollowerFollowingDialogContent({
+    required this.userIds,
+    required this.title,
+    required this.onUserTap,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<_FollowerFollowingDialogContent> createState() => _FollowerFollowingDialogContentState();
+}
+
+class _FollowerFollowingDialogContentState extends State<_FollowerFollowingDialogContent> with TickerProviderStateMixin {
+  double _listHeight = 50; // 초기 최소 높이
+  List<Map<String, dynamic>> _userInfos = [];
+  bool _isLoading = true;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfos();
+  }
+
+  Future<void> _loadUserInfos() async {
+    try {
+      final users = await _fetchUserInfos(widget.userIds);
+      setState(() {
+        _userInfos = users;
+        _isLoading = false;
+
+        // 리스트 아이템당 60 높이 * 개수 + 여백, 최대 350으로 제한
+        double calculatedHeight = _userInfos.length * 60.0 + 10;
+        _listHeight = calculatedHeight.clamp(50, 350);
+      });
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: 280,
+            maxHeight: 400,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                children: [
+                  Center(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${widget.userIds.length}명',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              if (widget.userIds.isEmpty)
+                const Text("아직 아무도 없습니다.", style: TextStyle(fontSize: 14))
+              else if (_isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (_hasError)
+                  const Text("오류가 발생했습니다.")
+                else if (_userInfos.isEmpty)
+                    const Text("유저 정보를 불러올 수 없습니다.")
+                  else
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: SizedBox(
+                        height: _listHeight,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: _userInfos.length,
+                          itemBuilder: (context, index) {
+                            final user = _userInfos[index];
+                            return ListTile(
+                              leading: user['profileImage'] != null && user['profileImage'].toString().isNotEmpty
+                                  ? CircleAvatar(backgroundImage: NetworkImage(user['profileImage']))
+                                  : const CircleAvatar(child: Icon(Icons.person)),
+                              title: Text(user['nickname'] ?? ''),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                widget.onUserTap(user['id']);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
 Future<List<Map<String, dynamic>>> _fetchUserInfos(List<String> userIds) async {
   final usersCollection = FirebaseFirestore.instance.collection('users');
 
