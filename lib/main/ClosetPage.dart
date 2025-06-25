@@ -128,137 +128,134 @@ class _ClosetPageState extends State<ClosetPage> {
         title: const Text('', style: TextStyle(color: Colors.black)),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => _onRefresh(context),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Column(
-              children: [
-                // ==== 시간별 날씨 ====
-                Container(
-                  color: const Color(0xfff7f8fd),
-                  padding: const EdgeInsets.only(top: 8, bottom: 4),
-                  child: SizedBox(
-                    height: 88,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      itemCount: hourList.length,
-                      itemBuilder: (context, idx) {
-                        final hour = hourList[idx];
-                        final temp = getClosestTempForHour(hour);
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 14),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('${hour.toString().padLeft(2, '0')}시',
-                                  style: const TextStyle(fontSize: 12)),
-                              const SizedBox(height: 2),
-                              const Icon(Icons.cloud, color: Color(0xff868eb6), size: 22),
-                              const SizedBox(height: 2),
-                              Text(
-                                temp != null ? '${temp.toStringAsFixed(1)}°' : '-',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+      body: RefreshIndicator(
+        onRefresh: () => _onRefresh(context),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // ==== 시간별 날씨 ====
+              Container(
+                color: const Color(0xfff7f8fd),
+                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                child: SizedBox(
+                  height: 88,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    itemCount: hourList.length,
+                    itemBuilder: (context, idx) {
+                      final hour = hourList[idx];
+                      final temp = getClosestTempForHour(hour);
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 14),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('${hour.toString().padLeft(2, '0')}시',
+                                style: const TextStyle(fontSize: 12)),
+                            const SizedBox(height: 2),
+                            const Icon(Icons.cloud, color: Color(0xff868eb6), size: 22),
+                            const SizedBox(height: 2),
+                            Text(
+                              temp != null ? '${temp.toStringAsFixed(1)}°' : '-',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 8),
-        
-                // ======= "내 코디/다른 사람 코디" 탭 =======
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Row(
-                    children: List.generate(_mainTabs.length, (i) {
-                      final isSelected = _tabIndex == i;
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _tabIndex = i),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            margin: EdgeInsets.only(right: i != _mainTabs.length - 1 ? 8 : 0),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isSelected ? Colors.white : const Color(0xfffff0f6),
-                              border: isSelected
-                                  ? Border.all(color: Colors.pinkAccent, width: 2)
-                                  : null,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Center(
-                              child: Text(
-                                _mainTabs[i],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.pink : Colors.black54,
-                                  fontSize: 15,
-                                ),
+              ),
+              const SizedBox(height: 8),
+
+              // ======= "내 코디/다른 사람 코디" 탭 =======
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Row(
+                  children: List.generate(_mainTabs.length, (i) {
+                    final isSelected = _tabIndex == i;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _tabIndex = i),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          margin: EdgeInsets.only(right: i != _mainTabs.length - 1 ? 8 : 0),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white : const Color(0xfffff0f6),
+                            border: isSelected
+                                ? Border.all(color: Colors.pinkAccent, width: 2)
+                                : null,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Center(
+                            child: Text(
+                              _mainTabs[i],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.pink : Colors.black54,
+                                fontSize: 15,
                               ),
                             ),
                           ),
                         ),
-                      );
-                    }),
-                  ),
+                      ),
+                    );
+                  }),
                 ),
-        
-                // ======= 필터 탭 =======
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: List.generate(_feelingTabs.length, (i) {
-                      final label = _feelingTabs[i];
-                      final isSelected = _selectedFeeling == label;
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedFeeling = label),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            margin: EdgeInsets.only(right: i != _feelingTabs.length - 1 ? 6 : 0),
-                            padding: const EdgeInsets.symmetric(vertical: 7),
-                            decoration: BoxDecoration(
-                              color: isSelected ? Colors.white : const Color(0xfff9e8ee),
-                              border: isSelected
-                                  ? Border.all(color: Colors.pinkAccent, width: 2)
-                                  : null,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Center(
-                              child: Text(
-                                label,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.pink : Colors.black54,
-                                  fontSize: 15,
-                                ),
+              ),
+
+              // ======= 필터 탭 =======
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: List.generate(_feelingTabs.length, (i) {
+                    final label = _feelingTabs[i];
+                    final isSelected = _selectedFeeling == label;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedFeeling = label),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          margin: EdgeInsets.only(right: i != _feelingTabs.length - 1 ? 6 : 0),
+                          padding: const EdgeInsets.symmetric(vertical: 7),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.white : const Color(0xfff9e8ee),
+                            border: isSelected
+                                ? Border.all(color: Colors.pinkAccent, width: 2)
+                                : null,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Center(
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.pink : Colors.black54,
+                                fontSize: 15,
                               ),
                             ),
                           ),
                         ),
-                      );
-                    }),
-                  ),
+                      ),
+                    );
+                  }),
                 ),
-                const SizedBox(height: 10),
-        
-                // ================= 피드 그리드 =================
-                FeedGrid(
-                  feeling: _selectedFeeling,
-                  isMine: _tabIndex == 0,
-                  currentUserId: widget.currentUserId,
-                  temperature: displayTemperature, // ★★★
-                ),
-                const SizedBox(height: 10),
-              ],
-            ),
+              ),
+              const SizedBox(height: 10),
+
+              // ================= 피드 그리드 =================
+              FeedGrid(
+                feeling: _selectedFeeling,
+                isMine: _tabIndex == 0,
+                currentUserId: widget.currentUserId,
+                temperature: displayTemperature, // ★★★
+              ),
+              const SizedBox(height: 16),
+            ],
           ),
         ),
       ),
@@ -381,7 +378,7 @@ class _FeedGridState extends State<FeedGrid> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 0.65,
+          childAspectRatio: 0.70,
         ),
         itemBuilder: (context, idx) {
           final data = feedItems[idx];
