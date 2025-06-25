@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/main.dart';
 import 'package:w2wproject/provider/custom_colors.dart';
+import 'package:w2wproject/provider/custom_fonts.dart';
 import 'package:w2wproject/provider/theme_provider.dart';
 import 'common/dialog_util.dart';
 import 'common/terms_page.dart';
@@ -25,6 +26,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  String logoimg = 'assets/logo/plogo.png';
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _formKey = GlobalKey<FormState>();
@@ -32,13 +34,27 @@ class _LoginPageState extends State<LoginPage> {
   String password = '';
   bool _isLoading = false;
 
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  void _hideLoadingDialog() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(); // 다이얼로그 닫기
+    }
+  }
+
   void _tryLogin() async {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
 
-      setState(() {
-        _isLoading = true;
-      });
+      _showLoadingDialog();
 
       try {
         // Firebase 이메일/비밀번호 로그인
@@ -58,11 +74,15 @@ class _LoginPageState extends State<LoginPage> {
           context,
         ).showSnackBar(SnackBar(content: Text('로그인 성공!')));
 
+        _hideLoadingDialog();
+
         // 로그인 성공 → 홈으로 이동
         Navigator.of(
           context,
         ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
       } on FirebaseAuthException catch (e) {
+        _hideLoadingDialog();
+
         String errorMessage = '';
 
         switch (e.code) {
@@ -82,11 +102,11 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(errorMessage)));
-      } finally {
-        // 로딩 종료
-        setState(() {
-          _isLoading = false;
-        });
+      }  catch (e) {
+        _hideLoadingDialog(); // 예외 발생 시에도 꼭 닫아야 함
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('알 수 없는 오류가 발생했습니다.')),
+        );
       }
     }
   }
@@ -128,9 +148,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> signInWithGoogle() async {
+    _showLoadingDialog();
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return; // 취소한 경우
+      if (googleUser == null) {
+        _hideLoadingDialog();
+        return;
+      } // 취소한 경우
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
@@ -158,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
           // ✅ 최초 로그인: Firestore에 유저 정보 저장
           final email = userCredential.user?.email ?? '';
           final photoUrl = userCredential.user?.photoURL ?? '';
-          String displayName = userCredential.user?.displayName ?? '';
+          String displayName = userCredential.user?.displayName.toString() ?? '';
 
           bool taken = await isNicknameTaken(displayName);
           if (taken || displayName.trim().isEmpty) {
@@ -189,17 +213,22 @@ class _LoginPageState extends State<LoginPage> {
             'mainCoordiId': '',
           });
         }
+        _hideLoadingDialog();
         // ✅ 홈 화면으로 이동
         Navigator.of(
           context,
         ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
+      } else {
+        _hideLoadingDialog();
       }
     } catch (e) {
       print('구글 로그인 에러: $e');
+      _hideLoadingDialog();
     }
   }
 
   Future<void> loginWithKakao() async {
+    _showLoadingDialog();
     try {
       bool installed = await isKakaoTalkInstalled();
       OAuthToken kakaoToken =
@@ -209,9 +238,9 @@ class _LoginPageState extends State<LoginPage> {
 
       final user = await UserApi.instance.me();
       final uid = 'kakao_${user.id}';
-      final email = user.id ?? '';
+      final email = user.id.toString() ?? '';
       final profileImageUrl = user.kakaoAccount?.profile?.profileImageUrl ?? '';
-      String nickname = user.kakaoAccount?.profile?.nickname ?? '';
+      String nickname = user.kakaoAccount?.profile?.nickname.toString() ?? '';
 
       // Firebase Functions에 요청
       final res = await http.post(
@@ -271,11 +300,15 @@ class _LoginPageState extends State<LoginPage> {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('userId', authUid);
 
+        _hideLoadingDialog();
         Navigator.of(
           context,
         ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
+      } else {
+        _hideLoadingDialog();
       }
     } catch (e) {
+      _hideLoadingDialog();
       if (e is PlatformException && e.code == 'CANCELED') {
         print('사용자가 로그인 취소함');
       } else {
@@ -285,10 +318,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> signInWithNaver() async {
-    print('signInWithNaver started');
+    _showLoadingDialog();
     try {
       await NaverLoginSDK.authenticate();
-      print('Naver authentication successful');
 
       NaverLoginSDK.profile(
         callback: ProfileCallback(
@@ -297,7 +329,6 @@ class _LoginPageState extends State<LoginPage> {
             String message,
             dynamic response,
           ) async {
-            print("📌 profile resultCode:$resultCode, message:$message");
             String responseJson;
             if (response is String) {
               responseJson = response;
@@ -310,14 +341,11 @@ class _LoginPageState extends State<LoginPage> {
 
             // fromJson 함수는 String JSON을 받는다고 가정
             final profile = NaverLoginProfile.fromJson(response: responseJson);
-            print("profile: $profile");
 
             final String uid = 'naver:${profile.id ?? ''}';
             final String email = profile.id ?? '';
             final String? nickname = profile.nickName ?? profile.name;
             final String profileImage = profile.profileImage ?? '';
-
-            print("👤 uid: $uid, nickname: $nickname");
 
             // 👉 Firebase 커스텀 토큰 발급 요청 후 로그인
             final res = await http.post(
@@ -378,47 +406,43 @@ class _LoginPageState extends State<LoginPage> {
               SharedPreferences prefs = await SharedPreferences.getInstance();
               await prefs.setString('userId', authUid);
 
+              _hideLoadingDialog();
               Navigator.of(
                 context,
               ).pushReplacement(MaterialPageRoute(builder: (_) => HomePage()));
             }
           },
           onFailure: (int httpStatus, String message) {
+            _hideLoadingDialog();
             print("❌ profile failure: $httpStatus, message: $message");
           },
           onError: (int errorCode, String message) {
+            _hideLoadingDialog();
             print("❌ profile error: $errorCode, message: $message");
           },
         ),
       );
     } catch (e) {
+      _hideLoadingDialog();
       print('Naver login failed: $e');
     }
   }
 
-  Widget _buildSocialButton(
-    String text,
-    Color bgColor,
-    Color textColor, {
-    bool border = false,
-    required VoidCallback onPressed,
+  Widget _buildSocialButton({
+    required String assetPath,
+    required VoidCallback onTap,
+    double width = 300,
+    double height = 45,
   }) {
-    return Container(
-      width: double.infinity,
-      height: 45,
-      margin: EdgeInsets.only(top: 10),
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: bgColor,
-          side: border ? BorderSide(color: textColor) : BorderSide.none,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        onPressed: onPressed,
-        child: Text(
-          text,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 200,
+        alignment: Alignment.center,
+        child: Image.asset(
+          assetPath,
+          width: 200,
+          fit: BoxFit.contain,
         ),
       ),
     );
@@ -429,6 +453,27 @@ class _LoginPageState extends State<LoginPage> {
     _emailFocus.dispose();
     _passwordFocus.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final theme = prefs.getString("colorTheme");
+
+    setState(() {
+      if (theme == 'ColorTheme.blackTheme') {
+        logoimg = 'assets/logo/wlogo.png';
+      } else if (theme == 'ColorTheme.blueTheme') {
+        logoimg = 'assets/logo/logo.png';
+      } else {
+        logoimg = 'assets/logo/plogo.png';
+      }
+    });
   }
 
   @override
@@ -445,6 +490,7 @@ class _LoginPageState extends State<LoginPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isBlackTheme = themeProvider.colorTheme == ColorTheme.blackTheme;
     final bgColor = isBlackTheme ? Color(0xFF333333) : Colors.white;
+    final fonts = Theme.of(context).extension<CustomFonts>()!;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -487,29 +533,16 @@ class _LoginPageState extends State<LoginPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  SizedBox(height: 40),
+                  SizedBox(height: 30),
                   // Logo
                   Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'w',
-                        style: TextStyle(
-                          fontSize: 80,
-                          fontWeight: FontWeight.bold,
-                          color: pointColor,
-                        ),
-                      ),
-                      Text(
-                        'wearly',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: pointColor,
-                        ),
-                      ),
+                      // ✅ 로고 이미지 표시
+                      Image.asset(logoimg, width: 150, height: 150),
                     ],
                   ),
-                  SizedBox(height: 50),
+                  SizedBox(height: 40),
 
                   // Email
                   Container(
@@ -526,6 +559,7 @@ class _LoginPageState extends State<LoginPage> {
                         hintText: '이메일',
                         hintStyle: TextStyle(color: Grey, fontSize: 14),
                         border: InputBorder.none,
+                        errorStyle: TextStyle(fontFamily: fonts.labelFont),
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
@@ -562,6 +596,7 @@ class _LoginPageState extends State<LoginPage> {
                         hintText: '비밀번호',
                         hintStyle: TextStyle(color: Grey, fontSize: 14),
                         border: InputBorder.none,
+                        errorStyle: TextStyle(fontFamily: fonts.labelFont),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty)
@@ -599,6 +634,7 @@ class _LoginPageState extends State<LoginPage> {
                               : Text(
                                 '로그인',
                                 style: TextStyle(
+                                  fontFamily: fonts.titleFont,
                                   color: White,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -613,29 +649,18 @@ class _LoginPageState extends State<LoginPage> {
 
                   // 소셜 로그인 버튼들
                   _buildSocialButton(
-                    '구글로 로그인',
-                    Colors.white,
-                    Colors.black,
-                    border: true,
-                    onPressed: () {
-                      signInWithGoogle();
-                    },
+                    assetPath: 'assets/logo/android_light_sq_SI@3x.png',
+                    onTap: signInWithGoogle,
                   ),
+                  const SizedBox(height: 12),
                   _buildSocialButton(
-                    '카카오로 로그인',
-                    Colors.yellow[600]!,
-                    Colors.black,
-                    onPressed: () {
-                      loginWithKakao();
-                    },
+                    assetPath: 'assets/logo/kakao_login_large_narrow.png',
+                    onTap: loginWithKakao,
                   ),
+                  const SizedBox(height: 12),
                   _buildSocialButton(
-                    '네이버로 로그인',
-                    Colors.green,
-                    Colors.white,
-                    onPressed: () {
-                      signInWithNaver();
-                    },
+                    assetPath: 'assets/logo/btnG_official.png',
+                    onTap: signInWithNaver,
                   ),
                   SizedBox(height: 30),
 
@@ -650,12 +675,20 @@ class _LoginPageState extends State<LoginPage> {
                         children: [
                           Text(
                             "아직 wearly 회원이 아니신가요?",
-                            style: TextStyle(color: Grey, fontSize: 12),
+                            style: TextStyle(
+                              fontFamily: fonts.labelFont,
+                              color: Grey,
+                              fontSize: 14,
+                            ),
                           ),
-                          SizedBox(height: 5),
+                          SizedBox(height: 10),
                           Text(
                             "이메일/비밀번호를 잊으셨나요?",
-                            style: TextStyle(color: Grey, fontSize: 12),
+                            style: TextStyle(
+                              fontFamily: fonts.labelFont,
+                              color: Grey,
+                              fontSize: 14,
+                            ),
                           ),
                         ],
                       ),
@@ -670,19 +703,19 @@ class _LoginPageState extends State<LoginPage> {
                               "회원가입하기",
                               style: TextStyle(
                                 color: pointColor,
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          SizedBox(height: 5),
+                          SizedBox(height: 10),
                           GestureDetector(
                             onTap: _goToFindidpass,
                             child: Text(
                               "이메일/비밀번호 찾기",
                               style: TextStyle(
                                 color: pointColor,
-                                fontSize: 12,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

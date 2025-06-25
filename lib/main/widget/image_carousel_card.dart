@@ -1,12 +1,11 @@
-// image_carousel_card.dart
 import 'package:flutter/material.dart';
 
-class ImageCarouselCard extends StatelessWidget {
+class ImageCarouselCard extends StatefulWidget {
   final List<String> imageUrls;
   final String profileImageUrl;
   final String userName;
   final VoidCallback onUserTap;
-  final VoidCallback? onShareTap;  // 추가
+  final VoidCallback? onShareTap; // 추가
 
   // ✅ 추가
   final bool isLiked;
@@ -26,8 +25,27 @@ class ImageCarouselCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  State<ImageCarouselCard> createState() => _ImageCarouselCardState();
+}
 
+class _ImageCarouselCardState extends State<ImageCarouselCard> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottomNavTheme = theme.bottomNavigationBarTheme;
     final backgroundColor = theme.scaffoldBackgroundColor;
@@ -36,9 +54,9 @@ class ImageCarouselCard extends StatelessWidget {
     final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    if (imageUrls.isEmpty) {
+    if (widget.imageUrls.isEmpty) {
       return Container(
-        height: 480,
+        height: 520, // 높이 늘림 (아래 인디케이터 공간 확보)
         decoration: BoxDecoration(
           color: Colors.pink[50],
           borderRadius: const BorderRadius.only(
@@ -63,16 +81,40 @@ class ImageCarouselCard extends StatelessWidget {
       );
     }
 
-    if (imageUrls.length == 1) {
-      return _buildImageCard(imageUrls[0]);
+    if (widget.imageUrls.length == 1) {
+      return SizedBox(
+        height: 520,
+        child: Column(
+          children: [
+            _buildImageCard(widget.imageUrls[0]),
+            const SizedBox(height: 12),
+            _buildPageIndicator(), // 1개라도 인디케이터 표시 가능
+          ],
+        ),
+      );
     } else {
       return SizedBox(
-        height: 480,
-        child: PageView.builder(
-          itemCount: imageUrls.length,
-          itemBuilder: (context, index) {
-            return _buildImageCard(imageUrls[index]);
-          },
+        height: 520,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 480,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: widget.imageUrls.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return _buildImageCard(widget.imageUrls[index]);
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildPageIndicator(),
+          ],
         ),
       );
     }
@@ -92,7 +134,7 @@ class ImageCarouselCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
-            onTap: onUserTap,
+            onTap: widget.onUserTap,
             child: Row(
               children: [
                 ClipOval(
@@ -100,9 +142,9 @@ class ImageCarouselCard extends StatelessWidget {
                     width: 32,
                     height: 32,
                     color: Colors.grey[300],
-                    child: profileImageUrl.isNotEmpty
+                    child: widget.profileImageUrl.isNotEmpty
                         ? Image.network(
-                      profileImageUrl,
+                      widget.profileImageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(color: Colors.grey[400]);
@@ -113,7 +155,7 @@ class ImageCarouselCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  userName.length > 8 ? '${userName.substring(0, 8)}...' : userName,
+                  widget.userName.length > 8 ? '${widget.userName.substring(0, 8)}...' : widget.userName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -125,25 +167,24 @@ class ImageCarouselCard extends StatelessWidget {
           Row(
             children: [
               GestureDetector(
-                onTap: onLikeToggle,
+                onTap: widget.onLikeToggle,
                 child: Row(
                   children: [
                     Icon(
-                      isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: isLiked ? Colors.red : Colors.grey,
+                      widget.isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: widget.isLiked ? Colors.red : Colors.grey,
                       size: 20,
                     ),
-                    SizedBox(width: 4),
-                    Text('$likeCount'),
+                    const SizedBox(width: 4),
+                    Text('${widget.likeCount}'),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              GestureDetector(
-                onTap: onShareTap,
-                child: Icon(Icons.share, size: 20)
-              ),
-
+              if (widget.onShareTap != null)
+                GestureDetector(
+                    onTap: widget.onShareTap,
+                    child: const Icon(Icons.share, size: 20)),
               const SizedBox(width: 16),
             ],
           ),
@@ -184,6 +225,25 @@ class ImageCarouselCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPageIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(widget.imageUrls.length, (index) {
+        final isActive = index == _currentPage;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: isActive ? 16 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: isActive ? Colors.pinkAccent : Colors.grey[300],
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }),
     );
   }
 }
