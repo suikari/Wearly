@@ -577,6 +577,8 @@ class _WritePostPageState extends State<WritePostPage> {
                           ),
                         ],
                       ),
+                        SizedBox(width: 20,),
+
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
