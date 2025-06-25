@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../common/custom_app_bar.dart';
 import '../provider/custom_colors.dart';
+import 'widget/follow_service.dart';
 
 class SearchResultPage extends StatefulWidget {
   final String keyword;
@@ -24,7 +26,7 @@ class _SearchResultPageState extends State<SearchResultPage>
   final List<String> tabs = ['태그', '지역', '내용', '유저'];
   final List<String> sortOptions = ['최신순', '온도순'];
 
-
+  final String? myUid = FirebaseAuth.instance.currentUser?.uid;
   @override
   void initState() {
     super.initState();
@@ -778,17 +780,34 @@ class _SearchResultPageState extends State<SearchResultPage>
                         style: const TextStyle(fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: mainColor,
-                          foregroundColor: subColor,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
-                        child: const Text('팔로우'),
+                      trailing: Builder(
+                        builder: (context) {
+                          final followers = (data['follower'] ?? []) as List<dynamic>;
+                          final isFollowing = followers.contains(myUid);
+
+                          return ElevatedButton(
+                            onPressed: isFollowing ? null
+                               : () async {
+                              followUser(
+                                targetUid: docs[index].id,
+                                onComplete: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('팔로우 완료')),
+                                  );
+                                  setState(() {}); // UI 갱신
+                                },
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: mainColor,
+                              foregroundColor: subColor,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              textStyle: const TextStyle(fontSize: 12),
+                            ),
+                            child: Text(isFollowing ? '팔로우 중' : '팔로우'),
+                          );
+                        }
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     ),
