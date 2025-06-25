@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../common/custom_app_bar.dart';
 import '../provider/custom_colors.dart';
-import 'chat_list_page.dart';
-
 
 class SearchResultPage extends StatefulWidget {
   final String keyword;
@@ -782,7 +780,6 @@ class _SearchResultPageState extends State<SearchResultPage>
                       ),
                       trailing: ElevatedButton(
                         onPressed: () {
-
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: mainColor,
