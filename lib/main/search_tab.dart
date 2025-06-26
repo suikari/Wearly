@@ -13,7 +13,6 @@ class SearchTab extends StatefulWidget {
 }
 
 class _SearchTabState extends State<SearchTab> {
-  bool showDetails = false;
   double minTemp = 10;
   double maxTemp = 30;
   final TextEditingController _searchController = TextEditingController();
@@ -26,10 +25,6 @@ class _SearchTabState extends State<SearchTab> {
     '클래식',
   ];
   Set<String> selectedTags = {};
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -48,14 +43,6 @@ class _SearchTabState extends State<SearchTab> {
           // 검색 상단 Row
           Row(
             children: [
-              IconButton(
-                icon: Icon(Icons.filter_list),
-                onPressed: () {
-                  setState(() {
-                    showDetails = !showDetails;
-                  });
-                },
-              ),
               Expanded(
                 child: TextField(
                   controller: _searchController,
@@ -71,8 +58,15 @@ class _SearchTabState extends State<SearchTab> {
               SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () {
-                  if (_searchController.text.trim().isEmpty) return;
-
+                  if (_searchController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('최소 1개의 검색어를 입력하세요.'),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                    return;
+                  }
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => SearchResultPage(
@@ -88,9 +82,6 @@ class _SearchTabState extends State<SearchTab> {
               ),
             ],
           ),
-
-          // 디테일 옵션 보이기
-          if (showDetails) ...[
             SizedBox(height: 16),
             Text('온도 범위 설정 (°C)', style: TextStyle(fontWeight: FontWeight.bold)),
             Row(
@@ -133,9 +124,7 @@ class _SearchTabState extends State<SearchTab> {
                 ),
               ],
             ),
-
             SizedBox(height: 24),
-
             Text('인기 태그', style: TextStyle(fontWeight: FontWeight.bold)),
             Wrap(
               spacing: 8,
@@ -157,7 +146,6 @@ class _SearchTabState extends State<SearchTab> {
                 );
               }).toList(),
             ),
-          ],
         ],
       ),
     );

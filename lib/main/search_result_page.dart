@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../common/custom_app_bar.dart';
 import '../provider/custom_colors.dart';
-import 'chat_list_page.dart';
-
+import 'widget/follow_service.dart';
 
 class SearchResultPage extends StatefulWidget {
   final String keyword;
@@ -26,7 +26,7 @@ class _SearchResultPageState extends State<SearchResultPage>
   final List<String> tabs = ['태그', '지역', '내용', '유저'];
   final List<String> sortOptions = ['최신순', '온도순'];
 
-
+  final String? myUid = FirebaseAuth.instance.currentUser?.uid;
   @override
   void initState() {
     super.initState();
@@ -69,7 +69,7 @@ class _SearchResultPageState extends State<SearchResultPage>
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Text(
-              '"${widget.keyword}"에 대한 검색 결과입니다.',
+              '"${widget.keyword}"에 대한 검색 결과입니다. 온도 범위 : $minTemp℃~$maxTemp℃',
               style: const TextStyle(fontSize: 16),
             ),
           ),
@@ -86,7 +86,7 @@ class _SearchResultPageState extends State<SearchResultPage>
               controller: _tabController,
               labelColor: mainColor,
               unselectedLabelColor: Colors.black87,
-              indicatorColor: subColor,
+              indicatorColor: pointColor,
               tabs: tabs.map((t) => Tab(text: t)).toList(),
             ),
           ),
@@ -250,7 +250,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: mainColor,
+                      color: subColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -271,19 +271,19 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     margin: const EdgeInsets.only(right: 6),
                                     decoration: BoxDecoration(
-                                      color: mainColor,
+                                      color: subColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       data['feeling'],
-                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      style: const TextStyle(color: Colors.black, fontSize: 12),
                                     ),
                                   ),
                                 if (data['temperature'] != null)
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: subColor,
+                                      color: pointColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -375,7 +375,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: mainColor,
+                      color: subColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -401,7 +401,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     ),
                                     child: Text(
                                       data['feeling'],
-                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      style: const TextStyle(color: Colors.black, fontSize: 12),
                                     ),
                                   ),
                                 if (data['temperature'] != null)
@@ -564,7 +564,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                     Card(
                       margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: mainColor,
+                      color: subColor,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -585,12 +585,12 @@ class _SearchResultPageState extends State<SearchResultPage>
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     margin: const EdgeInsets.only(right: 6),
                                     decoration: BoxDecoration(
-                                      color: mainColor,
+                                      color: subColor,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       data['feeling'],
-                                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                                      style: const TextStyle(color: Colors.black, fontSize: 12),
                                     ),
                                   ),
                                 if (data['temperature'] != null)
@@ -755,7 +755,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                         radius: 28,
                         backgroundImage: (data['profileImageUrl'] != null && data['profileImageUrl'].toString().isNotEmpty)
                             ? NetworkImage(data['profileImageUrl'])
-                            : const AssetImage('assets/noimg.jpg') as ImageProvider,
+                            : const AssetImage('assets/profile2.jpg') as ImageProvider,
                         backgroundColor: Colors.transparent,
                       ),
                       title: Row(
@@ -765,10 +765,10 @@ class _SearchResultPageState extends State<SearchResultPage>
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(width: 6),
-                          if (data['interest'] != null)
+                          if (data['interest'] != null && data['interest'] is List && data['interest'].isNotEmpty)
                             Flexible(
                               child: Text(
-                                "#${data['interest']}", // interest가 쉼표로 구분된 문자열이라면 더 파싱 가능
+                                "#${(data['interest'] as List).join(', ')}",
                                 style: const TextStyle(color: Colors.grey, fontSize: 12),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -776,22 +776,38 @@ class _SearchResultPageState extends State<SearchResultPage>
                         ],
                       ),
                       subtitle: Text(
-                        data['bio'] ?? '',
+                        data['bio'] ?? '자기소개 없음',
                         style: const TextStyle(fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: ElevatedButton(
-                        onPressed: () {
+                      trailing: Builder(
+                        builder: (context) {
+                          final followers = (data['follower'] ?? []) as List<dynamic>;
+                          final isFollowing = followers.contains(myUid);
 
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: mainColor,
-                          foregroundColor: subColor,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
-                        child: const Text('팔로우'),
+                          return ElevatedButton(
+                            onPressed: isFollowing ? null
+                               : () async {
+                              followUser(
+                                targetUid: docs[index].id,
+                                onComplete: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('팔로우 완료')),
+                                  );
+                                  setState(() {}); // UI 갱신
+                                },
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: mainColor,
+                              foregroundColor: subColor,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              textStyle: const TextStyle(fontSize: 12),
+                            ),
+                            child: Text(isFollowing ? '팔로우 중' : '팔로우'),
+                          );
+                        }
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     ),

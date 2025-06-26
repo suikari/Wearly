@@ -158,6 +158,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ],
             ),
+            const Divider(height: 32),
+            _buildSectionTitle(Icons.mark_chat_unread, 'DM 설정'),
+            Row(
+              children: [
+                _toggleButton('숫자알림', dmAllowed, () {
+                  setState(() => dmAllowed = true);
+                  _saveDmAllowed(true);
+                }),
+                const SizedBox(width: 8),
+                _toggleButton('알림안봄', !dmAllowed, () {
+                  setState(() => dmAllowed = false);
+                  _saveDmAllowed(false);
+                }),
+              ],
+            ),
             // const Padding(
             //   padding: EdgeInsets.symmetric(vertical: 8),
             //   child: Text(
@@ -201,21 +216,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 );
               }),
-            ),
-            const Divider(height: 32),
-            _buildSectionTitle(Icons.mark_chat_unread, 'DM 설정'),
-            Row(
-              children: [
-                _toggleButton('숫자알림', dmAllowed, () {
-                  setState(() => dmAllowed = true);
-                  _saveDmAllowed(true);
-                }),
-                const SizedBox(width: 8),
-                _toggleButton('알림안봄', !dmAllowed, () {
-                  setState(() => dmAllowed = false);
-                  _saveDmAllowed(false);
-                }),
-              ],
             ),
             const Divider(height: 32),
 
