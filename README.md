@@ -9,8 +9,23 @@
 <div>
   <img src="https://img.shields.io/badge/flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white">
   <img src="https://img.shields.io/badge/firebase-DD2C00?style=for-the-badge&logo=firebase&logoColor=white">
+  <img src="https://img.shields.io/badge/dart-0175C2?style=for-the-badge&logo=dart&logoColor=white">
 </div>
 
+## 사용 도구
+<div>
+  <img src="https://img.shields.io/badge/androidstudio-3DDC84?style=for-the-badge&logo=androidstudio&logoColor=white">
+  <img src="https://img.shields.io/badge/figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white">
+
+</div>
+
+## 🗓 개발 기간
+
+- **05/30 ~ 06/08** : 기획 및 화면정의서, 데이터베이스 설계  
+- **06/09 ~ 06/27** : 기능 개발  
+- **06/28 ~ 06/30** : UI 보완 및 마무리 점검
+
+---
 
 
 ### 외부 API
@@ -37,39 +52,38 @@
 | **강재석** | https://github.com/codingjs12 | kjsbest007@gmail.com |
 | **방대한** | https://github.com/suikari | suikari330@gmail.com |
 | **신수빈** | https://github.com/PRPRSPR | s.subin.0208@gmail.com |
-| **이주원** | https://github.com/juwon2932 | @example.com |
+| **이주원** | https://github.com/juwon2932 | sadltkdahr12@gmail.com |
 
 ---
 ## 👥 역할 분담
 
- ### 😅강재석 (팀장)
+ ### 강재석 (팀장)
 - **작업 페이지:**
-
    - 검색 페이지, 글쓰기 페이지
 
 - **구현 기능:**
-  - 
+  - 온도, 태그 별 피드, 유저 검색, 시간/위치 기반 날씨 연동 코디 기록
 
  ### 방대한
 - **작업 페이지**:
-   - 피드 페이지, 마이 페이지, 유저 페이지
+   - 피드 페이지, 마이 페이지, 유저 페이지, 설정 페이지
  
 - **구현 기능**:
-  - 
+  - 색상 테마, 대표 코디 설정, 코디 수정, 코디 모아보기, 
 
 ### 신수빈
  - **작업 페이지**:
      - 로딩 페이지, 로그인 페이지, 회원가입 페이지, 이메일/비밀번호 찾기 페이지
 
 - **구현 기능**:
-   - 
+   - Wearly 회원가입/로그인, 구글, 카카오, 네이버 로그인, 이메일 인증, 닉네임/이메일 기반 이메일/비밀번호 찾기
   
 ### 이주원
 - **작업 페이지**:
   - 메인 페이지, DM 페이지, 온도 별 코디 페이지, 알림 페이지
     
 - **구현 기능**:
-  - 
+  - 기상청 API 활용 날씨 위젯, 추천, 베스트 피드, 광고, 온도 기반 코디 비교 및 체감 라벨 필터링, DM, 알림
 
 ---
 
