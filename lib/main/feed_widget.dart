@@ -162,7 +162,7 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
             )
           else
             SizedBox(
-              height: 430,
+              height: 480,
               child: PageView.builder(
                 itemCount: feedList.length,
                 controller: PageController(viewportFraction: 0.81),
@@ -246,35 +246,12 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                             // 태그 영역(칩 스타일) + 더보기/접기 버튼
                             Padding(
                               padding: const EdgeInsets.fromLTRB(15, 9, 0, 6),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Stack(
                                 children: [
-                                  Expanded(
-                                    child: tags.length > 5
-                                        ? SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Row(
-                                        children: tagsToShow.map<Widget>((tag) =>
-                                            Container(
-                                              margin: EdgeInsets.only(right: 7, bottom: 3),
-                                              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 9),
-                                              decoration: BoxDecoration(
-                                                color: Color(0xFFF2F4F8),
-                                                borderRadius: BorderRadius.circular(11),
-                                              ),
-                                              child: Text(
-                                                '$tag',
-                                                style: TextStyle(
-                                                  color: Colors.black87,
-                                                  fontWeight: FontWeight.w500,
-                                                  fontSize: 12.7,
-                                                ),
-                                              ),
-                                            )
-                                        ).toList(),
-                                      ),
-                                    )
-                                        : Wrap(
+                                  // 태그 리스트 (Wrap으로 줄바꿈)
+                                  Padding(
+                                    padding: EdgeInsets.only(right: tags.length > 3 ? 30 : 0), // 더보기 아이콘 영역 확보
+                                    child: Wrap(
                                       spacing: 7,
                                       runSpacing: 3,
                                       children: tagsToShow.map<Widget>((tag) =>
@@ -296,26 +273,25 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                                       ).toList(),
                                     ),
                                   ),
-                                  // 태그가 3개를 초과하면 '더보기' 버튼 표시
+                                  // 더보기/접기 아이콘 (오른쪽 아래)
                                   if (tags.length > 3)
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          if (isExpanded) {
-                                            expandedTagIdx.remove(idx);
-                                          } else {
-                                            expandedTagIdx.add(idx);
-                                          }
-                                        });
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(left: 8, top: 3),
-                                        child: Text(
-                                          isExpanded ? '접기' : '더보기',
-                                          style: TextStyle(
-                                            color: Colors.blue,
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.bold,
+                                    Positioned(
+                                      bottom: 0, right: 0,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            if (isExpanded) {
+                                              expandedTagIdx.remove(idx);
+                                            } else {
+                                              expandedTagIdx.add(idx);
+                                            }
+                                          });
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(left: 8, right: 8, top: 3),
+                                          child: Icon(
+                                            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                            color: Colors.blue, size: 22,
                                           ),
                                         ),
                                       ),

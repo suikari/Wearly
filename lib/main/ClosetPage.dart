@@ -2,10 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 
+// 날씨 상태별 아이콘 반환 함수 (기본값은 sunny)
+IconData getWeatherIcon(String? weather) {
+  if (weather == null) return Icons.wb_sunny;
+  switch (weather.toLowerCase()) {
+    case '맑음':
+    case 'sunny':
+      return Icons.wb_sunny;
+    case '구름많음':
+    case '흐림':
+    case 'cloudy':
+      return Icons.cloud;
+    case '구름조금':
+    case 'few clouds':
+      return Icons.wb_cloudy;
+    case '비':
+    case 'rain':
+      return Icons.umbrella;
+    case '눈':
+    case 'snow':
+      return Icons.ac_unit;
+    case '소나기':
+    case 'shower':
+      return Icons.grain;
+    default:
+      return Icons.wb_sunny; // 기본값
+  }
+}
+
 class ClosetPage extends StatefulWidget {
   final List<Map<String, dynamic>> hourlyWeather;
   final String currentUserId;
-  final int? currentTemperature; // null 허용
+  final int? currentTemperature;
 
   const ClosetPage({
     super.key,
@@ -55,20 +83,25 @@ class _ClosetPageState extends State<ClosetPage> {
     return List.generate(8, (i) => (hour + i) % 24);
   }
 
-  double? getClosestTempForHour(int targetHour) {
+  // 시간별 item 찾기
+  Map<String, dynamic>? getClosestWeatherItemForHour(int targetHour) {
     int minDiff = 25;
-    double? temp;
+    Map<String, dynamic>? found;
     for (final item in _hourlyWeather) {
-      if (item['fcstTime'] == null || item['temp'] == null) continue;
-      final fcstHour = int.tryParse(item['fcstTime'].substring(0, 2));
+      if (item['fcstTime'] == null) continue;
+      final fcstHour = int.tryParse(item['fcstTime'].toString().substring(0, 2));
       if (fcstHour == null) continue;
       final diff = (fcstHour - targetHour).abs();
       if (diff < minDiff) {
         minDiff = diff;
-        temp = double.tryParse(item['temp'].toString());
+        found = item;
       }
     }
-    return temp;
+    return found;
+  }
+
+  double? getClosestTempForHour(int targetHour) {
+    return getClosestWeatherItemForHour(targetHour)?['temp'] as double?;
   }
 
   int get displayTemperature {
@@ -138,7 +171,9 @@ class _ClosetPageState extends State<ClosetPage> {
                     itemCount: hourList.length,
                     itemBuilder: (context, idx) {
                       final hour = hourList[idx];
-                      final temp = getClosestTempForHour(hour);
+                      final item = getClosestWeatherItemForHour(hour);
+                      final temp = item?['temp'];
+                      final weather = item?['weather']; // 예: '맑음', '흐림', '비' 등
                       return Padding(
                         padding: const EdgeInsets.only(right: 14),
                         child: Column(
@@ -146,10 +181,10 @@ class _ClosetPageState extends State<ClosetPage> {
                           children: [
                             Text('${hour.toString().padLeft(2, '0')}시'),
                             const SizedBox(height: 2),
-                            const Icon(Icons.cloud),
+                            Icon(getWeatherIcon(weather), size: 22),
                             const SizedBox(height: 2),
                             Text(
-                              temp != null ? '${temp.toStringAsFixed(1)}°' : '-',
+                              temp != null ? '${temp.toString()}°' : '-',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],
