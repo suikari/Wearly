@@ -437,60 +437,66 @@ class _MyPageWidgetState extends State<MyPageTab> {
                           // 좌측 상단 팔로워/팔로잉 표시
                           Padding(
                             padding: const EdgeInsets.only(left: 12, bottom: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Row(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () {
-                                        showFollowerFollowingDialog(
-                                          context: context,
-                                          userIds: List<String>.from(profile['follower'] ?? []),
-                                          title: '팔로워',
-                                          onUserTap: widget.onUserTap, // 이미 상위에서 받은 콜백 넘김
-                                        );
-                                      },
-                                      child: Text(
+                                // 팔로워 블럭
+                                GestureDetector(
+                                  onTap: () {
+                                    showFollowerFollowingDialog(
+                                      context: context,
+                                      userIds: List<String>.from(profile['follower'] ?? []),
+                                      title: '팔로워',
+                                      onUserTap: widget.onUserTap,
+                                    );
+                                  },
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.center, // 텍스트와 숫자 모두 가운데 정렬
+                                    children: [
+                                      const Text(
                                         '팔로워',
                                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                       ),
-                                    ),
-                                    SizedBox(width: 16),
-                                    GestureDetector(
-                                      onTap: () {
-                                        showFollowerFollowingDialog(
-                                          context: context,
-                                          userIds: List<String>.from(profile['following'] ?? []),
-                                          title: '팔로잉',
-                                          onUserTap: widget.onUserTap, // 이미 상위에서 받은 콜백 넘김
-                                        );
-                                      },
-                                      child: Text(
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${followerCount ?? 0}',
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(width: 24), // 블럭 간 간격
+
+                                // 팔로잉 블럭
+                                GestureDetector(
+                                  onTap: () {
+                                    showFollowerFollowingDialog(
+                                      context: context,
+                                      userIds: List<String>.from(profile['following'] ?? []),
+                                      title: '팔로잉',
+                                      onUserTap: widget.onUserTap,
+                                    );
+                                  },
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      const Text(
                                         '팔로잉',
                                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text(
-                                      '${followerCount ?? 0}',
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                    const SizedBox(width: 32),
-                                    Text(
-                                      '${followingCount ?? 0}',
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${followingCount ?? 0}',
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-              
                           // 프로필 이미지 (중앙 정렬 유지)
                           Center(
                             child: Column(

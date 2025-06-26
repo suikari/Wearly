@@ -3,10 +3,12 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
 
+import '../provider/theme_provider.dart';
 import 'ClosetPage.dart';
 import 'feed_widget.dart';
 import 'mypage_tab.dart';
@@ -476,6 +478,8 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     List<Widget> children = [];
 
     // 항상 카드 UI 출력, 내부에서만 로딩 처리!
@@ -520,7 +524,10 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Colors.black87,
+                          color: themeProvider.colorTheme != ColorTheme.blackTheme
+                              ? Colors.black87
+                              : Colors.white,
+
                         ),
                       ),
                       SizedBox(width: 6),
