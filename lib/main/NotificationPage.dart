@@ -101,28 +101,31 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
+  /// 모두 읽기
   Future<void> markAllAsRead() async {
-    final unread = notificationDocs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['isRead'] != true;
-    }).toList();
-
-    if (unread.isEmpty) return;
+    // 미확인 전체 (중복 DM 포함, 실제 DB에 읽음 처리)
+    final unreadQuery = await FirebaseFirestore.instance
+        .collection('notifications')
+        .where('uid', isEqualTo: widget.uid)
+        .where('isRead', isEqualTo: false)
+        .get();
+    if (unreadQuery.docs.isEmpty) return;
 
     WriteBatch batch = FirebaseFirestore.instance.batch();
-    for (var doc in unread) {
+    for (var doc in unreadQuery.docs) {
       batch.update(doc.reference, {'isRead': true});
     }
     await batch.commit();
 
-    // 리스트 강제 새로고침!
+    // 0.2초 후 알림 새로고침 (즉시 반영)
+    await Future.delayed(const Duration(milliseconds: 200));
     setState(() {
       notificationDocs.clear();
       lastDoc = null;
       hasMore = true;
       isLoading = false;
     });
-    fetchNotifications();
+    await fetchNotifications();
   }
 
   @override
@@ -156,7 +159,6 @@ class _NotificationPageState extends State<NotificationPage> {
     if (doc.exists) {
       final data = doc.data();
       nickname = data?['nickname'] ?? nickname;
-      // 여기가 가장 중요! "profileImage"만 써야 네트워크 url이 뜸
       profileImg = data?['profileImage'] ?? '';
     }
     userCache[uid] = {'nickname': nickname, 'profileImg': profileImg};
@@ -229,14 +231,47 @@ class _NotificationPageState extends State<NotificationPage> {
           trailing: Text(dateStr, style: TextStyle(fontSize: 13, color: Colors.grey)),
           tileColor: isRead ? Colors.grey[100] : Colors.white,
           onTap: () async {
-            await FirebaseFirestore.instance
-                .collection('notifications')
-                .doc(doc.id)
-                .update({'isRead': true});
+            // DM이면 같은 fromUid, 5분 이내 isRead==false DM 전부 읽음 처리
+            if (noti['type'] == 'dm' && noti['fromUid'] != null && noti['createdAt'] != null) {
+              final fromUid = noti['fromUid'];
+              final baseTime = (noti['createdAt'] as Timestamp).toDate();
+              final lowerBound = baseTime.subtract(Duration(minutes: 5));
+              final upperBound = baseTime.add(Duration(minutes: 5));
+              final dmSnap = await FirebaseFirestore.instance
+                  .collection('notifications')
+                  .where('uid', isEqualTo: widget.uid)
+                  .where('fromUid', isEqualTo: fromUid)
+                  .where('type', isEqualTo: 'dm')
+                  .where('isRead', isEqualTo: false)
+                  .get();
+
+              WriteBatch batch = FirebaseFirestore.instance.batch();
+              for (var d in dmSnap.docs) {
+                final dData = d.data() as Map<String, dynamic>;
+                final dTime = (dData['createdAt'] as Timestamp?)?.toDate();
+                if (dTime != null &&
+                    dTime.isAfter(lowerBound) &&
+                    dTime.isBefore(upperBound)) {
+                  batch.update(d.reference, {'isRead': true});
+                }
+              }
+              await batch.commit();
+            } else {
+              // 일반 알림 1개만
+              await FirebaseFirestore.instance
+                  .collection('notifications')
+                  .doc(doc.id)
+                  .update({'isRead': true});
+            }
 
             setState(() {
               noti['isRead'] = true;
+              notificationDocs.clear();
+              lastDoc = null;
+              hasMore = true;
+              isLoading = false;
             });
+            await fetchNotifications();
 
             // DM만 별도, 나머지는 전부 탭 전환만
             if (noti['type'] == 'dm' && noti['roomId'] != null) {
@@ -255,14 +290,6 @@ class _NotificationPageState extends State<NotificationPage> {
               Navigator.pop(context);
               widget.onUserTap!(fromUid);
             }
-
-            setState(() {
-              notificationDocs.clear();
-              lastDoc = null;
-              hasMore = true;
-              isLoading = false;
-            });
-            fetchNotifications();
           },
         );
       },
