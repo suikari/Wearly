@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/dart-0175C2?style=for-the-badge&logo=dart&logoColor=white">
 </div>
 
-## 사용 도구
+## 🛠 사용 도구
 <div>
   <img src="https://img.shields.io/badge/androidstudio-3DDC84?style=for-the-badge&logo=androidstudio&logoColor=white">
   <img src="https://img.shields.io/badge/figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white">
@@ -55,6 +55,7 @@
 | **이주원** | https://github.com/juwon2932 | sadltkdahr12@gmail.com |
 
 ---
+
 ## 👥 역할 분담
 
  ### 강재석 (팀장)
