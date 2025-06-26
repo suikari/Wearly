@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../main/chat_list_page.dart';
+import '../main/mypage_tab.dart';
 import '../provider/theme_provider.dart';
 import '../main/NotificationPage.dart';
 
@@ -13,12 +14,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final String? title;
   final VoidCallback? onMessageTap;
+  final bool? MessageIcon;
   final VoidCallback? onNotificationTap;
+  final Function(String userId)? onUserTap;
 
   CustomAppBar({
     this.title,
     this.onMessageTap,
     this.onNotificationTap,
+    this.onUserTap,
+    this.MessageIcon = true,
   });
 
   /// 실시간 미확인 메시지 개수 스트림
@@ -58,6 +63,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: backgroundColor,
       iconTheme: IconThemeData(color: iconColor),
       actions: [
+        if (MessageIcon == true)
         // 메시지(채팅)
         StreamBuilder<int>(
           stream: getUnreadMessageCountStream(uid),
@@ -125,12 +131,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 borderRadius: BorderRadius.circular(25),
                 onTap: onNotificationTap ??
                         () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => NotificationPage(uid: uid),
-                        ),
-                      );
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NotificationPage(
+                                uid: uid,
+                                onUserTap: onUserTap,
+                              ),
+                            ),
+                          );
                     },
                 child: Stack(
                   clipBehavior: Clip.none,
