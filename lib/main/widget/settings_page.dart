@@ -105,6 +105,42 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('로그아웃'),
+        content: Text('로그아웃 하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(), // 취소
+            child: Text('취소'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop(); // 다이얼로그 먼저 닫기
+              await _logout(context); // 로그아웃 처리
+            },
+            child: Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('userId'); // 저장된 정보 초기화
+
+    if (!context.mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => LoginPage()),
+          (route) => false, // 모든 이전 화면 제거
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -227,17 +263,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
               Center(
                 child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.remove('userId');// 저장된 정보 초기화
-
-                    if (!mounted) return;
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => LoginPage()),
-                          (route) => false, // 모든 이전 화면 제거
-                    );
-                  },
+                  onPressed: () => _confirmLogout(context),
                   icon: const Icon(Icons.logout),
                   label: const Text('로그아웃'),
                   style: ElevatedButton.styleFrom(

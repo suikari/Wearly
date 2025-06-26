@@ -6,12 +6,14 @@ class CommentSection extends StatefulWidget {
   final String feedId;
   final String currentUserId;
   final void Function(String)? onUserTap; // ← 콜백 타입 정의
+  static FocusNode? globalFocusNode;
 
 
   const CommentSection({
     Key? key,
     required this.feedId,
     required this.currentUserId,
+
     this.onUserTap,
   }) : super(key: key);
 
@@ -35,6 +37,7 @@ class _CommentSectionState extends State<CommentSection> {
   @override
   void initState() {
     super.initState();
+    CommentSection.globalFocusNode = commentFocusNode;
     _commentFuture = _loadComments();
   }
 
@@ -178,65 +181,65 @@ class _CommentSectionState extends State<CommentSection> {
 
   Widget _buildCommentInput() {
     return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: commentController,
-            decoration: InputDecoration(
-              hintText: "댓글을 입력하세요",
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          Expanded(
+            child: TextField(
+              controller: commentController,
+              decoration: InputDecoration(
+                hintText: "댓글을 입력하세요",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        ElevatedButton(
-          onPressed: () {
-            if (commentController.text != '') {
-              replyingToId = null;
-              _addComment(commentController.text);
-            }
-          },
-          child: const Text("등록"),
-        ),
-      ],
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              if (commentController.text != '') {
+                replyingToId = null;
+                _addComment(commentController.text);
+              }
+            },
+            child: const Text("등록"),
+          ),
+        ],
     );
   }
 
   Widget _buildreplyCommentInput({String? hintText}) {
     return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: replycommentController,
-            focusNode: commentFocusNode,
-            decoration: InputDecoration(
-              hintText: hintText ?? "답글 입력...",
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          Expanded(
+            child: TextField(
+              controller: replycommentController,
+              focusNode: commentFocusNode,
+              decoration: InputDecoration(
+                hintText: hintText ?? "답글 입력...",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        ElevatedButton(
-          onPressed: () {
-            if (replycommentController.text != '') {
-              _addComment(replycommentController.text);
-            }
-          },
-          child: const Text("등록"),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            setState(() {
-              replyingToId = null;
-              editingCommentId = null;
-              replycommentController.clear();
-            });
-          },
-          child: const Text("취소"),
-        ),
-      ],
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              if (replycommentController.text != '') {
+                _addComment(replycommentController.text);
+              }
+            },
+            child: const Text("등록"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                replyingToId = null;
+                editingCommentId = null;
+                replycommentController.clear();
+              });
+            },
+            child: const Text("취소"),
+          ),
+        ],
     );
   }
 
@@ -251,7 +254,7 @@ class _CommentSectionState extends State<CommentSection> {
 
     postWriteUserId = comment.userId;
 
-    if (isReplyingHere) {
+    if (isReplyingHere  && !commentFocusNode.hasFocus) {
       Future.microtask(() {
         if (mounted) commentFocusNode.requestFocus();
       });
@@ -415,32 +418,39 @@ class _CommentSectionState extends State<CommentSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        FutureBuilder<List<Comment>>(
-          future: _commentFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Text('댓글 로딩 오류: ${snapshot.error}');
-            }
-            final comments = snapshot.data ?? [];
-            if (comments.isEmpty) {
-              return const Text('아직 댓글이 없습니다. 첫 댓글을 남겨보세요!');
-            }
-            return _buildComments(comments);
-          },
-        ),
-        const SizedBox(height: 8),
-        _buildCommentInput(),
-      ],
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Column(
+        children: [
+          FutureBuilder<List<Comment>>(
+            future: _commentFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Text('댓글 로딩 오류: ${snapshot.error}');
+              }
+              final comments = snapshot.data ?? [];
+              if (comments.isEmpty) {
+                return const Text('아직 댓글이 없습니다. 첫 댓글을 남겨보세요!');
+              }
+              return _buildComments(comments);
+            },
+          ),
+          const SizedBox(height: 8),
+          _buildCommentInput(),
+        ],
+      ),
     );
   }
 
   @override
   void dispose() {
+    CommentSection.globalFocusNode = null;
     commentController.dispose();
     replycommentController.dispose();
     editingController.dispose();

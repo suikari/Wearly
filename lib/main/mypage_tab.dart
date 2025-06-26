@@ -240,6 +240,8 @@ class _MyPageWidgetState extends State<MyPageTab> {
   }
 
   void openSettingsPage(BuildContext context) {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => SettingsPage( userId: currentUserId )),
@@ -247,6 +249,8 @@ class _MyPageWidgetState extends State<MyPageTab> {
   }
 
   Future<void> openUserEditPage(BuildContext context) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -270,6 +274,15 @@ class _MyPageWidgetState extends State<MyPageTab> {
         'follower': FieldValue.arrayRemove([currentUserId])
       });
     } else {
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'uid': viewedUserId,
+        'type': 'follow',
+        'fromUid': currentUserId,
+        'content': '회원님을 팔로우 합니다.',
+        'createdAt': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+
       await currentUserRef.update({
         'following': FieldValue.arrayUnion([viewedUserId])
       });
