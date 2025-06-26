@@ -93,7 +93,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       borderRadius: BorderRadius.circular(25),
                       onTap: onMessageTap ??
                               () {
-                            Navigator.push(
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => ChatListPage()),
                             );
@@ -151,7 +152,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       borderRadius: BorderRadius.circular(25),
                       onTap: onNotificationTap ??
                               () {
-                            Navigator.push(
+                                FocusManager.instance.primaryFocus?.unfocus();
+
+                                Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => NotificationPage(

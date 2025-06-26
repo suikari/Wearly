@@ -183,6 +183,8 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   void showShareBottomSheet(BuildContext context, String feedId) {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final url = 'wearly://deeplink/feedid?id=$feedId';
     showModalBottomSheet(
       context: context,
