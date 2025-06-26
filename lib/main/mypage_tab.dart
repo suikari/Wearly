@@ -242,7 +242,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
   void openSettingsPage(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const SettingsPage()),
+      MaterialPageRoute(builder: (context) => SettingsPage( userId: currentUserId )),
     );
   }
 
@@ -659,6 +659,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
                       feedId: selectedFeedId!,
                       currentUserId: currentUserId,
                       onBack: closeDetail,
+                      onUserTap : widget.onUserTap,
                     ),
                 ],
               ),

@@ -94,10 +94,13 @@ class _FeedListPageState extends State<FeedListPage> {
       if (!userDoc.exists) throw Exception('User not found');
 
       final userData = userDoc.data() as Map<String, dynamic>? ?? {};
-      final List<String> myInterests = List<String>.from(userData['interest'] ?? []);
-      final List<String> followingUserIds = List<String>.from(userData['following'] ?? []);
+      final List<String> myInterests = List<String>.from(
+          userData['interest'] ?? []);
+      final List<String> followingUserIds = List<String>.from(
+          userData['following'] ?? []);
 
-      Query query = fs.collection('feeds').orderBy('cdatetime', descending: true);
+      Query query = fs.collection('feeds').orderBy(
+          'cdatetime', descending: true);
 
       // 다중 태그 필터 조건 적용
       if (filteredTags.isNotEmpty) {
@@ -155,7 +158,9 @@ class _FeedListPageState extends State<FeedListPage> {
       for (var feed in filteredItems) {
         final tags = List<String>.from(feed['tags'] ?? []);
         final writeId = feed['writeid'] ?? '';
-        final interestScore = tags.where((tag) => myInterests.contains(tag)).length;
+        final interestScore = tags
+            .where((tag) => myInterests.contains(tag))
+            .length;
 
         if (interestScore > 0) {
           feed['interestScore'] = interestScore;
@@ -204,10 +209,16 @@ class _FeedListPageState extends State<FeedListPage> {
       });
     }
   }
-  Future<void> toggleLike(String feedId) async {
-    try {
-      final currentLiked = likedStatus[feedId] ?? false;
 
+
+
+  Future<void> toggleLike(Map<String, dynamic> feed) async {
+    final feedId = feed['id'];
+    final writeUesrid = feed['writerInfo']?['docId'];
+    final feedTitle = feed['title'];
+    final currentLiked = likedStatus[feedId] ?? false;
+
+    try {
       setState(() {
         likedStatus[feedId] = !currentLiked;
         likeCounts[feedId] = (likeCounts[feedId] ?? 0) + (currentLiked ? -1 : 1);
@@ -231,6 +242,16 @@ class _FeedListPageState extends State<FeedListPage> {
           userLikeRef.delete(),
         ]);
       } else {
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'uid' : writeUesrid, // 알림 받을 사람(피드 주인)
+          'type' : 'comment',
+          'fromUid': currentUserId,
+          'content': '($feedTitle)게시글을 좋아합니다. ',
+          'postId': feedId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+
         await Future.wait([
           feedLikeRef.set({
             'userId': currentUserId,
@@ -581,7 +602,7 @@ class _FeedListPageState extends State<FeedListPage> {
                               isLiked: likedStatus[feed['id']] ?? false,
                               likeCount: likeCounts[feed['id']] ?? 0,
                               onLikeToggle: () {
-                                toggleLike(feed['id']);
+                                toggleLike(feed);
                               },
                             ),
                           ),
@@ -652,6 +673,7 @@ class _FeedListPageState extends State<FeedListPage> {
                         key: ValueKey("comment_${feed['id']}"),
                         feedId: feed['id'],
                         currentUserId: currentUserId,
+                        onUserTap: widget.onUserTap,
                       ),
                     ],
                   ),

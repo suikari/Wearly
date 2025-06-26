@@ -5,11 +5,14 @@ import 'package:intl/intl.dart';
 class CommentSection extends StatefulWidget {
   final String feedId;
   final String currentUserId;
+  final void Function(String)? onUserTap; // ← 콜백 타입 정의
+
 
   const CommentSection({
     Key? key,
     required this.feedId,
     required this.currentUserId,
+    this.onUserTap,
   }) : super(key: key);
 
   @override
@@ -24,8 +27,10 @@ class _CommentSectionState extends State<CommentSection> {
 
   String? replyingToId;
   String? editingCommentId;
+  String? postWriteUserId;
 
   late Future<List<Comment>> _commentFuture;
+
 
   @override
   void initState() {
@@ -57,13 +62,13 @@ class _CommentSectionState extends State<CommentSection> {
       final parentId = data['parentId']?.toString();
 
       String nickname = '익명';
-      String profileImageUrl = '';
+      String profileImage = '';
 
       if (userId.isNotEmpty) {
         if (userCache.containsKey(userId)) {
           final cached = userCache[userId]!;
           nickname = cached.nickname;
-          profileImageUrl = cached.profileImageUrl;
+          profileImage = cached.profileImage;
         } else {
           final userDoc = await FirebaseFirestore.instance
               .collection('users')
@@ -72,10 +77,10 @@ class _CommentSectionState extends State<CommentSection> {
           if (userDoc.exists) {
             final userData = userDoc.data() ?? {};
             nickname = userData['nickname']?.toString() ?? '익명';
-            profileImageUrl = userData['profileImageUrl']?.toString() ?? '';
+            profileImage = userData['profileImage']?.toString() ?? '';
             userCache[userId] = UserData(
               nickname: nickname,
-              profileImageUrl: profileImageUrl,
+              profileImage: profileImage,
             );
           }
         }
@@ -85,7 +90,7 @@ class _CommentSectionState extends State<CommentSection> {
         id: doc.id,
         userId: userId,
         userName: nickname,
-        userProfileImageUrl: profileImageUrl,
+        userprofileImage: profileImage,
         comment: commentText,
         cdatetime: timestamp?.toDate() ?? DateTime.now(),
         parentId: parentId,
@@ -113,6 +118,16 @@ class _CommentSectionState extends State<CommentSection> {
     if (editingCommentId != null) {
       await commentsRef.doc(editingCommentId).update({'comment': text.trim()});
     } else {
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'uid' : postWriteUserId, // 알림 받을 사람(피드 주인)
+        'type' : 'comment',
+        'fromUid': widget.currentUserId,
+        'content': ' 게시글에 댓글을 남겼습니다. ',
+        'postId': widget.feedId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+
       await commentsRef.add(commentData);
     }
 
@@ -234,11 +249,22 @@ class _CommentSectionState extends State<CommentSection> {
     final isReplyingHere = replyingToId == comment.id;
     final replies = replyMap[comment.id] ?? [];
 
+    postWriteUserId = comment.userId;
+
     if (isReplyingHere) {
       Future.microtask(() {
         if (mounted) commentFocusNode.requestFocus();
       });
     }
+    final avatar = comment.userprofileImage != null && comment.userprofileImage!.isNotEmpty
+        ? CircleAvatar(
+      radius: 12,
+      backgroundImage: NetworkImage(comment.userprofileImage!),
+    )
+        : const CircleAvatar(
+      radius: 18,
+      child: Icon(Icons.person, size: 18),
+    );
 
     return Padding(
       padding: EdgeInsets.only(left: isReply ? 40 : 0, top: 8, bottom: 4),
@@ -248,7 +274,14 @@ class _CommentSectionState extends State<CommentSection> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const CircleAvatar(radius: 18, child: Icon(Icons.person, size: 18)),
+              widget.onUserTap != null
+                  ? GestureDetector(
+                behavior: HitTestBehavior.translucent, 
+                onTap: () {
+                  widget.onUserTap!(comment.userId);
+                },
+                child: avatar,
+              ) : avatar,
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -423,7 +456,7 @@ class Comment {
   final String comment;
   final DateTime cdatetime;
   final String? parentId;
-  final String? userProfileImageUrl;
+  final String? userprofileImage;
 
   Comment({
     required this.id,
@@ -432,16 +465,17 @@ class Comment {
     required this.comment,
     required this.cdatetime,
     this.parentId,
-    this.userProfileImageUrl,
+    this.userprofileImage,
   });
 }
 
 class UserData {
   final String nickname;
-  final String profileImageUrl;
+  final String profileImage;
 
   UserData({
     required this.nickname,
-    required this.profileImageUrl,
+    required this.profileImage,
   });
+
 }

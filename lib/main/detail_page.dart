@@ -22,6 +22,7 @@ class DetailPage extends StatefulWidget {
   final VoidCallback onBack;
   final String currentUserId;
   final bool showAppBar;
+  final void Function(String)? onUserTap; // ← 콜백 타입 정의
 
   const DetailPage({
     Key? key,
@@ -29,6 +30,7 @@ class DetailPage extends StatefulWidget {
     required this.onBack,
     required this.currentUserId,
     this.showAppBar = false,
+    this.onUserTap,
   }) : super(key: key);
 
   @override
@@ -91,7 +93,13 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  Future<void> toggleLike(String feedId) async {
+
+
+  Future<void> toggleLike(Map<String, dynamic> feed) async {
+    final feedId = feed['id'];
+    final writeUesrid = feed['writerInfo']?['docId'];
+    final feedTitle = feed['title'];
+
     try {
       final currentLiked = isLiked;
 
@@ -106,6 +114,16 @@ class _DetailPageState extends State<DetailPage> {
       if (currentLiked) {
         await Future.wait([likeRef.delete(), userRef.delete()]);
       } else {
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'uid' : writeUesrid, // 알림 받을 사람(피드 주인)
+          'type' : 'comment',
+          'fromUid': widget.currentUserId,
+          'content': '($feedTitle)게시글을 좋아합니다. ',
+          'postId': feedId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+
         await Future.wait([
           likeRef.set({'userId': widget.currentUserId, 'createdAt': FieldValue.serverTimestamp()}),
           userRef.set({'feedId': feedId, 'createdAt': FieldValue.serverTimestamp()}),
@@ -295,7 +313,7 @@ class _DetailPageState extends State<DetailPage> {
                 onShareTap: () => showShareBottomSheet(context, feedData!['id']),
                 isLiked: isLiked,
                 likeCount: likeCount,
-                onLikeToggle: () => toggleLike(feedData!['id']),
+                onLikeToggle: () => toggleLike(feedData!),
               ),
               SizedBox(height: 16),
               Text(feedData!['content'] ?? '', style: TextStyle(fontSize: 16)),
@@ -312,6 +330,7 @@ class _DetailPageState extends State<DetailPage> {
                 key: ValueKey("comment_${feedData!['id']}"),
                 feedId: feedData!['id'],
                 currentUserId: widget.currentUserId,
+                onUserTap: widget.onUserTap,
               ),
             ],
           ),
