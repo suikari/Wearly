@@ -83,6 +83,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
   Future<void> sendMessage() async {
     final text = _controller.text.trim();
+    _controller.clear();
     if (text.isEmpty) return;
 
     final fromNickname = await getNickname(myUid);
@@ -129,7 +130,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       'roomId': widget.roomId,
     });
 
-    _controller.clear();
+
     Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
