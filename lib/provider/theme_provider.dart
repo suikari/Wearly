@@ -54,14 +54,15 @@ class ThemeProvider extends ChangeNotifier {
       case ColorTheme.blueTheme:
         return ThemeData(
           fontFamily: 'IM_Hyemin', // 기본 본문 폰트
-          textTheme: TextTheme(
-            bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
-            bodyMedium: TextStyle(fontFamily: 'IM_Hyemin'),
-            bodySmall: TextStyle(fontFamily: 'IM_Hyemin'),
-            labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
-            labelMedium: TextStyle(fontFamily: 'IM_Hyemin'),
-            labelSmall: TextStyle(fontFamily: 'IM_Hyemin'),
-            headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20),
+          textTheme:
+          TextTheme(
+            bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16 , color: Color(0xFF333333) ),
+            bodyMedium: TextStyle(fontFamily: 'IM_Hyemin' , color: Color(0xFF333333) ),
+            bodySmall: TextStyle(fontFamily: 'IM_Hyemin' , color: Color(0xFF333333) ),
+            labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16 , color: Color(0xFF333333) ),
+            labelMedium: TextStyle(fontFamily: 'IM_Hyemin' , color: Color(0xFF333333) ),
+            labelSmall: TextStyle(fontFamily: 'IM_Hyemin' , color: Color(0xFF333333) ),
+            headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20 , color: Color(0xFF333333) ),
           ),
           brightness: Brightness.light,
           primarySwatch: bluetSwatch,
@@ -100,23 +101,23 @@ class ThemeProvider extends ChangeNotifier {
           primaryColor: Colors.grey[900],
           scaffoldBackgroundColor: Color.fromRGBO(51, 51, 51, 1.0),
           textTheme: TextTheme(
-            bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
-            bodyMedium: TextStyle(fontFamily: 'IM_Hyemin'),
-            bodySmall: TextStyle(fontFamily: 'IM_Hyemin'),
-            labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
-            labelMedium: TextStyle(fontFamily: 'IM_Hyemin'),
-            labelSmall: TextStyle(fontFamily: 'IM_Hyemin'),
-            headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20),
+            bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16, color : Colors.white),
+            bodyMedium: TextStyle(fontFamily: 'IM_Hyemin' , color : Colors.white),
+            bodySmall: TextStyle(fontFamily: 'IM_Hyemin' , color : Colors.white),
+            labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16 , color : Colors.white),
+            labelMedium: TextStyle(fontFamily: 'IM_Hyemin' , color : Colors.white),
+            labelSmall: TextStyle(fontFamily: 'IM_Hyemin' , color : Colors.white),
+            headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20 , color : Colors.white),
           ),
           appBarTheme: AppBarTheme(
-            backgroundColor: Colors.grey[900],
+            backgroundColor:  Color(0xCC000000), //Colors.grey[900],
             iconTheme: IconThemeData(color: Colors.white),
             titleTextStyle: TextStyle(fontFamily: 'Maplestory',color: Colors.white, fontSize: 20),
           ),
           bottomNavigationBarTheme: BottomNavigationBarThemeData(
-            backgroundColor: Colors.grey[900],
-            selectedItemColor: Color.fromRGBO(85,85,85, 1.0),
-            unselectedItemColor: Colors.white70,
+            backgroundColor: Color(0xCC000000), //Colors.grey[900],
+            selectedItemColor: Colors.white70,
+            unselectedItemColor: Color.fromRGBO(85,85,85, 1.0),
             selectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
             unselectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
           ),
@@ -145,16 +146,16 @@ class ThemeProvider extends ChangeNotifier {
         scaffoldBackgroundColor: Colors.white,
         fontFamily: 'IM_Hyemin', // 기본 본문 폰트
         textTheme: TextTheme(
-          bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
-          bodyMedium: TextStyle(fontFamily: 'IM_Hyemin'),
-          bodySmall: TextStyle(fontFamily: 'IM_Hyemin'),
-          labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16),
-          labelMedium: TextStyle(fontFamily: 'IM_Hyemin'),
-          labelSmall: TextStyle(fontFamily: 'IM_Hyemin'),
-          headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20),
+          bodyLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16 , color: Color(0xFF333333) ),
+          bodyMedium: TextStyle(fontFamily: 'IM_Hyemin' , color: Color(0xFF333333) ),
+          bodySmall: TextStyle(fontFamily: 'IM_Hyemin' , color: Color(0xFF333333) ),
+          labelLarge: TextStyle(fontFamily: 'IM_Hyemin', fontSize: 16 , color: Color(0xFF333333) ),
+          labelMedium: TextStyle(fontFamily: 'IM_Hyemin' , color: Color(0xFF333333) ),
+          labelSmall: TextStyle(fontFamily: 'IM_Hyemin' , color: Color(0xFF333333) ),
+          headlineSmall: TextStyle(fontFamily: 'Maplestory', fontSize: 20 , color: Color(0xFF333333) ),
         ),
         appBarTheme: AppBarTheme(
-          backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
+          backgroundColor: Color(0xFFFFC1CC),//Color.fromRGBO(255, 193, 204, 1.0),
           iconTheme: IconThemeData(color: Colors.white),
           titleTextStyle: TextStyle(
             fontFamily: 'Maplestory', // 헤더용 폰트
@@ -163,8 +164,8 @@ class ThemeProvider extends ChangeNotifier {
           ),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: Color.fromRGBO(255, 193, 204, 1.0),
-          selectedItemColor: Color.fromRGBO(255, 111, 97, 1.0),
+          backgroundColor: Color(0xFFFFC1CC),//Color.fromRGBO(255, 193, 204, 1.0),
+          selectedItemColor: Color(0xFFFF6F61),//Color.fromRGBO(255, 111, 97, 1.0),
           unselectedItemColor: Colors.white,
           selectedLabelStyle: TextStyle(fontFamily: 'Maplestory'), // 네비게이션 선택 항목 폰트
           unselectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),

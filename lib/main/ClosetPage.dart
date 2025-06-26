@@ -2,12 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 
-const kFeedBgColor = Color(0xFFfff5f8);
+// 날씨 상태별 아이콘 반환 함수 (기본값은 sunny)
+IconData getWeatherIcon(String? weather) {
+  if (weather == null) return Icons.wb_sunny;
+  switch (weather.toLowerCase()) {
+    case '맑음':
+    case 'sunny':
+      return Icons.wb_sunny;
+    case '구름많음':
+    case '흐림':
+    case 'cloudy':
+      return Icons.cloud;
+    case '구름조금':
+    case 'few clouds':
+      return Icons.wb_cloudy;
+    case '비':
+    case 'rain':
+      return Icons.umbrella;
+    case '눈':
+    case 'snow':
+      return Icons.ac_unit;
+    case '소나기':
+    case 'shower':
+      return Icons.grain;
+    default:
+      return Icons.wb_sunny; // 기본값
+  }
+}
 
 class ClosetPage extends StatefulWidget {
   final List<Map<String, dynamic>> hourlyWeather;
   final String currentUserId;
-  final int? currentTemperature; // null 허용
+  final int? currentTemperature;
 
   const ClosetPage({
     super.key,
@@ -57,30 +83,34 @@ class _ClosetPageState extends State<ClosetPage> {
     return List.generate(8, (i) => (hour + i) % 24);
   }
 
-  double? getClosestTempForHour(int targetHour) {
+  // 시간별 item 찾기
+  Map<String, dynamic>? getClosestWeatherItemForHour(int targetHour) {
     int minDiff = 25;
-    double? temp;
+    Map<String, dynamic>? found;
     for (final item in _hourlyWeather) {
-      if (item['fcstTime'] == null || item['temp'] == null) continue;
-      final fcstHour = int.tryParse(item['fcstTime'].substring(0, 2));
+      if (item['fcstTime'] == null) continue;
+      final fcstHour = int.tryParse(item['fcstTime'].toString().substring(0, 2));
       if (fcstHour == null) continue;
       final diff = (fcstHour - targetHour).abs();
       if (diff < minDiff) {
         minDiff = diff;
-        temp = double.tryParse(item['temp'].toString());
+        found = item;
       }
     }
-    return temp;
+    return found;
+  }
+
+  double? getClosestTempForHour(int targetHour) {
+    return getClosestWeatherItemForHour(targetHour)?['temp'] as double?;
   }
 
   int get displayTemperature {
-    // 0, null이 오면 시간별 데이터에서 보정
     if (widget.currentTemperature != null && widget.currentTemperature != 0) {
       return widget.currentTemperature!;
     } else {
       final nowHour = DateTime.now().hour;
       final nowTemp = getClosestTempForHour(nowHour);
-      return nowTemp?.round() ?? 22; // 못 찾으면 22도
+      return nowTemp?.round() ?? 22;
     }
   }
 
@@ -99,10 +129,9 @@ class _ClosetPageState extends State<ClosetPage> {
     if (_hourlyWeather.isEmpty) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
+            icon: Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
@@ -110,22 +139,19 @@ class _ClosetPageState extends State<ClosetPage> {
           child: Text(
             "날씨 데이터가 없습니다.\n메인에서 새로고침 후 다시 시도해주세요.",
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.redAccent, fontSize: 16),
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
+          icon: Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
-        title: const Text('', style: TextStyle(color: Colors.black)),
+        title: const Text(''),
         centerTitle: true,
       ),
       body: RefreshIndicator(
@@ -136,7 +162,6 @@ class _ClosetPageState extends State<ClosetPage> {
             children: [
               // ==== 시간별 날씨 ====
               Container(
-                color: const Color(0xfff7f8fd),
                 padding: const EdgeInsets.only(top: 8, bottom: 4),
                 child: SizedBox(
                   height: 88,
@@ -146,21 +171,21 @@ class _ClosetPageState extends State<ClosetPage> {
                     itemCount: hourList.length,
                     itemBuilder: (context, idx) {
                       final hour = hourList[idx];
-                      final temp = getClosestTempForHour(hour);
+                      final item = getClosestWeatherItemForHour(hour);
+                      final temp = item?['temp'];
+                      final weather = item?['weather']; // 예: '맑음', '흐림', '비' 등
                       return Padding(
                         padding: const EdgeInsets.only(right: 14),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('${hour.toString().padLeft(2, '0')}시',
-                                style: const TextStyle(fontSize: 12)),
+                            Text('${hour.toString().padLeft(2, '0')}시'),
                             const SizedBox(height: 2),
-                            const Icon(Icons.cloud, color: Color(0xff868eb6), size: 22),
+                            Icon(getWeatherIcon(weather), size: 22),
                             const SizedBox(height: 2),
                             Text(
-                              temp != null ? '${temp.toStringAsFixed(1)}°' : '-',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 13),
+                              temp != null ? '${temp.toString()}°' : '-',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -185,9 +210,8 @@ class _ClosetPageState extends State<ClosetPage> {
                           margin: EdgeInsets.only(right: i != _mainTabs.length - 1 ? 8 : 0),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.white : const Color(0xfffff0f6),
                             border: isSelected
-                                ? Border.all(color: Colors.pinkAccent, width: 2)
+                                ? Border.all(width: 2)
                                 : null,
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -196,8 +220,7 @@ class _ClosetPageState extends State<ClosetPage> {
                               _mainTabs[i],
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.pink : Colors.black54,
-                                fontSize: 15,
+                                color: isSelected ? Theme.of(context).colorScheme.primary : null,
                               ),
                             ),
                           ),
@@ -223,9 +246,8 @@ class _ClosetPageState extends State<ClosetPage> {
                           margin: EdgeInsets.only(right: i != _feelingTabs.length - 1 ? 6 : 0),
                           padding: const EdgeInsets.symmetric(vertical: 7),
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.white : const Color(0xfff9e8ee),
                             border: isSelected
-                                ? Border.all(color: Colors.pinkAccent, width: 2)
+                                ? Border.all(width: 2)
                                 : null,
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -234,8 +256,7 @@ class _ClosetPageState extends State<ClosetPage> {
                               label,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.pink : Colors.black54,
-                                fontSize: 15,
+                                color: isSelected ? Theme.of(context).colorScheme.primary : null,
                               ),
                             ),
                           ),
@@ -252,7 +273,7 @@ class _ClosetPageState extends State<ClosetPage> {
                 feeling: _selectedFeeling,
                 isMine: _tabIndex == 0,
                 currentUserId: widget.currentUserId,
-                temperature: displayTemperature, // ★★★
+                temperature: displayTemperature,
               ),
               const SizedBox(height: 16),
             ],
@@ -295,16 +316,11 @@ class _FeedGridState extends State<FeedGrid> {
   Future<void> fetchFeeds() async {
     setState(() { isLoading = true; });
     try {
-      // print('---[FeedGrid] fetchFeeds start---');
-      // print('필터: feeling=${widget.feeling}, isMine=${widget.isMine}, currentUserId=${widget.currentUserId}, temperature=${widget.temperature}');
       final snapshot = await FirebaseFirestore.instance
           .collection('feeds')
           .where('feeling', isEqualTo: widget.feeling)
           .orderBy('cdatetime', descending: true)
           .get();
-
-      // print('[Firestore] 받은 문서 개수: ${snapshot.docs.length}');
-      int filteredCount = 0;
 
       final items = snapshot.docs.map((doc) {
         final data = doc.data();
@@ -322,25 +338,18 @@ class _FeedGridState extends State<FeedGrid> {
             ? writeid == widget.currentUserId
             : writeid != widget.currentUserId;
 
-        // print('[doc ${data['id']}] temp=$temp, writeid=$writeid, tempMatch=$tempMatch, idMatch=$idMatch, 전체조건=${tempMatch && idMatch}');
-        // print('  Firestore feeling=${data['feeling']}, tags=${data['tags']}, content=${data['content']}');
-        if (tempMatch && idMatch) filteredCount++;
         return tempMatch && idMatch;
       }).toList();
-
-      // print('[FeedGrid] 필터링 후 피드 개수: $filteredCount');
 
       setState(() {
         feedItems = items;
         isLoading = false;
       });
-      // print('---[FeedGrid] fetchFeeds end---');
     } catch (e) {
       setState(() {
         feedItems = [];
         isLoading = false;
       });
-      // print('[FeedGrid] 에러 발생: $e');
     }
   }
 
@@ -365,7 +374,7 @@ class _FeedGridState extends State<FeedGrid> {
     if (feedItems.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 28),
-        child: Center(child: Text("피드가 없습니다.", style: TextStyle(color: Colors.black38))),
+        child: Center(child: Text("피드가 없습니다.")),
       );
     }
     return Padding(
@@ -378,7 +387,7 @@ class _FeedGridState extends State<FeedGrid> {
           crossAxisCount: 2,
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 0.7,
+          childAspectRatio: 0.70,
         ),
         itemBuilder: (context, idx) {
           final data = feedItems[idx];
@@ -409,11 +418,10 @@ class FeedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: kFeedBgColor,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.pink.withOpacity(0.05),
+            color: Theme.of(context).shadowColor.withOpacity(0.08),
             blurRadius: 3,
             offset: const Offset(0, 1),
           ),
@@ -423,18 +431,17 @@ class FeedCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 이미지: 고정 height X, 비율만 맞춤!
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: AspectRatio(
-              aspectRatio: 1, // 정사각형 사진(1:1), 세로로 길게 하고 싶으면 0.9~1.2
+              aspectRatio: 1,
               child: imageUrl != null
                   ? Image.network(
                 imageUrl!,
                 width: double.infinity,
                 fit: BoxFit.cover,
               )
-                  : Container(color: Colors.white),
+                  : Container(),
             ),
           ),
           const SizedBox(height: 8),
@@ -444,16 +451,16 @@ class FeedCard extends StatelessWidget {
                 .map((tag) => Text(
               "#$tag",
               style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xffb460a2),
-                  fontWeight: FontWeight.bold),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ))
                 .toList(),
           ),
           const SizedBox(height: 4),
           Text(
             content,
-            style: const TextStyle(fontSize: 13, color: Colors.black87),
+            style: const TextStyle(fontSize: 13),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

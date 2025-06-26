@@ -63,40 +63,40 @@
                 android:resource="@xml/my_widget_info" />
         </receiver>
 
-        <meta-data
-            android:name="com.naver.sdk.client_id"
-            android:value="@string/NAVER_CLIENT_ID" />
-        <meta-data
-            android:name="com.naver.sdk.client_secret"
-            android:value="@string/NAVER_CLIENT_SECRET" />
-        <meta-data
-            android:name="com.naver.sdk.client_name"
-            android:value="@string/NAVER_CLIENT_NAME" />
-        <activity
-            android:name="com.navercorp.nid.oauth.NidOAuthLoginActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="wearly" android:host="oauth"/>
-            </intent-filter>
-        </activity>
-        <meta-data
-            android:name="com.kakao.sdk.AppKey"
-            android:value="${kakao_app_key}"/>
-        <activity
-            android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
-            android:exported="true"
-            android:theme="@style/TransparentCompat"
-            tools:replace="android:theme">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="${kakao_scheme}" android:host="oauth"/>
-            </intent-filter>
-        </activity>
+<!--        <meta-data-->
+<!--            android:name="com.naver.sdk.client_id"-->
+<!--            android:value="@string/NAVER_CLIENT_ID" />-->
+<!--        <meta-data-->
+<!--            android:name="com.naver.sdk.client_secret"-->
+<!--            android:value="@string/NAVER_CLIENT_SECRET" />-->
+<!--        <meta-data-->
+<!--            android:name="com.naver.sdk.client_name"-->
+<!--            android:value="@string/NAVER_CLIENT_NAME" />-->ㄴ
+<!--        <activity-->
+<!--            android:name="com.navercorp.nid.oauth.NidOAuthLoginActivity"-->
+<!--            android:exported="true">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.VIEW"/>-->
+<!--                <category android:name="android.intent.category.DEFAULT"/>-->
+<!--                <category android:name="android.intent.category.BROWSABLE"/>-->
+<!--                <data android:scheme="wearly" android:host="oauth"/>-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
+<!--        <meta-data-->
+<!--            android:name="com.kakao.sdk.AppKey"-->
+<!--            android:value="${kakao_app_key}"/>-->
+<!--        <activity-->
+<!--            android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"-->
+<!--            android:exported="true"-->
+<!--            android:theme="@style/TransparentCompat"-->
+<!--            tools:replace="android:theme">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.VIEW" />-->
+<!--                <category android:name="android.intent.category.DEFAULT" />-->
+<!--                <category android:name="android.intent.category.BROWSABLE" />-->
+<!--                <data android:scheme="${kakao_scheme}" android:host="oauth"/>-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
     </application>
 
     <queries>

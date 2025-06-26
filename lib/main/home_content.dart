@@ -8,15 +8,22 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'ClosetPage.dart';
+import 'feed_widget.dart';
 import 'mypage_tab.dart';
 import 'wearly_weather_card.dart';
-import 'feed_widget.dart';
 
+// ==================== HomeContent ====================
 class HomeContent extends StatefulWidget {
   @override
   final Key key;
+  final Function(String userId) onUserTap;
+  final Function(String feedId) onFeedTap;
 
-  const HomeContent({required this.key}) : super(key: key);
+  const HomeContent({
+    required this.key,
+    required this.onUserTap,
+    required this.onFeedTap,
+  }) : super(key: key);
 
   @override
   State<HomeContent> createState() => _HomeContentState();
@@ -33,7 +40,7 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
   bool isWeatherExpanded = true;
   List<String> tagList = [];
   bool showAllTags = false;
-  List<Map<String, dynamic>> _hourlyWeather = []; // TMP+POP
+  List<Map<String, dynamic>> _hourlyWeather = [];
 
   String displayLocationName = "현재 위치";
 
@@ -184,7 +191,7 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
     DateTime yesterdayDt = now.subtract(Duration(days: 1));
     String yesterday =
         "${yesterdayDt.year.toString().padLeft(4, '0')}${yesterdayDt.month.toString().padLeft(2, '0')}${yesterdayDt.day.toString().padLeft(2, '0')}";
-    String baseTime = "2300"; // 반드시 23시
+    String baseTime = "2300";
 
     String urlFcstYesterday =
         "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?"
@@ -355,8 +362,8 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
       String? baseHour;
       String curHour = now.hour.toString().padLeft(2, '0') + "00";
 
-      int? pty; // 강수형태
-      int? sky; // 하늘상태
+      int? pty;
+      int? sky;
 
       List<Map<String, dynamic>> rehList = [];
       List<Map<String, dynamic>> wsdList = [];
@@ -449,9 +456,8 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
 
-      String encoded = jsonEncode(_hourlyWeather); // JSON 문자열로 변환
+      String encoded = jsonEncode(_hourlyWeather);
       await prefs.setString('hourlyWeather', encoded);
-
 
       cachedWeatherData = allData;
       lastFetchTime = DateTime.now();
@@ -472,14 +478,18 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     List<Widget> children = [];
 
-    if (loading) {
-      children.add(
-        Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    } else if (errorMsg != null) {
+    // 항상 카드 UI 출력, 내부에서만 로딩 처리!
+    children.add(
+      WearlyWeatherCard(
+        data: weatherData ?? {},
+        expanded: isWeatherExpanded,
+        onExpand: () => setState(() => isWeatherExpanded = true),
+        onFold: () => setState(() => isWeatherExpanded = false),
+        loading: loading,
+      ),
+    );
+
+    if (errorMsg != null) {
       children.add(
         Padding(
           padding: const EdgeInsets.all(32.0),
@@ -490,18 +500,9 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
       int tagShowLimit = 2;
 
       children.add(
-        WearlyWeatherCard(
-          data: weatherData!,
-          expanded: isWeatherExpanded,
-          onExpand: () => setState(() => isWeatherExpanded = true),
-          onFold: () => setState(() => isWeatherExpanded = false),
-        ),
-      );
-      children.add(
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
           child: Card(
-            // color: Color(0xfffdeeee),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -551,7 +552,7 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
                         onPressed: () async {
                           String? userId = await getCurrentUserId();
 
-                          if (userId != null && _hourlyWeather != null && _hourlyWeather.isNotEmpty) {
+                          if (userId != null && _hourlyWeather.isNotEmpty) {
                             int nowTemp = 0;
                             try {
                               nowTemp = int.tryParse(_hourlyWeather.first['temp'].toString()) ?? 0;
@@ -577,7 +578,6 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
                             if (encoded != null) {
                               List<dynamic> decoded = jsonDecode(encoded);
                               loadedHourlyWeather = decoded.cast<Map<String, dynamic>>();
-                              // 또는 List<Map<String, dynamic>>.from(decoded)
                             }
 
                             int nowTemp = 0;
@@ -594,16 +594,6 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
                                 currentTemperature: nowTemp,
                               ),
                             ));
-
-
-                            // print("userId >> $userId");
-                            // print("_hourlyWeather >> $_hourlyWeather");
-                            // print("_hourlyWeather.isNotEmpty >> ${_hourlyWeather.isNotEmpty}");
-
-                            // ScaffoldMessenger.of(context).showSnackBar(
-                            //   SnackBar(content: Text('날씨 데이터가 아직 준비되지 않았습니다.')),
-                            // );
-
                           }
                         },
                       ),
@@ -616,8 +606,10 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Icon(
-                              showAllTags ? Icons.expand_less_rounded : Icons.add,
-                              size: 16,
+                              showAllTags
+                                  ? Icons.keyboard_arrow_up_rounded
+                                  : Icons.keyboard_arrow_down_rounded,
+                              size: 25,
                             ),
                           ),
                         ),
@@ -647,9 +639,24 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
           ),
         ),
       );
-      children.add(TodayFeedSection(tagList: tagList));
-      children.add(ZigzagBannerSection());
-      children.add(WeeklyBestWidget());
+      // 👉 피드, 광고, 위클리 랭킹 섹션
+      children.add(
+        TodayFeedSection(
+          tagList: tagList,
+          onUserTap: widget.onUserTap,
+          onFeedTap: widget.onFeedTap,
+        ),
+      );
+
+      children.add(
+        ZigzagBannerSection(tagList: tagList),
+      );
+
+      children.add(
+        WeeklyBestWidget(
+          onUserTap: widget.onUserTap,
+        ),
+      );
     }
 
     return RefreshIndicator(

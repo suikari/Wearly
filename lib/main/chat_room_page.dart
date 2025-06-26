@@ -14,7 +14,7 @@ class ChatRoomPage extends StatefulWidget {
     required this.roomId,
     required this.targetUid,
     required this.userName,
-    this.profileUrl = 'assets/default_profile.png',
+    this.profileUrl = '',
   }) : super(key: key);
 
   @override
@@ -26,7 +26,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   final ScrollController _scrollController = ScrollController();
 
   String get myUid => FirebaseAuth.instance.currentUser?.uid ?? '';
-  String get myName => FirebaseAuth.instance.currentUser?.displayName ?? '';
+
+  Future<String> getNickname(String uid) async {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (doc.exists && doc.data()?['nickname'] != null) {
+      return doc['nickname'] as String;
+    }
+    return '알 수 없음';
+  }
 
   @override
   void initState() {
@@ -62,7 +69,11 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           const Expanded(child: Divider(thickness: 1, endIndent: 10)),
           Text(
             DateFormat('yyyy년 M월 d일', 'ko').format(date),
-            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).textTheme.bodySmall?.color,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const Expanded(child: Divider(thickness: 1, indent: 10)),
         ],
@@ -74,21 +85,21 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // 1. 메시지 저장
-    final msgRef = await FirebaseFirestore.instance
+    final fromNickname = await getNickname(myUid);
+
+    await FirebaseFirestore.instance
         .collection('chatRooms')
         .doc(widget.roomId)
         .collection('message')
         .add({
       'sender': myUid,
-      'senderName': myName,
+      'senderName': fromNickname,
       'text': text,
       'createdAt': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'text',
     });
 
-    // 2. 채팅방 정보 업데이트
     final roomRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.roomId);
     await FirebaseFirestore.instance.runTransaction((txn) async {
       final roomSnap = await txn.get(roomRef);
@@ -108,13 +119,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       });
     });
 
-    // 3. 알림 저장 (상대방만)
     await FirebaseFirestore.instance.collection('notifications').add({
-      'uid': widget.targetUid,                 // 알림 받을 사람
-      'fromUid': myUid,                        // 보낸 사람
-      'fromNickname': myName,
-      'fromProfileImg': widget.profileUrl,
-      'content': text,                         // 메시지 내용, 또는 "새 메시지가 도착했습니다" 등
+      'uid': widget.targetUid,
+      'fromUid': myUid,
+      'content': text,
       'createdAt': FieldValue.serverTimestamp(),
       'isRead': false,
       'type': 'dm',
@@ -144,7 +152,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                 margin: const EdgeInsets.only(bottom: 2),
                 decoration: BoxDecoration(
-                  color: Colors.blue[100],
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(18),
                     topRight: Radius.circular(18),
@@ -154,7 +162,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 ),
                 child: Text(
                   text,
-                  style: const TextStyle(color: Colors.black),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
                   softWrap: true,
                 ),
               ),
@@ -163,13 +171,22 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 children: [
                   Text(
                     formatTime(time),
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
                   ),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 4),
                   Icon(
                     read ? Icons.done_all : Icons.done,
                     size: 15,
-                    color: read ? Colors.blue : Colors.grey,
+                    color: read ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    read ? '읽음' : '안읽음',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: read ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               )
@@ -187,23 +204,31 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         : DateTime.now();
     final senderName = data['senderName'] ?? widget.userName;
 
-    ImageProvider getProfileImage() {
-      if (widget.profileUrl.isEmpty || widget.profileUrl == 'null') {
-        return const AssetImage('assets/default_profile.png');
+    Widget buildProfileCircle() {
+      if (widget.profileUrl.isEmpty ||
+          widget.profileUrl == 'null' ||
+          widget.profileUrl.trim() == '') {
+        return const CircleAvatar(
+          radius: 18,
+          child: Icon(Icons.person, size: 22),
+        );
       } else if (widget.profileUrl.startsWith('http')) {
-        return NetworkImage(widget.profileUrl);
+        return CircleAvatar(
+          radius: 18,
+          backgroundImage: NetworkImage(widget.profileUrl),
+        );
       } else {
-        return AssetImage(widget.profileUrl);
+        return const CircleAvatar(
+          radius: 18,
+          child: Icon(Icons.person, size: 22),
+        );
       }
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CircleAvatar(
-          radius: 18,
-          backgroundImage: getProfileImage(),
-        ),
+        buildProfileCircle(),
         const SizedBox(width: 8),
         Flexible(
           child: Column(
@@ -211,17 +236,17 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             children: [
               Text(
                 senderName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: Colors.black54,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                 margin: const EdgeInsets.only(top: 2, bottom: 2),
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                  color: Theme.of(context).colorScheme.surfaceVariant,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(18),
                     topRight: Radius.circular(18),
@@ -231,13 +256,13 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 ),
                 child: Text(
                   text,
-                  style: const TextStyle(color: Colors.black87),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   softWrap: true,
                 ),
               ),
               Text(
                 formatTime(time),
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
               ),
             ],
           ),
@@ -250,143 +275,154 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      // backgroundColor 직접 지정 X, 테마 자동
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        // backgroundColor, iconTheme, textStyle 모두 theme 적용
         elevation: 1,
         title: Row(
           children: [
-            CircleAvatar(
-              backgroundImage: (widget.profileUrl.isEmpty || widget.profileUrl == 'null')
-                  ? const AssetImage('assets/default_profile.png')
-                  : (widget.profileUrl.startsWith('http')
-                  ? NetworkImage(widget.profileUrl)
-                  : AssetImage(widget.profileUrl)) as ImageProvider,
+            (widget.profileUrl.isEmpty ||
+                widget.profileUrl == 'null' ||
+                widget.profileUrl.trim() == '')
+                ? const CircleAvatar(
               radius: 20,
-            ),
+              child: Icon(Icons.person, size: 24),
+            )
+                : (widget.profileUrl.startsWith('http')
+                ? CircleAvatar(
+              backgroundImage: NetworkImage(widget.profileUrl),
+              radius: 20,
+            )
+                : const CircleAvatar(
+              radius: 20,
+              child: Icon(Icons.person, size: 24),
+            )),
             const SizedBox(width: 10),
             Text(
               '${widget.userName} 님',
-              style: const TextStyle(
-                  color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+              style: Theme.of(context).appBarTheme.titleTextStyle,
             ),
           ],
         ),
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('chatRooms')
-            .doc(widget.roomId)
-            .collection('message')
-            .orderBy('createdAt')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final msgs = snapshot.data!.docs;
+      body: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chatRooms')
+                  .doc(widget.roomId)
+                  .collection('message')
+                  .orderBy('createdAt')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                final msgs = snapshot.data!.docs;
 
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToBottom();
-          });
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scrollToBottom();
+                });
 
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            for (final doc in msgs) {
-              final data = doc.data() as Map<String, dynamic>;
-              final sender = data['sender'] ?? '';
-              final isMe = sender == myUid;
-              final read = data['read'] ?? false;
-              if (!isMe && !read) {
-                FirebaseFirestore.instance
-                    .collection('chatRooms')
-                    .doc(widget.roomId)
-                    .collection('message')
-                    .doc(doc.id)
-                    .update({'read': true});
-              }
-            }
-            await _markMyUnreadZero();
-          });
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  for (final doc in msgs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final sender = data['sender'] ?? '';
+                    final isMe = sender == myUid;
+                    final read = data['read'] ?? false;
+                    if (!isMe && !read) {
+                      FirebaseFirestore.instance
+                          .collection('chatRooms')
+                          .doc(widget.roomId)
+                          .collection('message')
+                          .doc(doc.id)
+                          .update({'read': true});
+                    }
+                  }
+                  await _markMyUnreadZero();
+                });
 
-          return ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            itemCount: msgs.length,
-            itemBuilder: (context, i) {
-              final data = msgs[i].data() as Map<String, dynamic>;
-              final sender = data['sender'] ?? '';
-              final isMe = sender == myUid;
-              final time = data['createdAt'] is Timestamp
-                  ? (data['createdAt'] as Timestamp).toDate()
-                  : DateTime.now();
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  itemCount: msgs.length,
+                  itemBuilder: (context, i) {
+                    final data = msgs[i].data() as Map<String, dynamic>;
+                    final sender = data['sender'] ?? '';
+                    final isMe = sender == myUid;
+                    final time = data['createdAt'] is Timestamp
+                        ? (data['createdAt'] as Timestamp).toDate()
+                        : DateTime.now();
 
-              bool showDateSeparator = false;
-              if (i == 0) {
-                showDateSeparator = true;
-              } else {
-                final prev = msgs[i - 1].data() as Map<String, dynamic>;
-                final prevTime = prev['createdAt'] is Timestamp
-                    ? (prev['createdAt'] as Timestamp).toDate()
-                    : DateTime.now();
-                if (time.difference(prevTime).inDays > 0 ||
-                    time.day != prevTime.day ||
-                    time.month != prevTime.month ||
-                    time.year != prevTime.year) {
-                  showDateSeparator = true;
-                }
-              }
+                    bool showDateSeparator = false;
+                    if (i == 0) {
+                      showDateSeparator = true;
+                    } else {
+                      final prev = msgs[i - 1].data() as Map<String, dynamic>;
+                      final prevTime = prev['createdAt'] is Timestamp
+                          ? (prev['createdAt'] as Timestamp).toDate()
+                          : DateTime.now();
+                      if (time.difference(prevTime).inDays > 0 ||
+                          time.day != prevTime.day ||
+                          time.month != prevTime.month ||
+                          time.year != prevTime.year) {
+                        showDateSeparator = true;
+                      }
+                    }
 
-              List<Widget> widgets = [];
-              if (showDateSeparator) {
-                final dayTime = DateTime(time.year, time.month, time.day, 0, 0, 0);
-                widgets.add(buildDateSeparator(dayTime));
-              }
-              widgets.add(
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: isMe ? buildMyMsg(data) : buildOtherMsg(data),
-                ),
-              );
+                    List<Widget> widgets = [];
+                    if (showDateSeparator) {
+                      final dayTime = DateTime(time.year, time.month, time.day, 0, 0, 0);
+                      widgets.add(buildDateSeparator(dayTime));
+                    }
+                    widgets.add(
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: isMe ? buildMyMsg(data) : buildOtherMsg(data),
+                      ),
+                    );
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: widgets,
-              );
-            },
-          );
-        },
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          color: Colors.white,
-          padding: EdgeInsets.fromLTRB(12, 6, 12, 6),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: "메시지 보내기...",
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                  ),
-                  minLines: 1,
-                  maxLines: 4,
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.send, color: Colors.blue),
-                onPressed: sendMessage,
-              ),
-            ],
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: widgets,
+                    );
+                  },
+                );
+              },
+            ),
           ),
-        ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: "메시지 보내기...",
+                        hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                        filled: true,
+                        // fillColor: ... X (theme 적용)
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                      ),
+                      minLines: 1,
+                      maxLines: 4,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(Icons.send, color: Theme.of(context).colorScheme.primary),
+                    onPressed: sendMessage,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
