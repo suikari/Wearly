@@ -22,6 +22,7 @@ class DetailPage extends StatefulWidget {
   final VoidCallback onBack;
   final String currentUserId;
   final bool showAppBar;
+  final void Function(String)? onUserTap; // ← 콜백 타입 정의
 
   const DetailPage({
     Key? key,
@@ -29,6 +30,7 @@ class DetailPage extends StatefulWidget {
     required this.onBack,
     required this.currentUserId,
     this.showAppBar = false,
+    this.onUserTap,
   }) : super(key: key);
 
   @override
@@ -91,7 +93,13 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
-  Future<void> toggleLike(String feedId) async {
+
+
+  Future<void> toggleLike(Map<String, dynamic> feed) async {
+    final feedId = feed['id'];
+    final writeUesrid = feed['writerInfo']?['docId'];
+    final feedTitle = feed['title'];
+
     try {
       final currentLiked = isLiked;
 
@@ -106,6 +114,16 @@ class _DetailPageState extends State<DetailPage> {
       if (currentLiked) {
         await Future.wait([likeRef.delete(), userRef.delete()]);
       } else {
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'uid' : writeUesrid, // 알림 받을 사람(피드 주인)
+          'type' : 'comment',
+          'fromUid': widget.currentUserId,
+          'content': '($feedTitle)게시글을 좋아합니다. ',
+          'postId': feedId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+
         await Future.wait([
           likeRef.set({'userId': widget.currentUserId, 'createdAt': FieldValue.serverTimestamp()}),
           userRef.set({'feedId': feedId, 'createdAt': FieldValue.serverTimestamp()}),
@@ -233,87 +251,97 @@ class _DetailPageState extends State<DetailPage> {
     final subColor = customColors?.subColor ?? Colors.white;
     Color pointColor = customColors?.pointColor ?? Colors.white70;
 
-    return Scaffold(
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : feedData == null
-          ? Center(child: Text("피드를 불러올 수 없습니다."))
-          : SafeArea(
-        child: RefreshIndicator(
-          onRefresh: fetchFeedData,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.arrow_back),
-                    onPressed: widget.onBack,
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      feedData!['title'] ?? '',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Scaffold(
+        body: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : feedData == null
+            ? Center(child: Text("피드를 불러올 수 없습니다."))
+            : SafeArea(
+          child: RefreshIndicator(
+            onRefresh: fetchFeedData,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.arrow_back),
+                      onPressed: widget.onBack,
                     ),
-                  ),
-                  if (feedData!['writeid'] == widget.currentUserId)
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EditPostPage(feedId: feedData!['id']),
-                            ),
-                          );
-                        } else if (value == 'del') {
-                          deleteFeed(feedData!['id']);
-                        } else if (value == 'main') {
-                          updateMainCoordiId(feedData!['id']);
-                        }
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(value: 'edit', child: Text('수정')),
-                        PopupMenuItem(value: 'del', child: Text('삭제')),
-                        PopupMenuItem(value: 'main', child: Text('대표설정')),
-                      ],
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        feedData!['title'] ?? '',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                ],
-              ),
-              SizedBox(height: 12),
-              ImageCarouselCard(
-                imageUrls: List<String>.from(feedData!['imageUrls'] ?? []),
-                cardcolor: subColor,
-                pointColor : pointColor,
-                profileImageUrl: feedData!['writerInfo']?['profileImage'] ?? '',
-                userName: feedData!['writerInfo']?['nickname'] ?? '',
-                onUserTap: () {
-                  final docId = feedData!['writerInfo']?['docId'] ?? '';
-                  // 이동 처리
-                },
-                onShareTap: () => showShareBottomSheet(context, feedData!['id']),
-                isLiked: isLiked,
-                likeCount: likeCount,
-                onLikeToggle: () => toggleLike(feedData!['id']),
-              ),
-              SizedBox(height: 16),
-              Text(feedData!['content'] ?? '', style: TextStyle(fontSize: 16)),
-              SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(feedData!['location'] ?? '', style: TextStyle(color: Colors.grey)),
-                  Text(DateFormat('yyyy-MM-dd HH:mm').format((feedData!['cdatetime'] as Timestamp).toDate()), style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-              Divider(height: 32),
-              CommentSection(
-                key: ValueKey("comment_${feedData!['id']}"),
-                feedId: feedData!['id'],
-                currentUserId: widget.currentUserId,
-              ),
-            ],
+                    if (feedData!['writeid'] == widget.currentUserId)
+                      PopupMenuButton<String>(
+                        onOpened: (){
+                          FocusManager.instance.primaryFocus?.unfocus();
+                        },
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EditPostPage(feedId: feedData!['id']),
+                              ),
+                            );
+                          } else if (value == 'del') {
+                            deleteFeed(feedData!['id']);
+                          } else if (value == 'main') {
+                            updateMainCoordiId(feedData!['id']);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(value: 'edit', child: Text('수정')),
+                          PopupMenuItem(value: 'del', child: Text('삭제')),
+                          PopupMenuItem(value: 'main', child: Text('대표설정')),
+                        ],
+                      ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                ImageCarouselCard(
+                  imageUrls: List<String>.from(feedData!['imageUrls'] ?? []),
+                  cardcolor: subColor,
+                  pointColor : pointColor,
+                  profileImageUrl: feedData!['writerInfo']?['profileImage'] ?? '',
+                  userName: feedData!['writerInfo']?['nickname'] ?? '',
+                  onUserTap: () {
+                    final docId = feedData!['writerInfo']?['docId'] ?? '';
+                    // 이동 처리
+                  },
+                  onShareTap: () => showShareBottomSheet(context, feedData!['id']),
+                  isLiked: isLiked,
+                  likeCount: likeCount,
+                  onLikeToggle: () => toggleLike(feedData!),
+                ),
+                SizedBox(height: 16),
+                Text(feedData!['content'] ?? '', style: TextStyle(fontSize: 16)),
+                SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(feedData!['location'] ?? '', style: TextStyle(color: Colors.grey)),
+                    Text(DateFormat('yyyy-MM-dd HH:mm').format((feedData!['cdatetime'] as Timestamp).toDate()), style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+                Divider(height: 32),
+                CommentSection(
+                  key: ValueKey("comment_${feedData!['id']}"),
+                  feedId: feedData!['id'],
+                  currentUserId: widget.currentUserId,
+                  onUserTap: widget.onUserTap,
+                ),
+              ],
+            ),
           ),
         ),
       ),
