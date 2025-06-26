@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../main/chat_room_page.dart';
-import '../main/mypage_tab.dart';
 
-// uid → 닉네임/프로필 캐싱
+// 프로필 캐시 (fromUid 기준)
 final Map<String, Map<String, dynamic>> userCache = {};
 
 class NotificationPage extends StatefulWidget {
   final String uid;
-  const NotificationPage({Key? key, required this.uid}) : super(key: key);
+  final Function? onUserTap;  // 파라미터/반환값 상관없이 받음
+
+  const NotificationPage({
+    Key? key,
+    required this.uid,
+    required this.onUserTap,
+  }) : super(key: key);
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
@@ -40,6 +45,31 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
+  // 1. 5분 중복 DM 제거용 함수
+  List<DocumentSnapshot> filterDuplicateDM(List<DocumentSnapshot> docs) {
+    final List<DocumentSnapshot> result = [];
+    final Map<String, DateTime> lastDmTimeByUser = {};
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      if (data['type'] != 'dm') {
+        result.add(doc); // dm이 아니면 무조건 추가
+        continue;
+      }
+      final fromUid = data['fromUid'];
+      final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+      if (fromUid == null || createdAt == null) continue;
+
+      final lastTime = lastDmTimeByUser[fromUid];
+      if (lastTime == null || createdAt.difference(lastTime).inMinutes > 5) {
+        result.add(doc); // 5분 넘었으면 추가
+        lastDmTimeByUser[fromUid] = createdAt;
+      }
+      // 5분 이내 중복 DM은 무시!
+    }
+    return result;
+  }
+
   Future<void> fetchNotifications() async {
     if (isLoading || !hasMore) return;
     setState(() => isLoading = true);
@@ -48,7 +78,7 @@ class _NotificationPageState extends State<NotificationPage> {
         .collection('notifications')
         .where('uid', isEqualTo: widget.uid)
         .orderBy('createdAt', descending: true)
-        .limit(pageSize);
+        .limit(pageSize * 5); // 넉넉하게 받아서 필터
 
     if (lastDoc != null) {
       query = query.startAfterDocument(lastDoc!);
@@ -57,36 +87,45 @@ class _NotificationPageState extends State<NotificationPage> {
     final snap = await query.get();
 
     if (mounted) {
+      // 5분 중복 DM 필터링
+      final docs = filterDuplicateDM(snap.docs);
+
       setState(() {
-        if (snap.docs.isNotEmpty) {
-          notificationDocs.addAll(snap.docs);
-          lastDoc = snap.docs.last;
+        if (docs.isNotEmpty) {
+          notificationDocs.addAll(docs);
+          lastDoc = snap.docs.isNotEmpty ? snap.docs.last : null;
         }
-        if (snap.docs.length < pageSize) hasMore = false;
+        if (snap.docs.length < pageSize * 5) hasMore = false;
         isLoading = false;
       });
     }
   }
 
+  /// 모두 읽기
   Future<void> markAllAsRead() async {
-    final unread = notificationDocs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return data['isRead'] != true;
-    }).toList();
-
-    if (unread.isEmpty) return;
+    // 미확인 전체 (중복 DM 포함, 실제 DB에 읽음 처리)
+    final unreadQuery = await FirebaseFirestore.instance
+        .collection('notifications')
+        .where('uid', isEqualTo: widget.uid)
+        .where('isRead', isEqualTo: false)
+        .get();
+    if (unreadQuery.docs.isEmpty) return;
 
     WriteBatch batch = FirebaseFirestore.instance.batch();
-    for (var doc in unread) {
+    for (var doc in unreadQuery.docs) {
       batch.update(doc.reference, {'isRead': true});
     }
     await batch.commit();
 
+    // 0.2초 후 알림 새로고침 (즉시 반영)
+    await Future.delayed(const Duration(milliseconds: 200));
     setState(() {
-      for (var doc in unread) {
-        (doc.data() as Map<String, dynamic>)['isRead'] = true;
-      }
+      notificationDocs.clear();
+      lastDoc = null;
+      hasMore = true;
+      isLoading = false;
     });
+    await fetchNotifications();
   }
 
   @override
@@ -111,6 +150,7 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
+  // ✅ fromUid 기준 유저 정보 로드(profileImage 필드 주의!)
   Future<Map<String, dynamic>> fetchUserInfo(String uid) async {
     if (userCache.containsKey(uid)) return userCache[uid]!;
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
@@ -119,7 +159,7 @@ class _NotificationPageState extends State<NotificationPage> {
     if (doc.exists) {
       final data = doc.data();
       nickname = data?['nickname'] ?? nickname;
-      profileImg = data?['profileImg'] ?? '';
+      profileImg = data?['profileImage'] ?? '';
     }
     userCache[uid] = {'nickname': nickname, 'profileImg': profileImg};
     return userCache[uid]!;
@@ -155,21 +195,33 @@ class _NotificationPageState extends State<NotificationPage> {
         final profileImg = snapshot.data?['profileImg'] ?? '';
 
         return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Colors.white,
-            radius: 24,
-            backgroundImage: profileImg.isEmpty
-                ? AssetImage('assets/default_profile.jpg')
-                : (profileImg.startsWith('http')
-                ? NetworkImage(profileImg)
-                : AssetImage(profileImg)) as ImageProvider,
-            onBackgroundImageError: (_, __) {},
+          leading: GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              widget.onUserTap!(fromUid);
+            },
+            child: CircleAvatar(
+              backgroundColor: Colors.white,
+              radius: 24,
+              backgroundImage: profileImg.isEmpty
+                  ? AssetImage('assets/default_profile.jpg')
+                  : (profileImg.startsWith('http')
+                  ? NetworkImage(profileImg)
+                  : AssetImage(profileImg)) as ImageProvider,
+              onBackgroundImageError: (_, __) {},
+            ),
           ),
-          title: Text(
-            '${typeLabel(noti['type'])}$nickname',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: isRead ? Colors.grey : Colors.black,
+          title: GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              widget.onUserTap!(fromUid);
+            },
+            child: Text(
+              '${typeLabel(noti['type'])}$nickname',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isRead ? Colors.grey : Colors.black,
+              ),
             ),
           ),
           subtitle: Text(
@@ -179,20 +231,51 @@ class _NotificationPageState extends State<NotificationPage> {
           trailing: Text(dateStr, style: TextStyle(fontSize: 13, color: Colors.grey)),
           tileColor: isRead ? Colors.grey[100] : Colors.white,
           onTap: () async {
-            // 알림을 읽음 처리
-            await FirebaseFirestore.instance
-                .collection('notifications')
-                .doc(doc.id)
-                .update({'isRead': true});
+            // DM이면 같은 fromUid, 5분 이내 isRead==false DM 전부 읽음 처리
+            if (noti['type'] == 'dm' && noti['fromUid'] != null && noti['createdAt'] != null) {
+              final fromUid = noti['fromUid'];
+              final baseTime = (noti['createdAt'] as Timestamp).toDate();
+              final lowerBound = baseTime.subtract(Duration(minutes: 5));
+              final upperBound = baseTime.add(Duration(minutes: 5));
+              final dmSnap = await FirebaseFirestore.instance
+                  .collection('notifications')
+                  .where('uid', isEqualTo: widget.uid)
+                  .where('fromUid', isEqualTo: fromUid)
+                  .where('type', isEqualTo: 'dm')
+                  .where('isRead', isEqualTo: false)
+                  .get();
+
+              WriteBatch batch = FirebaseFirestore.instance.batch();
+              for (var d in dmSnap.docs) {
+                final dData = d.data() as Map<String, dynamic>;
+                final dTime = (dData['createdAt'] as Timestamp?)?.toDate();
+                if (dTime != null &&
+                    dTime.isAfter(lowerBound) &&
+                    dTime.isBefore(upperBound)) {
+                  batch.update(d.reference, {'isRead': true});
+                }
+              }
+              await batch.commit();
+            } else {
+              // 일반 알림 1개만
+              await FirebaseFirestore.instance
+                  .collection('notifications')
+                  .doc(doc.id)
+                  .update({'isRead': true});
+            }
 
             setState(() {
               noti['isRead'] = true;
+              notificationDocs.clear();
+              lastDoc = null;
+              hasMore = true;
+              isLoading = false;
             });
+            await fetchNotifications();
 
-            // 화면 이동
-            Future<void> navigate;
+            // DM만 별도, 나머지는 전부 탭 전환만
             if (noti['type'] == 'dm' && noti['roomId'] != null) {
-              navigate = Navigator.push(
+              Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => ChatRoomPage(
@@ -203,64 +286,10 @@ class _NotificationPageState extends State<NotificationPage> {
                   ),
                 ),
               );
-            } else if (noti['type'] == 'follow' && noti['fromUid'] != null) {
-              navigate = Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MyPageTab(
-                    userId: noti['fromUid'],
-                    onUserTap: (uid) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MyPageTab(
-                            userId: uid,
-                            onUserTap: (uid) {},
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            } else if ((noti['type'] == 'comment' || noti['type'] == 'like') &&
-                noti['postId'] != null &&
-                noti['fromUid'] != null) {
-              navigate = Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MyPageTab(
-                    userId: noti['fromUid'],
-                    onUserTap: (uid) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MyPageTab(
-                            userId: uid,
-                            onUserTap: (uid) {},
-                          ),
-                        ),
-                      );
-                    },
-                    // 필요시 selectedFeedId, showDetail 등 파라미터 추가
-                  ),
-                ),
-              );
             } else {
-              // 아무 이동이 없는 경우
-              navigate = Future.value();
+              Navigator.pop(context);
+              widget.onUserTap!(fromUid);
             }
-
-            // 여기서 await 후 새로고침!
-            await navigate;
-            // 상태 초기화 후 새로고침
-            setState(() {
-              notificationDocs.clear();
-              lastDoc = null;
-              hasMore = true;
-              isLoading = false;
-            });
-            fetchNotifications();
           },
         );
       },

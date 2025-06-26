@@ -200,7 +200,7 @@ class _HomePageState extends State<HomePage> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        appBar: CustomAppBar(),
+        appBar: CustomAppBar(onUserTap: openUserPage,),
         body: IndexedStack(
           index: _selectedIndex,
           children: _pages,

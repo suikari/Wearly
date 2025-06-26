@@ -7,8 +7,26 @@ import 'package:url_launcher/url_launcher.dart';
 import 'AdItemAddPage.dart';
 import 'mypage_tab.dart';
 
-// 관리자 UID 상수로 정의
+// 관리자 UID 상수 (본인 값으로 수정)
 const String adminUid = '2ea5nKtz9tX2LYgzaVmFfarAZGV2';
+
+// 안전한 프로필 이미지 로딩 함수
+ImageProvider getProfileImage(String? img) {
+  if (img == null || img.isEmpty) return AssetImage('assets/profile1.jpg');
+  if (img.startsWith('http')) return NetworkImage(img);
+  return AssetImage(img);
+}
+
+// === 광고 이미지 1장/여러장 모두 대응 함수 ===
+List<String> getAdPhotoUrls(Map<String, dynamic> ad) {
+  if (ad['photoUrls'] is List && (ad['photoUrls'] as List).isNotEmpty) {
+    return (ad['photoUrls'] as List).map((e) => e.toString()).toList();
+  }
+  if (ad['photoUrl'] != null && ad['photoUrl'].toString().isNotEmpty) {
+    return [ad['photoUrl'].toString()];
+  }
+  return [];
+}
 
 // (1) 피드 추천 영역
 class TodayFeedSection extends StatefulWidget {
@@ -30,8 +48,6 @@ class TodayFeedSection extends StatefulWidget {
 class _TodayFeedSectionState extends State<TodayFeedSection> {
   List<Map<String, dynamic>> feedList = [];
   bool isLoading = false;
-
-  // 펼쳐진 태그 인덱스 저장용
   Set<int> expandedTagIdx = {};
 
   @override
@@ -146,14 +162,14 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
             )
           else
             SizedBox(
-              height: 430,
+              height: 480,
               child: PageView.builder(
                 itemCount: feedList.length,
                 controller: PageController(viewportFraction: 0.81),
                 itemBuilder: (context, idx) {
                   final feed = feedList[idx];
                   final profileImg = feed['profileImgUrl'];
-                  final feedImg = (feed['imageUrls'] as List?)?.isNotEmpty == true ? feed['imageUrls'][0] : null;
+                  final feedImg = (feed['imageUrls'] as List?)?.isNotEmpty == true ? feed['imageUrls'][0]?.toString() : null;
                   final nickname = feed['nickname'] ?? '알 수 없음';
                   final tags = (feed['tags'] as List?) ?? [];
 
@@ -190,11 +206,7 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                                       child: CircleAvatar(
                                         backgroundColor: Colors.white,
                                         radius: 15,
-                                        backgroundImage: profileImg == null
-                                            ? AssetImage('assets/profile1.jpg')
-                                            : (profileImg.toString().startsWith('http')
-                                            ? NetworkImage(profileImg)
-                                            : AssetImage(profileImg)) as ImageProvider,
+                                        backgroundImage: getProfileImage(profileImg),
                                       ),
                                     ),
                                     SizedBox(width: 8),
@@ -224,9 +236,9 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(19),
-                                    child: feedImg != null
-                                        ? Image.network(feedImg, fit: BoxFit.cover)
-                                        : Icon(Icons.image, size: 62, color: Colors.white30),
+                                    child: (feedImg == null || feedImg.isEmpty)
+                                        ? Icon(Icons.image, size: 62, color: Colors.white30)
+                                        : Image.network(feedImg, fit: BoxFit.cover),
                                   ),
                                 ),
                               ),
@@ -234,10 +246,11 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                             // 태그 영역(칩 스타일) + 더보기/접기 버튼
                             Padding(
                               padding: const EdgeInsets.fromLTRB(15, 9, 0, 6),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Stack(
                                 children: [
-                                  Expanded(
+                                  // 태그 리스트 (Wrap으로 줄바꿈)
+                                  Padding(
+                                    padding: EdgeInsets.only(right: tags.length > 3 ? 30 : 0), // 더보기 아이콘 영역 확보
                                     child: Wrap(
                                       spacing: 7,
                                       runSpacing: 3,
@@ -260,26 +273,25 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                                       ).toList(),
                                     ),
                                   ),
-                                  // 태그가 3개를 초과하면 '더보기' 버튼 표시
+                                  // 더보기/접기 아이콘 (오른쪽 아래)
                                   if (tags.length > 3)
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          if (isExpanded) {
-                                            expandedTagIdx.remove(idx);
-                                          } else {
-                                            expandedTagIdx.add(idx);
-                                          }
-                                        });
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(left: 8, top: 3),
-                                        child: Text(
-                                          isExpanded ? '접기' : '더보기',
-                                          style: TextStyle(
-                                            color: Colors.blue,
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.bold,
+                                    Positioned(
+                                      bottom: 0, right: 0,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            if (isExpanded) {
+                                              expandedTagIdx.remove(idx);
+                                            } else {
+                                              expandedTagIdx.add(idx);
+                                            }
+                                          });
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(left: 8, right: 8, top: 3),
+                                          child: Icon(
+                                            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                            color: Colors.blue, size: 22,
                                           ),
                                         ),
                                       ),
@@ -300,6 +312,7 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
     );
   }
 }
+
 // (2) 광고 배너 영역 - 상단 1개, 하단 썸네일 N개
 class ZigzagBannerSection extends StatefulWidget {
   final List<String> tagList;
@@ -372,6 +385,9 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    bool isAdmin = user != null && user.uid == adminUid;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
       child: Column(
@@ -408,13 +424,14 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
                   ),
                 ),
                 Spacer(),
-                IconButton(
-                  icon: Icon(Icons.add_circle_outline, color: Color(0xffe15eef), size: 28),
-                  tooltip: '광고 업로드',
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => AdItemAddPage()));
-                  },
-                ),
+                if (isAdmin)
+                  IconButton(
+                    icon: Icon(Icons.add_circle_outline, color: Color(0xffe15eef), size: 28),
+                    tooltip: '광고 업로드',
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => AdItemAddPage()));
+                    },
+                  ),
               ],
             ),
           ),
@@ -423,74 +440,35 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
           else if (adList.isEmpty)
             SizedBox(height: 270, child: Center(child: Text('추천 태그에 맞는 광고가 없습니다.')))
           else ...[
-              GestureDetector(
-                onTap: () {
-                  if (adList[selectedIdx]['link'] != null) {
-                    _launchLink(adList[selectedIdx]['link']);
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: AspectRatio(
-                    aspectRatio: 0.78,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          adList[selectedIdx]['photoUrl'] != null
-                              ? Image.network(
-                            adList[selectedIdx]['photoUrl'],
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                Icon(Icons.image, size: 80, color: Colors.white30),
-                          )
-                              : Icon(Icons.image, size: 80, color: Colors.white30),
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.40),
-                                borderRadius: BorderRadius.only(
-                                  bottomLeft: Radius.circular(16),
-                                  bottomRight: Radius.circular(16),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    adList[selectedIdx]['itemName'] ?? '',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Icon(Icons.open_in_new, color: Colors.white70, size: 20),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: AspectRatio(
+                  aspectRatio: 0.78,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    // 핵심: 여러장 photoUrls, 한장 photoUrl 모두 지원
+                    child: _AdPhotoSlider(
+                      photoUrls: getAdPhotoUrls(adList[selectedIdx]),
+                      onTap: () {
+                        if (adList[selectedIdx]['link'] != null) {
+                          _launchLink(adList[selectedIdx]['link']);
+                        }
+                      },
                     ),
                   ),
                 ),
               ),
               Container(
                 height: 135,
-                margin: EdgeInsets.only(top: 14, left: 10, right: 10, bottom: 16), // 하단 margin 넉넉히
+                margin: EdgeInsets.only(top: 14, left: 10, right: 10, bottom: 16),
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: adList.length,
                   itemBuilder: (context, idx) {
                     final ad = adList[idx];
+                    // 썸네일도 여러장/한장 자동 지원
+                    final photoUrls = getAdPhotoUrls(ad);
+                    final thumbnail = photoUrls.isNotEmpty ? photoUrls[0] : '';
                     return GestureDetector(
                       onTap: () {
                         setState(() {
@@ -515,9 +493,9 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
                                 borderRadius: BorderRadius.circular(13),
                                 child: AspectRatio(
                                   aspectRatio: 1,
-                                  child: ad['photoUrl'] != null
+                                  child: thumbnail.isNotEmpty
                                       ? Image.network(
-                                    ad['photoUrl'],
+                                    thumbnail,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) =>
                                         Icon(Icons.image, color: Colors.white30),
@@ -568,6 +546,84 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
     );
   }
 }
+
+// 광고 이미지 슬라이더 위젯
+class _AdPhotoSlider extends StatefulWidget {
+  final List<String> photoUrls;
+  final VoidCallback? onTap;
+
+  const _AdPhotoSlider({required this.photoUrls, this.onTap});
+
+  @override
+  State<_AdPhotoSlider> createState() => _AdPhotoSliderState();
+}
+
+class _AdPhotoSliderState extends State<_AdPhotoSlider> {
+  int pageIdx = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final urls = widget.photoUrls.where((e) => e.isNotEmpty).toList();
+    if (urls.isEmpty) {
+      return Container(
+        color: Colors.grey[200],
+        child: Icon(Icons.image, size: 80, color: Colors.white30),
+      );
+    }
+    // 1장만 있을 때는 슬라이드 없이 한 장만
+    if (urls.length == 1) {
+      return GestureDetector(
+        onTap: widget.onTap,
+        child: Image.network(
+          urls[0],
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              Icon(Icons.image, size: 80, color: Colors.white30),
+        ),
+      );
+    }
+    // 여러 장일 때만 슬라이더 + 인디케이터
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        GestureDetector(
+          onTap: widget.onTap,
+          child: PageView.builder(
+            itemCount: urls.length,
+            onPageChanged: (idx) => setState(() => pageIdx = idx),
+            itemBuilder: (_, idx) {
+              final url = urls[idx];
+              return Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    Icon(Icons.image, size: 80, color: Colors.white30),
+              );
+            },
+          ),
+        ),
+        Positioned(
+          bottom: 8,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(urls.length, (i) {
+              return Container(
+                width: 9,
+                height: 9,
+                margin: EdgeInsets.symmetric(horizontal: 3),
+                decoration: BoxDecoration(
+                  color: i == pageIdx ? Colors.white : Colors.white54,
+                  shape: BoxShape.circle,
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // (3) 위클리 랭킹
 class WeeklyBestWidget extends StatefulWidget {
   final void Function(String userId) onUserTap;
@@ -701,7 +757,7 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
     final nickname = feed['nickname'] ?? '익명';
     final likeCount = feed['likeCount'] ?? 0;
     final imageUrls = (feed['imageUrls'] as List?) ?? [];
-    final feedImg = imageUrls.isNotEmpty ? imageUrls[0] : null;
+    final feedImg = imageUrls.isNotEmpty ? imageUrls[0]?.toString() : null;
     final writeid = feed['writeid'];
 
     return GestureDetector(
@@ -716,7 +772,7 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
               borderRadius: BorderRadius.circular(borderRadius),
               color: Colors.grey[200],
             ),
-            child: feedImg != null
+            child: (feedImg != null && feedImg.isNotEmpty)
                 ? ClipRRect(
               borderRadius: BorderRadius.circular(borderRadius),
               child: Image.network(feedImg, fit: BoxFit.cover),
@@ -739,9 +795,7 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
                   ),
                   child: CircleAvatar(
                     backgroundColor: Colors.white,
-                    backgroundImage: profileImg != null && profileImg.toString().startsWith('http')
-                        ? NetworkImage(profileImg)
-                        : AssetImage('assets/profile1.jpg') as ImageProvider,
+                    backgroundImage: getProfileImage(profileImg),
                   ),
                 ),
               ),
