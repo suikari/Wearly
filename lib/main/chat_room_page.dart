@@ -27,7 +27,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
   String get myUid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  // ⭐️ users에서 닉네임 가져오기
   Future<String> getNickname(String uid) async {
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (doc.exists && doc.data()?['nickname'] != null) {
@@ -70,7 +69,11 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           const Expanded(child: Divider(thickness: 1, endIndent: 10)),
           Text(
             DateFormat('yyyy년 M월 d일', 'ko').format(date),
-            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 13,
+              color: Theme.of(context).textTheme.bodySmall?.color,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const Expanded(child: Divider(thickness: 1, indent: 10)),
         ],
@@ -78,29 +81,25 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     );
   }
 
-  // ⭐️ 메시지 전송 (닉네임 동적 적용)
   Future<void> sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // 닉네임 불러오기 (users에서)
     final fromNickname = await getNickname(myUid);
 
-    // 1. 메시지 저장
     await FirebaseFirestore.instance
         .collection('chatRooms')
         .doc(widget.roomId)
         .collection('message')
         .add({
       'sender': myUid,
-      'senderName': fromNickname, // 실제 내 닉네임
+      'senderName': fromNickname,
       'text': text,
       'createdAt': FieldValue.serverTimestamp(),
       'read': false,
       'type': 'text',
     });
 
-    // 2. 채팅방 정보 업데이트
     final roomRef = FirebaseFirestore.instance.collection('chatRooms').doc(widget.roomId);
     await FirebaseFirestore.instance.runTransaction((txn) async {
       final roomSnap = await txn.get(roomRef);
@@ -120,12 +119,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       });
     });
 
-    // 3. 알림 저장 (상대방만, 닉네임 users 컬렉션 값으로)
     await FirebaseFirestore.instance.collection('notifications').add({
       'uid': widget.targetUid,
       'fromUid': myUid,
-      // 'fromNickname': fromNickname, // 여기!!
-      // 'fromProfileImg': widget.profileUrl,
       'content': text,
       'createdAt': FieldValue.serverTimestamp(),
       'isRead': false,
@@ -137,8 +133,6 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
-
-  // === "내가 보낸 메시지"에 확실한 읽음 표시! ===
   Widget buildMyMsg(Map<String, dynamic> data) {
     final text = data['text'] ?? '';
     final time = data['createdAt'] is Timestamp
@@ -158,7 +152,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                 margin: const EdgeInsets.only(bottom: 2),
                 decoration: BoxDecoration(
-                  color: Colors.blue[100],
+                  color: Theme.of(context).colorScheme.primaryContainer,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(18),
                     topRight: Radius.circular(18),
@@ -168,30 +162,29 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 ),
                 child: Text(
                   text,
-                  style: const TextStyle(color: Colors.black),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
                   softWrap: true,
                 ),
               ),
-              // 시간 + 체크 + 읽음/안읽음 표시 (확실하게!)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     formatTime(time),
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
                   ),
                   const SizedBox(width: 4),
                   Icon(
                     read ? Icons.done_all : Icons.done,
                     size: 15,
-                    color: read ? Colors.blue : Colors.grey,
+                    color: read ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     read ? '읽음' : '안읽음',
                     style: TextStyle(
                       fontSize: 11,
-                      color: read ? Colors.blue : Colors.grey,
+                      color: read ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -215,24 +208,19 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       if (widget.profileUrl.isEmpty ||
           widget.profileUrl == 'null' ||
           widget.profileUrl.trim() == '') {
-        // 이미지 없는 경우: 그냥 원형만
         return const CircleAvatar(
           radius: 18,
-          backgroundColor: Colors.grey,
-          child: Icon(Icons.person, color: Colors.white, size: 22),
+          child: Icon(Icons.person, size: 22),
         );
       } else if (widget.profileUrl.startsWith('http')) {
         return CircleAvatar(
           radius: 18,
           backgroundImage: NetworkImage(widget.profileUrl),
-          backgroundColor: Colors.grey[300],
         );
       } else {
-        // asset인데 없을 수도 있으니 try/catch
-        return CircleAvatar(
+        return const CircleAvatar(
           radius: 18,
-          backgroundColor: Colors.grey,
-          child: Icon(Icons.person, color: Colors.white, size: 22),
+          child: Icon(Icons.person, size: 22),
         );
       }
     }
@@ -248,17 +236,17 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             children: [
               Text(
                 senderName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
-                  color: Colors.black54,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                 margin: const EdgeInsets.only(top: 2, bottom: 2),
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
+                  color: Theme.of(context).colorScheme.surfaceVariant,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(18),
                     topRight: Radius.circular(18),
@@ -268,13 +256,13 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                 ),
                 child: Text(
                   text,
-                  style: const TextStyle(color: Colors.black87),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   softWrap: true,
                 ),
               ),
               Text(
                 formatTime(time),
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color),
               ),
             ],
           ),
@@ -287,41 +275,35 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      // backgroundColor 직접 지정 X, 테마 자동
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        // backgroundColor, iconTheme, textStyle 모두 theme 적용
         elevation: 1,
         title: Row(
           children: [
-            // 프로필 이미지 없으면 빈 원형만
             (widget.profileUrl.isEmpty ||
                 widget.profileUrl == 'null' ||
                 widget.profileUrl.trim() == '')
                 ? const CircleAvatar(
-              backgroundColor: Colors.grey,
               radius: 20,
-              child: Icon(Icons.person, color: Colors.white, size: 24),
+              child: Icon(Icons.person, size: 24),
             )
                 : (widget.profileUrl.startsWith('http')
                 ? CircleAvatar(
               backgroundImage: NetworkImage(widget.profileUrl),
-              backgroundColor: Colors.grey[300],
               radius: 20,
             )
                 : const CircleAvatar(
-              backgroundColor: Colors.grey,
               radius: 20,
-              child: Icon(Icons.person, color: Colors.white, size: 24),
+              child: Icon(Icons.person, size: 24),
             )),
             const SizedBox(width: 10),
             Text(
               '${widget.userName} 님',
-              style: const TextStyle(
-                  color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+              style: Theme.of(context).appBarTheme.titleTextStyle,
             ),
           ],
         ),
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Column(
         children: [
@@ -410,7 +392,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           ),
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(12, 6, 12, 16),
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 16),
               child: Row(
                 children: [
                   Expanded(
@@ -418,9 +400,9 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                       controller: _controller,
                       decoration: InputDecoration(
                         hintText: "메시지 보내기...",
-                        hintStyle: const TextStyle(color: Colors.grey),
+                        hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        // fillColor: ... X (theme 적용)
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
@@ -433,7 +415,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.send, color: Colors.blue),
+                    icon: Icon(Icons.send, color: Theme.of(context).colorScheme.primary),
                     onPressed: sendMessage,
                   ),
                 ],

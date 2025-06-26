@@ -12,8 +12,6 @@ import 'feed_widget.dart';
 import 'mypage_tab.dart';
 import 'wearly_weather_card.dart';
 
-
-
 // ==================== HomeContent ====================
 class HomeContent extends StatefulWidget {
   @override
@@ -480,14 +478,18 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     List<Widget> children = [];
 
-    if (loading) {
-      children.add(
-        Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    } else if (errorMsg != null) {
+    // 항상 카드 UI 출력, 내부에서만 로딩 처리!
+    children.add(
+      WearlyWeatherCard(
+        data: weatherData ?? {},
+        expanded: isWeatherExpanded,
+        onExpand: () => setState(() => isWeatherExpanded = true),
+        onFold: () => setState(() => isWeatherExpanded = false),
+        loading: loading,
+      ),
+    );
+
+    if (errorMsg != null) {
       children.add(
         Padding(
           padding: const EdgeInsets.all(32.0),
@@ -497,14 +499,6 @@ class _HomeContentState extends State<HomeContent> with WidgetsBindingObserver {
     } else {
       int tagShowLimit = 2;
 
-      children.add(
-        WearlyWeatherCard(
-          data: weatherData!,
-          expanded: isWeatherExpanded,
-          onExpand: () => setState(() => isWeatherExpanded = true),
-          onFold: () => setState(() => isWeatherExpanded = false),
-        ),
-      );
       children.add(
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
@@ -709,4 +703,3 @@ Map<String, int> convertGRID_GPS(double lat, double lng) {
   int y = (ro - ra * cos(theta) + YO + 0.5).floor();
   return {'x': x, 'y': y};
 }
-

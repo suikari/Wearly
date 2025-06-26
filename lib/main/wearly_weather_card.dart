@@ -5,12 +5,14 @@ class WearlyWeatherCard extends StatelessWidget {
   final bool expanded;
   final VoidCallback onExpand;
   final VoidCallback onFold;
+  final bool loading; // 추가
 
   const WearlyWeatherCard({
     required this.data,
     required this.expanded,
     required this.onExpand,
     required this.onFold,
+    this.loading = false,
     super.key,
   });
 
@@ -111,7 +113,12 @@ class WearlyWeatherCard extends StatelessWidget {
           top: expanded ? 24 : 16,
           bottom: expanded ? 16 : 8,
         ),
-        child: Column(
+        child: loading
+            ? SizedBox(
+          height: 170,
+          child: Center(child: CircularProgressIndicator()),
+        )
+            : Column(
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -150,7 +157,7 @@ class WearlyWeatherCard extends StatelessWidget {
                           SizedBox(width: 3),
                           Flexible(
                             child: Text(
-                              "${data['location']}",
+                              "${data['location'] ?? ''}",
                               style: TextStyle(color: Colors.grey[700], fontSize: 14),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,

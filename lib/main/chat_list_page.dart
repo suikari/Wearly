@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:w2wproject/common/custom_app_bar.dart';
 
 import 'chat_room_page.dart';
 
-// 팔로우 알림 전송 함수
+
 Future<void> sendFollowNotification({
   required String fromUid,
   required String fromNickname,
@@ -36,24 +37,19 @@ class _ChatListPageState extends State<ChatListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: const Text('채팅 리스트', style: TextStyle(color: Colors.black)),
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 1,
-      ),
+      appBar: CustomAppBar(title:'채팅 리스트' , MessageIcon : false),
       body: Column(
         children: [
           buildRecommendedUsersBar(),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            color: Colors.grey[100],
+            // color 제거
             child: TextField(
               decoration: InputDecoration(
                 hintText: "유저 닉네임/ID 검색...",
-                prefixIcon: Icon(Icons.search, color: Colors.blueGrey),
+                prefixIcon: Icon(Icons.search),
                 filled: true,
-                fillColor: Colors.white,
+                // fillColor: ... 제거 (theme에서 따름)
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -89,10 +85,14 @@ class _ChatListPageState extends State<ChatListPage> {
 
                 return ListView.separated(
                   itemCount: rooms.length,
-                  separatorBuilder: (context, index) => const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Divider(),
-                  ),
+                  separatorBuilder: (context, index) {
+                    // 예외 처리: separator는 최소 2개 이상일 때만
+                    if (rooms.length <= 1) return SizedBox.shrink();
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Divider(),
+                    );
+                  },
                   itemBuilder: (context, idx) {
                     final data = rooms[idx].data() as Map<String, dynamic>;
                     final uidsRaw = data['uids'];
@@ -113,7 +113,6 @@ class _ChatListPageState extends State<ChatListPage> {
                       }
                     }
 
-                    // unreadCount_<내UID> 필드로 표시
                     final unreadCount = data['unreadCount_$myUid'] ?? 0;
 
                     return FutureBuilder<DocumentSnapshot>(
@@ -141,13 +140,12 @@ class _ChatListPageState extends State<ChatListPage> {
                           leading: buildProfileAvatar(profileUrl, 22),
                           title: Text(
                             nickname,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           subtitle: Text(
                             lastMessage,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: Colors.grey[700]),
                           ),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.end,
@@ -158,11 +156,12 @@ class _ChatListPageState extends State<ChatListPage> {
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   margin: const EdgeInsets.only(bottom: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.redAccent,
+                                    // 색 직접 지정 필요시 theme 활용
+                                    color: Theme.of(context).colorScheme.error,
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.redAccent.withOpacity(0.15),
+                                        color: Theme.of(context).colorScheme.error.withOpacity(0.15),
                                         blurRadius: 2,
                                         spreadRadius: 1,
                                       )
@@ -170,8 +169,8 @@ class _ChatListPageState extends State<ChatListPage> {
                                   ),
                                   child: Text(
                                     unreadCount > 99 ? '99+' : '$unreadCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onError,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -179,7 +178,7 @@ class _ChatListPageState extends State<ChatListPage> {
                                 ),
                               Text(
                                 timeText,
-                                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                style: TextStyle(fontSize: 13),
                               ),
                             ],
                           ),
@@ -242,9 +241,12 @@ class _ChatListPageState extends State<ChatListPage> {
                 }
               }
 
+              // 예외 처리: take에서 음수 방지!
+              final int recommendTakeCount =
+              (8 - followingDocs.length).clamp(0, recommendDocs.length);
               final List<QueryDocumentSnapshot> finalDocs = [
                 ...followingDocs,
-                ...recommendDocs.take(8 - followingDocs.length)
+                ...recommendDocs.take(recommendTakeCount),
               ];
 
               if (finalDocs.isEmpty) {
@@ -282,11 +284,14 @@ class _ChatListPageState extends State<ChatListPage> {
                                   child: Container(
                                     padding: EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: Colors.black,
+                                      color: Theme.of(context).colorScheme.primary,
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
+                                      border: Border.all(
+                                        color: Theme.of(context).scaffoldBackgroundColor,
+                                        width: 2,
+                                      ),
                                     ),
-                                    child: Icon(Icons.person_add, color: Colors.white, size: 17),
+                                    child: Icon(Icons.person_add, color: Theme.of(context).colorScheme.onPrimary, size: 17),
                                   ),
                                 ),
                               ),
@@ -296,14 +301,17 @@ class _ChatListPageState extends State<ChatListPage> {
                                 child: Container(
                                   padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue[200],
+                                    color: Theme.of(context).colorScheme.secondary,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.white, width: 1),
+                                    border: Border.all(
+                                      color: Theme.of(context).scaffoldBackgroundColor,
+                                      width: 1,
+                                    ),
                                   ),
                                   child: Text(
                                     "팔로잉",
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSecondary,
                                       fontWeight: FontWeight.w600,
                                       fontSize: 10,
                                     ),
@@ -339,22 +347,20 @@ class _ChatListPageState extends State<ChatListPage> {
   Widget buildProfileAvatar(String? url, double radius) {
     if (url == null || url.trim().isEmpty || url == 'null') {
       return CircleAvatar(
-        backgroundColor: Colors.grey,
+        // 색상 직접지정 안 함, 기본값만 사용
         radius: radius,
-        child: Icon(Icons.person, color: Colors.white, size: radius),
+        child: Icon(Icons.person, size: radius),
       );
     } else if (url.startsWith('http')) {
       return CircleAvatar(
         backgroundImage: NetworkImage(url),
-        backgroundColor: Colors.grey[200],
         radius: radius,
       );
     } else {
       // asset 경로인데 없을 수 있으니 그냥 빈 원형만
       return CircleAvatar(
-        backgroundColor: Colors.grey,
         radius: radius,
-        child: Icon(Icons.person, color: Colors.white, size: radius),
+        child: Icon(Icons.person, size: radius),
       );
     }
   }
