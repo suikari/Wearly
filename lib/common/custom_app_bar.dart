@@ -10,6 +10,9 @@ import '../provider/theme_provider.dart';
 import '../main/NotificationPage.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+  @override
+  Size get preferredSize => Size.fromHeight(kToolbarHeight);
+
   final String? title;
   final VoidCallback? onMessageTap;
   final bool? MessageIcon;
@@ -23,20 +26,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.title,
     this.onMessageTap,
     this.onNotificationTap,
-<<<<<<< Bang/myPage
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-=======
     this.onUserTap,
     this.MessageIcon = true,
     Key? key,
   }) : super(key: key);
 
->>>>>>> master
   Future<Map<String, bool>> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final uid = prefs.getString('userId');
@@ -71,72 +65,78 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final titleTextStyle = appBarTheme.titleTextStyle ??
         const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600);
 
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final user = FirebaseAuth.instance.currentUser;
     final uid = user?.uid ?? '';
 
     return FutureBuilder<Map<String, bool>>(
-<<<<<<< Bang/myPage
-      future: _loadSettings(),
-      builder: (context, snapshot) {
-        final isAlarmOn = snapshot.data?['isAlarmOn'] ?? true;
-        final dmAllowed = snapshot.data?['dmAllowed'] ?? true;
+        future: _loadSettings(),
+        builder: (context, snapshot) {
+          final isAlarmOn = snapshot.data?['isAlarmOn'] ?? true;
+          final dmAllowed = snapshot.data?['dmAllowed'] ?? true;
 
-        return AppBar(
-          title: Text(title ?? '', style: titleTextStyle),
-          backgroundColor: backgroundColor,
-          iconTheme: IconThemeData(color: iconColor),
-          actions: [
-            // 메시지
-              StreamBuilder<int>(
-                stream: getUnreadMessageCountStream(uid),
-                builder: (context, snapshot) {
-                  int unreadMsgCount = snapshot.data ?? 0;
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(25),
-                    onTap: onMessageTap ??
-                            () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => ChatListPage()),
-                          );
-                        },
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.message, size: 27),
-                        ),
-                        if (unreadMsgCount > 0 && dmAllowed)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
-                              child: Text(
-                                unreadMsgCount > 99 ? '99+' : unreadMsgCount.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.2,
+          return AppBar(
+            title: Text(
+              title ?? '',
+              style: titleTextStyle,
+            ),
+            backgroundColor: backgroundColor,
+            iconTheme: IconThemeData(color: iconColor),
+            actions: [
+              if (MessageIcon == true)
+              // 메시지(채팅)
+                StreamBuilder<int>(
+                  stream: getUnreadMessageCountStream(uid),
+                  builder: (context, snapshot) {
+                    int unreadMsgCount = snapshot.data ?? 0;
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(25),
+                      onTap: onMessageTap ??
+                              () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => ChatListPage()),
+                            );
+                          },
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Icon(Icons.message, color: iconColor, size: 27),
+                          ),
+                          if (unreadMsgCount > 0 && dmAllowed)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(15),
                                 ),
-                                textAlign: TextAlign.center,
+                                constraints: const BoxConstraints(
+                                  minWidth: 15,
+                                  minHeight: 15,
+                                ),
+                                child: Text(
+                                  unreadMsgCount > 99 ? '99+' : unreadMsgCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.2,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
-            // 알림
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              // 알림(Notification) - 벽과의 여백 추가!
               StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('notifications')
@@ -146,7 +146,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 builder: (context, snapshot) {
                   final unreadNotiCount = snapshot.hasData ? snapshot.data!.docs.length : 0;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 10.0),
+                    padding: const EdgeInsets.only(right: 10.0), // ← 벽이랑 여백 확보!
                     child: InkWell(
                       borderRadius: BorderRadius.circular(25),
                       onTap: onNotificationTap ??
@@ -154,16 +154,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => NotificationPage(uid: uid),
+                                builder: (context) => NotificationPage(
+                                  uid: uid,
+                                  onUserTap: onUserTap,
+                                ),
                               ),
                             );
                           },
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
-                            child: Icon(Icons.notifications, size: 27),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Icon(Icons.notifications, color: iconColor, size: 27),
                           ),
                           if (unreadNotiCount > 0 && isAlarmOn)
                             Positioned(
@@ -175,7 +178,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                                   color: Colors.red,
                                   borderRadius: BorderRadius.circular(15),
                                 ),
-                                constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
+                                constraints: const BoxConstraints(
+                                  minWidth: 15,
+                                  minHeight: 15,
+                                ),
                                 child: Text(
                                   unreadNotiCount > 99 ? '99+' : unreadNotiCount.toString(),
                                   style: const TextStyle(
@@ -194,144 +200,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   );
                 },
               ),
-          ],
-        );
-      },
-=======
-        future: _loadSettings(),
-        builder: (context, snapshot) {
-          final isAlarmOn = snapshot.data?['isAlarmOn'] ?? true;
-          final dmAllowed = snapshot.data?['dmAllowed'] ?? true;
-
-          return AppBar(
-          title: Text(
-            title ?? '',
-            style: titleTextStyle,
-          ),
-          backgroundColor: backgroundColor,
-          iconTheme: IconThemeData(color: iconColor),
-          actions: [
-            if (MessageIcon == true)
-            // 메시지(채팅)
-            StreamBuilder<int>(
-              stream: getUnreadMessageCountStream(uid),
-              builder: (context, snapshot) {
-                int unreadMsgCount = snapshot.data ?? 0;
-                return InkWell(
-                  borderRadius: BorderRadius.circular(25),
-                  onTap: onMessageTap ??
-                          () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => ChatListPage()),
-                        );
-                      },
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Icon(Icons.message, color: iconColor, size: 27),
-                      ),
-                      if (unreadMsgCount > 0 && dmAllowed)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 15,
-                              minHeight: 15,
-                            ),
-                            child: Text(
-                              unreadMsgCount > 99 ? '99+' : unreadMsgCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                height: 1.2,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            // 알림(Notification) - 벽과의 여백 추가!
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('notifications')
-                  .where('uid', isEqualTo: uid)
-                  .where('isRead', isEqualTo: false)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                final unreadNotiCount = snapshot.hasData ? snapshot.data!.docs.length : 0;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 10.0), // ← 벽이랑 여백 확보!
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(25),
-                    onTap: onNotificationTap ??
-                            () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => NotificationPage(
-                                    uid: uid,
-                                    onUserTap: onUserTap,
-                                  ),
-                                ),
-                              );
-                        },
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.notifications, color: iconColor, size: 27),
-                        ),
-                        if (unreadNotiCount > 0 && isAlarmOn)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 15,
-                                minHeight: 15,
-                              ),
-                              child: Text(
-                                unreadNotiCount > 99 ? '99+' : unreadNotiCount.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.2,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      }
->>>>>>> master
+            ],
+          );
+        }
     );
   }
 }
