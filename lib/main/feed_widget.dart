@@ -32,7 +32,7 @@ List<String> getAdPhotoUrls(Map<String, dynamic> ad) {
 class TodayFeedSection extends StatefulWidget {
   final List<String> tagList;
   final void Function(String userId) onUserTap;
-  final void Function(String feedId) onFeedTap; // 상세 페이지 이동 콜백 추가
+  final void Function(String feedId) onFeedTap;
 
   const TodayFeedSection({
     Key? key,
@@ -76,7 +76,8 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
       return;
     }
 
-    final feedSnapshot = await FirebaseFirestore.instance.collection('feeds').get();
+    final feedSnapshot =
+    await FirebaseFirestore.instance.collection('feeds').get();
     List<Map<String, dynamic>> allFeeds = [];
 
     for (var doc in feedSnapshot.docs) {
@@ -89,7 +90,7 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
           .get();
       var userData = userDoc.data();
 
-      feedData['profileImgUrl'] = userData?['profileImageUrl'];
+      feedData['profileImgUrl'] = userData?['profileImage'] ?? '';
       feedData['nickname'] = userData?['nickname'];
       feedData['writeid'] = feedData['writeid'];
 
@@ -101,10 +102,13 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
       if (feed['tags'] == null) return false;
       List<dynamic> tags = feed['tags'];
       if (tags.isEmpty) return false;
-      return tags.any((t) =>
-      widget.tagList.contains(t) ||
-          widget.tagList.contains('#$t') ||
-          widget.tagList.any((tag) => tag.replaceAll('#', '') == t.toString().replaceAll('#', ''))
+      return tags.any(
+            (t) =>
+        widget.tagList.contains(t) ||
+            widget.tagList.contains('#$t') ||
+            widget.tagList.any(
+                  (tag) => tag.replaceAll('#', '') == t.toString().replaceAll('#', ''),
+            ),
       );
     }).toList();
 
@@ -162,14 +166,16 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
             )
           else
             SizedBox(
-              height: 480,
+              height: 450,
               child: PageView.builder(
                 itemCount: feedList.length,
                 controller: PageController(viewportFraction: 0.81),
                 itemBuilder: (context, idx) {
                   final feed = feedList[idx];
                   final profileImg = feed['profileImgUrl'];
-                  final feedImg = (feed['imageUrls'] as List?)?.isNotEmpty == true ? feed['imageUrls'][0]?.toString() : null;
+                  final feedImg = (feed['imageUrls'] as List?)?.isNotEmpty == true
+                      ? feed['imageUrls'][0]?.toString()
+                      : null;
                   final nickname = feed['nickname'] ?? '알 수 없음';
                   final tags = (feed['tags'] as List?) ?? [];
 
@@ -178,85 +184,150 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                   final tagsToShow = isExpanded ? tags : tags.take(3).toList();
 
                   return Padding(
-                    padding: const EdgeInsets.only(left: 7, right: 7, bottom: 4, top: 4),
+                    padding: const EdgeInsets.only(
+                      left: 7,
+                      right: 7,
+                      bottom: 4,
+                      top: 4,
+                    ),
                     child: Card(
                       elevation: 7,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.grey[200]!, width: 1.4),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 프로필 부분(마이페이지 이동)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 16, left: 14, bottom: 7),
-                              child: GestureDetector(
-                                onTap: () => widget.onUserTap(feed['writeid']),
-                                child: Row(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: SingleChildScrollView(
+                        physics: BouncingScrollPhysics(),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.grey[200]!,
+                              width: 1.4,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 프로필 부분(마이페이지 이동)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 16,
+                                  left: 14,
+                                  bottom: 7,
+                                ),
+                                child: GestureDetector(
+                                  onTap: () => widget.onUserTap(feed['writeid']),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.grey[300]!,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: CircleAvatar(
+                                          backgroundColor: Colors.white,
+                                          radius: 15,
+                                          backgroundImage: getProfileImage(profileImg),
+                                        ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        '$nickname 님',
+                                        style: TextStyle(
+                                          color: Colors.black87,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // 피드 이미지 부분(상세페이지 이동)
+                              Center(
+                                child: GestureDetector(
+                                  onTap: () => widget.onFeedTap(feed['feedId']),
+                                  child: Container(
+                                    margin: EdgeInsets.symmetric(vertical: 2),
+                                    width: 210,
+                                    height: 280,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(19),
+                                      color: Colors.black26,
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(19),
+                                      child: (feedImg == null || feedImg.isEmpty)
+                                          ? Icon(
+                                        Icons.image,
+                                        size: 62,
+                                        color: Colors.white30,
+                                      )
+                                          : Image.network(
+                                        feedImg,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // 태그 영역(칩 스타일) + 더보기/접기 버튼
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(15, 9, 0, 6),
+                                child: Stack(
                                   children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.grey[300]!, width: 1.5),
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        right: tags.length > 3 ? 30 : 0,
                                       ),
-                                      child: CircleAvatar(
-                                        backgroundColor: Colors.white,
-                                        radius: 15,
-                                        backgroundImage: getProfileImage(profileImg),
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      '$nickname 님',
-                                      style: TextStyle(
-                                        color: Colors.black87,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            // 피드 이미지 부분(상세페이지 이동)
-                            Center(
-                              child: GestureDetector(
-                                onTap: () => widget.onFeedTap(feed['feedId']), // 상세페이지로
-                                child: Container(
-                                  margin: EdgeInsets.symmetric(vertical: 2),
-                                  width: 210,
-                                  height: 280,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(19),
-                                    color: Colors.black26,
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(19),
-                                    child: (feedImg == null || feedImg.isEmpty)
-                                        ? Icon(Icons.image, size: 62, color: Colors.white30)
-                                        : Image.network(feedImg, fit: BoxFit.cover),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // 태그 영역(칩 스타일) + 더보기/접기 버튼
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(15, 9, 0, 6),
-                              child: Stack(
-                                children: [
-                                  // 태그 리스트 (Wrap으로 줄바꿈)
-                                  Padding(
-                                    padding: EdgeInsets.only(right: tags.length > 3 ? 30 : 0), // 더보기 아이콘 영역 확보
-                                    child: Wrap(
-                                      spacing: 7,
-                                      runSpacing: 3,
-                                      children: tagsToShow.map<Widget>((tag) =>
-                                          Container(
-                                            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 9),
+                                      child: isExpanded
+                                          ? Container(
+                                        constraints: BoxConstraints(
+                                          maxHeight: 90, // 원하는 만큼 조절
+                                        ),
+                                        child: SingleChildScrollView(
+                                          child: Wrap(
+                                            spacing: 7,
+                                            runSpacing: 3,
+                                            children: tags
+                                                .map<Widget>(
+                                                  (tag) => Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: 4,
+                                                  horizontal: 9,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Color(0xFFF2F4F8),
+                                                  borderRadius: BorderRadius.circular(11),
+                                                ),
+                                                child: Text(
+                                                  '$tag',
+                                                  style: TextStyle(
+                                                    color: Colors.black87,
+                                                    fontWeight: FontWeight.w500,
+                                                    fontSize: 12.7,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                                .toList(),
+                                          ),
+                                        ),
+                                      )
+                                          : Wrap(
+                                        spacing: 7,
+                                        runSpacing: 3,
+                                        children: tagsToShow
+                                            .map<Widget>(
+                                              (tag) => Container(
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: 4,
+                                              horizontal: 9,
+                                            ),
                                             decoration: BoxDecoration(
                                               color: Color(0xFFF2F4F8),
                                               borderRadius: BorderRadius.circular(11),
@@ -269,37 +340,46 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                                                 fontSize: 12.7,
                                               ),
                                             ),
-                                          )
-                                      ).toList(),
+                                          ),
+                                        )
+                                            .toList(),
+                                      ),
                                     ),
-                                  ),
-                                  // 더보기/접기 아이콘 (오른쪽 아래)
-                                  if (tags.length > 3)
-                                    Positioned(
-                                      bottom: 0, right: 0,
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            if (isExpanded) {
-                                              expandedTagIdx.remove(idx);
-                                            } else {
-                                              expandedTagIdx.add(idx);
-                                            }
-                                          });
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(left: 8, right: 8, top: 3),
-                                          child: Icon(
-                                            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                                            color: Colors.blue, size: 22,
+                                    if (tags.length > 3)
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              if (isExpanded) {
+                                                expandedTagIdx.remove(idx);
+                                              } else {
+                                                expandedTagIdx.add(idx);
+                                              }
+                                            });
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 8,
+                                              right: 8,
+                                              top: 3,
+                                            ),
+                                            child: Icon(
+                                              isExpanded
+                                                  ? Icons.keyboard_arrow_up
+                                                  : Icons.keyboard_arrow_down,
+                                              color: Colors.blue,
+                                              size: 22,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -316,7 +396,9 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
 // (2) 광고 배너 영역 - 상단 1개, 하단 썸네일 N개
 class ZigzagBannerSection extends StatefulWidget {
   final List<String> tagList;
-  const ZigzagBannerSection({Key? key, required this.tagList}) : super(key: key);
+
+  const ZigzagBannerSection({Key? key, required this.tagList})
+    : super(key: key);
 
   @override
   State<ZigzagBannerSection> createState() => _ZigzagBannerSectionState();
@@ -357,15 +439,22 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
     }
 
     // 태그 매칭: widget.tagList와 ad['tagId'] 교집합 1개라도 있으면 노출
-    List<Map<String, dynamic>> matchedAds = allAds.where((ad) {
-      if (ad['tagId'] == null) return false;
-      List<dynamic> adTags = ad['tagId'] is List ? ad['tagId'] : [ad['tagId']];
-      return adTags.any((t) =>
-      widget.tagList.contains(t) ||
-          widget.tagList.contains('#$t') ||
-          widget.tagList.any((tag) => tag.replaceAll('#', '') == t.toString().replaceAll('#', ''))
-      );
-    }).toList();
+    List<Map<String, dynamic>> matchedAds =
+        allAds.where((ad) {
+          if (ad['tagId'] == null) return false;
+          List<dynamic> adTags =
+              ad['tagId'] is List ? ad['tagId'] : [ad['tagId']];
+          return adTags.any(
+            (t) =>
+                widget.tagList.contains(t) ||
+                widget.tagList.contains('#$t') ||
+                widget.tagList.any(
+                  (tag) =>
+                      tag.replaceAll('#', '') ==
+                      t.toString().replaceAll('#', ''),
+                ),
+          );
+        }).toList();
 
     matchedAds.shuffle();
 
@@ -418,129 +507,149 @@ class _ZigzagBannerSectionState extends State<ZigzagBannerSection> {
                 SizedBox(width: 10),
                 Text(
                   "광고",
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
                 Spacer(),
                 if (isAdmin)
                   IconButton(
-                    icon: Icon(Icons.add_circle_outline, color: Color(0xffe15eef), size: 28),
+                    icon: Icon(
+                      Icons.add_circle_outline,
+                      color: Color(0xffe15eef),
+                      size: 28,
+                    ),
                     tooltip: '광고 업로드',
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => AdItemAddPage()));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => AdItemAddPage()),
+                      );
                     },
                   ),
               ],
             ),
           ),
           if (isLoading)
-            SizedBox(height: 270, child: Center(child: CircularProgressIndicator()))
+            SizedBox(
+              height: 270,
+              child: Center(child: CircularProgressIndicator()),
+            )
           else if (adList.isEmpty)
-            SizedBox(height: 270, child: Center(child: Text('추천 태그에 맞는 광고가 없습니다.')))
+            SizedBox(
+              height: 270,
+              child: Center(child: Text('추천 태그에 맞는 광고가 없습니다.')),
+            )
           else ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: AspectRatio(
-                  aspectRatio: 0.78,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    // 핵심: 여러장 photoUrls, 한장 photoUrl 모두 지원
-                    child: _AdPhotoSlider(
-                      photoUrls: getAdPhotoUrls(adList[selectedIdx]),
-                      onTap: () {
-                        if (adList[selectedIdx]['link'] != null) {
-                          _launchLink(adList[selectedIdx]['link']);
-                        }
-                      },
-                    ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: AspectRatio(
+                aspectRatio: 0.78,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  // 핵심: 여러장 photoUrls, 한장 photoUrl 모두 지원
+                  child: _AdPhotoSlider(
+                    photoUrls: getAdPhotoUrls(adList[selectedIdx]),
+                    onTap: () {
+                      if (adList[selectedIdx]['link'] != null) {
+                        _launchLink(adList[selectedIdx]['link']);
+                      }
+                    },
                   ),
                 ),
               ),
-              Container(
-                height: 135,
-                margin: EdgeInsets.only(top: 14, left: 10, right: 10, bottom: 16),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: adList.length,
-                  itemBuilder: (context, idx) {
-                    final ad = adList[idx];
-                    // 썸네일도 여러장/한장 자동 지원
-                    final photoUrls = getAdPhotoUrls(ad);
-                    final thumbnail = photoUrls.isNotEmpty ? photoUrls[0] : '';
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedIdx = idx;
-                        });
-                      },
-                      child: Container(
-                        width: 85,
-                        margin: EdgeInsets.symmetric(horizontal: 6),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: selectedIdx == idx ? Color(0xffe15eef) : Colors.transparent,
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(13),
+            ),
+            Container(
+              height: 135,
+              margin: EdgeInsets.only(top: 14, left: 10, right: 10, bottom: 16),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: adList.length,
+                itemBuilder: (context, idx) {
+                  final ad = adList[idx];
+                  // 썸네일도 여러장/한장 자동 지원
+                  final photoUrls = getAdPhotoUrls(ad);
+                  final thumbnail = photoUrls.isNotEmpty ? photoUrls[0] : '';
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedIdx = idx;
+                      });
+                    },
+                    child: Container(
+                      width: 85,
+                      margin: EdgeInsets.symmetric(horizontal: 6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color:
+                                    selectedIdx == idx
+                                        ? Color(0xffe15eef)
+                                        : Colors.transparent,
+                                width: 2,
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(13),
-                                child: AspectRatio(
-                                  aspectRatio: 1,
-                                  child: thumbnail.isNotEmpty
-                                      ? Image.network(
-                                    thumbnail,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        Icon(Icons.image, color: Colors.white30),
-                                  )
-                                      : Icon(Icons.image, color: Colors.white30),
-                                ),
+                              borderRadius: BorderRadius.circular(13),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(13),
+                              child: AspectRatio(
+                                aspectRatio: 1,
+                                child:
+                                    thumbnail.isNotEmpty
+                                        ? Image.network(
+                                          thumbnail,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (_, __, ___) => Icon(
+                                                Icons.image,
+                                                color: Colors.white30,
+                                              ),
+                                        )
+                                        : Icon(
+                                          Icons.image,
+                                          color: Colors.white30,
+                                        ),
                               ),
                             ),
-                            SizedBox(height: 8),
-                            Text(
-                              ad['itemName'] ?? '',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            ad['itemName'] ?? '',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
                             ),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.tag,
-                                  size: 15,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.tag,
+                                size: 15,
+                                color: Colors.grey[600],
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                (ad['tagId'] is List && ad['tagId'].isNotEmpty)
+                                    ? ad['tagId'][0]
+                                    : (ad['tagId'] ?? ''),
+                                style: TextStyle(
+                                  fontSize: 11,
                                   color: Colors.grey[600],
                                 ),
-                                SizedBox(width: 4),
-                                Text(
-                                  (ad['tagId'] is List && ad['tagId'].isNotEmpty)
-                                      ? ad['tagId'][0]
-                                      : (ad['tagId'] ?? ''),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
-            ],
+            ),
+          ],
         ],
       ),
     );
@@ -577,8 +686,9 @@ class _AdPhotoSliderState extends State<_AdPhotoSlider> {
         child: Image.network(
           urls[0],
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) =>
-              Icon(Icons.image, size: 80, color: Colors.white30),
+          errorBuilder:
+              (_, __, ___) =>
+                  Icon(Icons.image, size: 80, color: Colors.white30),
         ),
       );
     }
@@ -596,8 +706,9 @@ class _AdPhotoSliderState extends State<_AdPhotoSlider> {
               return Image.network(
                 url,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    Icon(Icons.image, size: 80, color: Colors.white30),
+                errorBuilder:
+                    (_, __, ___) =>
+                        Icon(Icons.image, size: 80, color: Colors.white30),
               );
             },
           ),
@@ -645,7 +756,8 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
   }
 
   Future<void> loadWeeklyBest() async {
-    final feedsSnap = await FirebaseFirestore.instance.collection('feeds').get();
+    final feedsSnap =
+        await FirebaseFirestore.instance.collection('feeds').get();
 
     List<Map<String, dynamic>> feedList = [];
     for (var doc in feedsSnap.docs) {
@@ -653,27 +765,34 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
       var feedId = doc.id;
 
       // 좋아요 수
-      var likesSnap = await FirebaseFirestore.instance
-          .collection('feeds')
-          .doc(feedId)
-          .collection('likes')
-          .get();
+      var likesSnap =
+          await FirebaseFirestore.instance
+              .collection('feeds')
+              .doc(feedId)
+              .collection('likes')
+              .get();
       int likeCount = likesSnap.docs.length;
 
-      // 유저 정보
-      var userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(feedData['writeid'])
-          .get();
+      var writeid = feedData['writeid'];
+
+      // 유저 정보 (UID로 Firestore에서 가져옴)
+      var userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(writeid)
+              .get();
       var userData = userDoc.data();
+
+      // Firestore에서 가져온 프로필 이미지 URL이 없으면 기본 이미지 사용
+      var profileImgUrl = userData?['profileImage'] ?? '';
 
       feedList.add({
         ...feedData,
         'feedId': feedId,
         'likeCount': likeCount,
-        'profileImgUrl': userData?['profileImageUrl'],
-        'nickname': userData?['nickname'],
-        'writeid': feedData['writeid'],
+        'profileImgUrl': profileImgUrl,
+        'nickname': userData?['nickname'] ?? '익명',
+        'writeid': writeid,
       });
     }
 
@@ -736,9 +855,21 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (weeklyBest.length > 1)
-              _buildRankingBox(weeklyBest[1], 2, 100, 22, margin: EdgeInsets.only(top: 10, right: 14)),
+              _buildRankingBox(
+                weeklyBest[1],
+                2,
+                100,
+                22,
+                margin: EdgeInsets.only(top: 10, right: 14),
+              ),
             if (weeklyBest.length > 2)
-              _buildRankingBox(weeklyBest[2], 3, 100, 22, margin: EdgeInsets.only(top: 10, left: 14)),
+              _buildRankingBox(
+                weeklyBest[2],
+                3,
+                100,
+                22,
+                margin: EdgeInsets.only(top: 10, left: 14),
+              ),
           ],
         ),
         SizedBox(height: 28),
@@ -747,12 +878,12 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
   }
 
   Widget _buildRankingBox(
-      Map<String, dynamic> feed,
-      int rank,
-      double imgSize,
-      double borderRadius, {
-        EdgeInsets? margin,
-      }) {
+    Map<String, dynamic> feed,
+    int rank,
+    double imgSize,
+    double borderRadius, {
+    EdgeInsets? margin,
+  }) {
     final profileImg = feed['profileImgUrl'];
     final nickname = feed['nickname'] ?? '익명';
     final likeCount = feed['likeCount'] ?? 0;
@@ -772,12 +903,17 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
               borderRadius: BorderRadius.circular(borderRadius),
               color: Colors.grey[200],
             ),
-            child: (feedImg != null && feedImg.isNotEmpty)
-                ? ClipRRect(
-              borderRadius: BorderRadius.circular(borderRadius),
-              child: Image.network(feedImg, fit: BoxFit.cover),
-            )
-                : Icon(Icons.image, size: imgSize / 2, color: Colors.white30),
+            child:
+                (feedImg != null && feedImg.isNotEmpty)
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(borderRadius),
+                      child: Image.network(feedImg, fit: BoxFit.cover),
+                    )
+                    : Icon(
+                      Icons.image,
+                      size: imgSize / 2,
+                      color: Colors.white30,
+                    ),
           ),
           SizedBox(height: 10),
           Row(
