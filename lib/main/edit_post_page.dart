@@ -258,6 +258,8 @@ class _EditPostPageState extends State<EditPostPage> {
     Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
     Color subColor = customColors?.subColor ?? Colors.white;
     Color pointColor = customColors?.pointColor ?? Colors.white;
+    Color highlightColor = customColors?.highlightColor ?? Colors.orange;
+
     final themeProvider = Provider.of<ThemeProvider>(context);
 
 
@@ -549,17 +551,25 @@ class _EditPostPageState extends State<EditPostPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEAF3FF),
+                                color: pointColor,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.location_on_outlined),
+                                  Icon(Icons.location_on_outlined ,
+                                      color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                      ? null
+                                      : Colors.grey),
                                   const SizedBox(width: 8),
                                   if (selectedDateTime != null &&
                                       displayLocationName != null)
                                     Text("${displayLocationName?.isNotEmpty ==
-                                        true ? displayLocationName : ''}"),
+                                        true ? displayLocationName : ''}" ,
+                                     style: TextStyle(
+                                       color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                           ? null
+                                           : Colors.grey,
+                                     ),),
                                 ],
                               ),
                             ),
@@ -580,14 +590,22 @@ class _EditPostPageState extends State<EditPostPage> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEAF3FF),
+                                  color: pointColor,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.thermostat_outlined, size: 20),
+                                    Icon(Icons.thermostat_outlined, size: 20 ,
+                                        color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                        ? null
+                                        : Colors.grey,),
                                     SizedBox(width: 8),
-                                    Text("${selectedTemp.toString() ?? " "}°C"),
+                                    Text("${selectedTemp.toString() ?? " "}°C"
+                                    , style: TextStyle(
+                                          color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                              ? null
+                                              : Colors.grey,
+                                      ),),
                                   ],
                                 ),
                               ),

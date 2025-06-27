@@ -61,8 +61,6 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    print("mainmain>> ${Navigator.canPop(context)}");
-
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(

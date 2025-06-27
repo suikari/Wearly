@@ -149,7 +149,6 @@ class _HomePageState extends State<HomePage> {
   }
   @override
   Widget build(BuildContext context) {
-    print("navnav>> ${Navigator.canPop(context)}");
     final List<Widget> _pages = [
       HomeContent(
         key: ValueKey(DateTime.now().millisecondsSinceEpoch),
