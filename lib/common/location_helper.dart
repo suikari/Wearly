@@ -37,7 +37,7 @@ class LocationHelper {
 
     if (placemarks.isNotEmpty) {
       final placemark = placemarks.first;
-      print('Placemark: ${placemark.toJson()}');
+      //print('Placemark: ${placemark.toJson()}');
       var street = placemark.street ?? '';
       street = street.replaceAll('대한민국', '').trim();
 
@@ -50,10 +50,10 @@ class LocationHelper {
         final gu = match.group(3) ?? '';
         final dong = match.group(4) ?? '';
 
-        print('doOrMetro: $doOrMetro');
-        print('city: $city');
-        print('gu: $gu');
-        print('dong: $dong');
+        //print('doOrMetro: $doOrMetro');
+        //print('city: $city');
+        //print('gu: $gu');
+        //print('dong: $dong');
 
         final parts = <String>[
           city.isNotEmpty ? city.replaceAll('시', '') : doOrMetro.replaceAll(RegExp(r'(도|광역시)'), ''),

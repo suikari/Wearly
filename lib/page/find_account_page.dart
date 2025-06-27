@@ -105,7 +105,7 @@ class _FindEmailTabState extends State<_FindEmailTab> {
       final social = userData['socialAccount'] as String?;
 
       final isSocial = (social == 'kakao' || social == 'naver');
-      print(isSocial);
+      //print(isSocial);
       setState(() {
         maskedEmailResult = isSocial ? null : maskEmail(email ?? '');
         socialAccountType = social;

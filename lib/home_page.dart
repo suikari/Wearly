@@ -147,38 +147,9 @@ class _HomePageState extends State<HomePage> {
       onUserTap: onUserTap,
     );
   }
-
-  Future<bool> _onWillPop() async {
-    if (_selectedIndex != 0) {
-      setState(() {
-        _selectedIndex = 0; // 홈 탭으로 이동
-      });
-      return false; // 뒤로가기 이벤트 취소
-    } else {
-      // 홈 탭에서 종료 확인 다이얼로그 띄우기
-      final shouldExit = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('앱 종료'),
-          content: const Text('앱을 종료하시겠습니까?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('종료'),
-            ),
-          ],
-        ),
-      );
-      return shouldExit ?? false; // true면 앱 종료, false면 종료 취소
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    print("navnav>> ${Navigator.canPop(context)}");
     final List<Widget> _pages = [
       HomeContent(
         key: ValueKey(DateTime.now().millisecondsSinceEpoch),
@@ -198,7 +169,17 @@ class _HomePageState extends State<HomePage> {
     ];
 
     return WillPopScope(
-      onWillPop: _onWillPop,
+      onWillPop: () async {
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0; // 홈 탭으로 이동
+          });
+          return false; // 뒤로가기 취소
+        } else {
+          // 종료 확인 다이얼로그 호출
+          return await showExitConfirmationDialog(context);
+        }
+      },
       child: Scaffold(
         appBar: CustomAppBar(onUserTap: openUserPage,),
         body: IndexedStack(
@@ -219,4 +200,24 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+Future<bool> showExitConfirmationDialog(BuildContext context) async {
+  return await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('앱 종료'),
+      content: const Text('앱을 종료하시겠습니까?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false), // 종료 안함
+          child: const Text('취소'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true), // 종료
+          child: const Text('종료'),
+        ),
+      ],
+    ),
+  ) ?? false; // 다이얼로그 닫혔을 경우 false
 }

@@ -29,7 +29,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
 
 
 
-    print("widget.profileImageUrl>>>>${widget.profileImageUrl}");
+    //print("widget.profileImageUrl>>>>${widget.profileImageUrl}");
     // Column(
     //   mainAxisSize: MainAxisSize.min,
     //   children: [

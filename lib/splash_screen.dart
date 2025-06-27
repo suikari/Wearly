@@ -96,6 +96,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    print("splspl>> ${Navigator.canPop(context)}");
+
     final bgColor = Theme.of(context).scaffoldBackgroundColor;
     return Scaffold(
       body: Center(

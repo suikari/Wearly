@@ -326,7 +326,7 @@ class _MyPageWidgetState extends State<MyPageTab> {
     Color Black = customColors?.textBlack ?? Colors.black;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    print("themeProvider>>${themeProvider.colorTheme}");
+    //print("themeProvider>>${themeProvider.colorTheme}");
     final screenWidth = MediaQuery.of(context).size.width;
     final followerCount = (profile['follower'] )?.length ?? 0;
     final followingCount = (profile['following'] )?.length ?? 0;
