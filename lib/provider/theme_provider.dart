@@ -116,8 +116,8 @@ class ThemeProvider extends ChangeNotifier {
           ),
           bottomNavigationBarTheme: BottomNavigationBarThemeData(
             backgroundColor: Color(0xCC000000), //Colors.grey[900],
-            selectedItemColor: Color.fromRGBO(85,85,85, 1.0),
-            unselectedItemColor: Colors.white70,
+            selectedItemColor: Colors.white70,
+            unselectedItemColor: Color.fromRGBO(85,85,85, 1.0),
             selectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
             unselectedLabelStyle: TextStyle(fontFamily: 'Maplestory'),
           ),

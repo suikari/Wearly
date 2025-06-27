@@ -72,6 +72,8 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
   }
 
   void _showImageDialog(String imageUrl) {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     showDialog(
       context: context,
       builder: (context) => Dialog(

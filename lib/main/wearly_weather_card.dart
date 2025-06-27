@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../provider/theme_provider.dart';
 
 class WearlyWeatherCard extends StatelessWidget {
+
+
   final Map<String, dynamic> data;
   final bool expanded;
   final VoidCallback onExpand;
@@ -100,6 +105,8 @@ class WearlyWeatherCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var themeProvider = Provider.of<ThemeProvider>(context);
+
     int tempDiff = (data['maxTemp'] ?? 0) - (data['minTemp'] ?? 0);
 
     return Card(
@@ -147,7 +154,9 @@ class WearlyWeatherCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 21,
-                          color: Colors.black87,
+                          color: themeProvider.colorTheme != ColorTheme.blackTheme
+                              ? Colors.black87
+                              : Colors.white,
                         ),
                       ),
                       SizedBox(height: 4),
@@ -158,7 +167,11 @@ class WearlyWeatherCard extends StatelessWidget {
                           Flexible(
                             child: Text(
                               "${data['location'] ?? ''}",
-                              style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                              style: TextStyle(
+                                  color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                      ? Colors.grey[700]
+                                      : Colors.white,
+                                  fontSize: 14),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -185,6 +198,7 @@ class WearlyWeatherCard extends StatelessWidget {
                         fontSize: 24,
                         color: getTempColor(data['temp']),
                       ),
+                      context : context,
                     ),
                     _centerInfoColumn(
                       "일교차",
@@ -198,7 +212,9 @@ class WearlyWeatherCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                  ? Colors.black87
+                                  : Colors.white,
                               height: 1.3,
                             ),
                             maxLines: 1,
@@ -207,6 +223,7 @@ class WearlyWeatherCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                        context: context
                     ),
                     _centerInfoColumn(
                       "강수 확률",
@@ -216,6 +233,8 @@ class WearlyWeatherCard extends StatelessWidget {
                         fontSize: 24,
                         color: getRainColor(data['precipitation']),
                       ),
+                        context: context
+
                     ),
                   ],
                 ),
@@ -231,6 +250,7 @@ class WearlyWeatherCard extends StatelessWidget {
                         fontSize: 18,
                         color: getWindColor(data['wind']),
                       ),
+                        context: context
                     ),
                     _centerInfoColumn(
                       "습도",
@@ -240,6 +260,8 @@ class WearlyWeatherCard extends StatelessWidget {
                         fontSize: 18,
                         color: getHumidityColor(data['humidity']),
                       ),
+                        context: context
+
                     ),
                     _centerInfoColumn(
                       "미세먼지",
@@ -251,6 +273,8 @@ class WearlyWeatherCard extends StatelessWidget {
                       ),
                       isDust: true,
                       dustValue: data['fineDust'],
+                        context: context
+
                     ),
                     _centerInfoColumn(
                       "초미세먼지",
@@ -262,6 +286,8 @@ class WearlyWeatherCard extends StatelessWidget {
                       ),
                       isDust: true,
                       dustValue: data['ultraFineDust'],
+                        context: context
+
                     ),
                   ],
                 ),
@@ -278,6 +304,8 @@ class WearlyWeatherCard extends StatelessWidget {
                     fontSize: 22,
                     color: getTempColor(data['temp']),
                   ),
+                    context: context
+
                 ),
                 _centerInfoColumn(
                   "일교차",
@@ -291,7 +319,9 @@ class WearlyWeatherCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: themeProvider.colorTheme != ColorTheme.blackTheme
+                              ? Colors.black87
+                              : Colors.white,
                           height: 1.3,
                         ),
                         maxLines: 1,
@@ -300,6 +330,8 @@ class WearlyWeatherCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                    context: context
+
                 ),
                 _centerInfoColumn(
                   "강수 확률",
@@ -309,6 +341,8 @@ class WearlyWeatherCard extends StatelessWidget {
                     fontSize: 22,
                     color: getRainColor(data['precipitation']),
                   ),
+                    context: context
+
                 ),
               ],
             ),
@@ -343,9 +377,13 @@ class WearlyWeatherCard extends StatelessWidget {
         Widget? subWidget,
         bool isDust = false,
         int? dustValue,
+        required BuildContext context,
       }) {
+    var themeProvider = Provider.of<ThemeProvider>(context);
+
     return Expanded(
-      child: Column(
+
+    child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
@@ -353,7 +391,9 @@ class WearlyWeatherCard extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
-              color: Colors.black87,
+              color: themeProvider.colorTheme != ColorTheme.blackTheme
+                  ? Colors.black87
+                  : Colors.white
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -366,7 +406,10 @@ class WearlyWeatherCard extends StatelessWidget {
                 TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 19,
-                  color: isDust ? Colors.green : Colors.black87,
+                  color: isDust ? Colors.green :
+                  themeProvider.colorTheme != ColorTheme.blackTheme
+                      ? Colors.black87
+                      : Colors.white,
                 ),
             textAlign: TextAlign.center,
             maxLines: 1,

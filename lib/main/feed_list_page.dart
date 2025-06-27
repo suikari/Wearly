@@ -94,10 +94,13 @@ class _FeedListPageState extends State<FeedListPage> {
       if (!userDoc.exists) throw Exception('User not found');
 
       final userData = userDoc.data() as Map<String, dynamic>? ?? {};
-      final List<String> myInterests = List<String>.from(userData['interest'] ?? []);
-      final List<String> followingUserIds = List<String>.from(userData['following'] ?? []);
+      final List<String> myInterests = List<String>.from(
+          userData['interest'] ?? []);
+      final List<String> followingUserIds = List<String>.from(
+          userData['following'] ?? []);
 
-      Query query = fs.collection('feeds').orderBy('cdatetime', descending: true);
+      Query query = fs.collection('feeds').orderBy(
+          'cdatetime', descending: true);
 
       // 다중 태그 필터 조건 적용
       if (filteredTags.isNotEmpty) {
@@ -155,7 +158,9 @@ class _FeedListPageState extends State<FeedListPage> {
       for (var feed in filteredItems) {
         final tags = List<String>.from(feed['tags'] ?? []);
         final writeId = feed['writeid'] ?? '';
-        final interestScore = tags.where((tag) => myInterests.contains(tag)).length;
+        final interestScore = tags
+            .where((tag) => myInterests.contains(tag))
+            .length;
 
         if (interestScore > 0) {
           feed['interestScore'] = interestScore;
@@ -204,10 +209,16 @@ class _FeedListPageState extends State<FeedListPage> {
       });
     }
   }
-  Future<void> toggleLike(String feedId) async {
-    try {
-      final currentLiked = likedStatus[feedId] ?? false;
 
+
+
+  Future<void> toggleLike(Map<String, dynamic> feed) async {
+    final feedId = feed['id'];
+    final writeUesrid = feed['writerInfo']?['docId'];
+    final feedTitle = feed['title'];
+    final currentLiked = likedStatus[feedId] ?? false;
+
+    try {
       setState(() {
         likedStatus[feedId] = !currentLiked;
         likeCounts[feedId] = (likeCounts[feedId] ?? 0) + (currentLiked ? -1 : 1);
@@ -231,6 +242,16 @@ class _FeedListPageState extends State<FeedListPage> {
           userLikeRef.delete(),
         ]);
       } else {
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'uid' : writeUesrid, // 알림 받을 사람(피드 주인)
+          'type' : 'comment',
+          'fromUid': currentUserId,
+          'content': '($feedTitle)게시글을 좋아합니다. ',
+          'postId': feedId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+
         await Future.wait([
           feedLikeRef.set({
             'userId': currentUserId,
@@ -241,6 +262,7 @@ class _FeedListPageState extends State<FeedListPage> {
             'createdAt': FieldValue.serverTimestamp(),
           }),
         ]);
+
       }
     } catch (e) {
       // 롤백
@@ -276,7 +298,10 @@ class _FeedListPageState extends State<FeedListPage> {
     }
   }
 
+
   Future<void> updateMainCoordiId(String newMainCoordiId) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     try {
       final docRef = FirebaseFirestore.instance
           .collection('users')
@@ -303,6 +328,8 @@ class _FeedListPageState extends State<FeedListPage> {
   }
 
   void showShareBottomSheet(BuildContext context, String feedId) {
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final url = 'wearly://deeplink/feedid?id=$feedId';
     final qrKey = GlobalKey();
 
@@ -433,234 +460,244 @@ class _FeedListPageState extends State<FeedListPage> {
     Color Black = customColors?.textBlack ?? Colors.black;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return Scaffold(
-      // 필터 해제용 플로팅 액션 버튼 (우하단)
-      floatingActionButton: filteredTags.isNotEmpty
-          ? FloatingActionButton.extended(
-        onPressed: () {
-          setState(() {
-            filteredTags.clear();
-            isLoading = true;
-          });
-          fetchFeedsWithWriter();
-        },
-        label: Text('필터 해제'),
-        icon: Icon(Icons.clear),
-      )
-          : null,
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-            onRefresh: () async {
-              await fetchFeedsWithWriter();
-            },
-            child: ListView.builder(
-            physics: const AlwaysScrollableScrollPhysics(),  // 이게 핵심!
-            padding: const EdgeInsets.all(12),
-            itemCount: feeds.where((feed) => feed['isPublic'] != false).length,
-            itemBuilder: (context, index) {
-            final visibleFeeds = feeds.where((feed) => feed['isPublic'] != false).toList();
-            final feed = visibleFeeds[index];
-            
-            return Padding(
-              key: ValueKey(feed['id']),
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
+      child: Scaffold(
+        // 필터 해제용 플로팅 액션 버튼 (우하단)
+        floatingActionButton: filteredTags.isNotEmpty
+            ? FloatingActionButton.extended(
+          onPressed: () {
+            setState(() {
+              filteredTags.clear();
+              isLoading = true;
+            });
+            fetchFeedsWithWriter();
+          },
+          label: Text('필터 해제'),
+          icon: Icon(Icons.clear),
+        )
+            : null,
+        body: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+              onRefresh: () async {
+                await fetchFeedsWithWriter();
+              },
+              child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),  // 이게 핵심!
+              padding: const EdgeInsets.all(12),
+              itemCount: feeds.where((feed) => feed['isPublic'] != false).length,
+              itemBuilder: (context, index) {
+              final visibleFeeds = feeds.where((feed) => feed['isPublic'] != false).toList();
+              final feed = visibleFeeds[index];
+
+              return Padding(
+                key: ValueKey(feed['id']),
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 타이틀 + 메뉴 점 세 개
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              feed['title'] ?? '',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                              ),
-                            ),
-                          ),
-                          if (feed['writeid'] != null &&
-                              feed['writeid'] == currentUserId)
-                            PopupMenuButton<String>(
-                              icon: Icon(Icons.more_vert, color: Colors.grey),
-                              onSelected: (value) {
-                                if (value == 'edit') {
-                                  openEditPostPage(context,feed['id']);
-                                } else if (value == 'del') {
-                                  deleteFeed(feed['id']);
-                                } else if (value == 'main') {
-                                  updateMainCoordiId(feed['id']);
-                                }
-                              },
-                              itemBuilder: (BuildContext context) =>
-                              <PopupMenuEntry<String>>[
-                                PopupMenuItem<String>(
-                                  value: 'edit',
-                                  child: Text('수정'),
-                                ),
-                                PopupMenuItem<String>(
-                                  value: 'del',
-                                  child: Text('삭제'),
-                                ),
-                                PopupMenuItem<String>(
-                                  value: 'main',
-                                  child: Text('대표설정'),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-            
-                      SizedBox(height: 4),
-            
-                      Row(
-                        children: [
-                          Icon(Icons.mood, size: 18, color: Colors.orangeAccent),
-                          SizedBox(width: 4),
-                          Text(
-                            feed['feeling'] ?? '',
-                            style: TextStyle(
-                              color: Colors.orangeAccent,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Icon(
-                            Icons.thermostat,
-                            size: 18,
-                            color: Colors.redAccent,
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            feed['temperature']?.toString() ?? '',
-                            style: TextStyle(
-                              color: Colors.redAccent,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-            
-                      SizedBox(height: 12),
-                      // 이미지 (중앙, 카드 너비 90%, 좌하단+우상단 라운드)
-                      Stack(
-                        children: [
-                          Center(
-                            child: ImageCarouselCard(
-                              key: ValueKey(feed['id']),
-                              cardcolor : subColor,
-                              pointColor : pointColor,
-                              imageUrls:
-                              (feed['imageUrls'] as List<dynamic>)
-                                  .map((e) => e.toString())
-                                  .toList(),
-                              profileImageUrl:
-                              feed['writerInfo']?['profileImage'] ?? '',
-                              userName:
-                              feed['writerInfo']?['nickname'] ?? '닉네임',
-                              onUserTap: () {
-                                final docId = feed['writerInfo']?['docId'] ?? '';
-                                widget.onUserTap(docId);
-                              },
-                              onShareTap: () {
-                                final feedId = feed['id']?.toString() ?? '';
-                                showShareBottomSheet(context, feedId);
-                              },
-                              isLiked: likedStatus[feed['id']] ?? false,
-                              likeCount: likeCounts[feed['id']] ?? 0,
-                              onLikeToggle: () {
-                                toggleLike(feed['id']);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-            
-                      SizedBox(height: 16),
-            
-                      Text(feed['content'] ?? '', style: TextStyle(fontSize: 16)),
-                      SizedBox(height: 12),
-                      feed['tags'] != null && feed['tags'] is List
-                          ? Wrap(
-                        spacing: 6.0,
-                        runSpacing: 2.0,
-                        children: (feed['tags'] as List)
-                            .map(
-                              (tag) => GestureDetector(
-                            onTap: () {
-                              toggleTagFilter(tag.toString());
-                            },
-                            child: Chip(
-                              label: Text(
-                                tag.toString(),
+                  elevation: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 타이틀 + 메뉴 점 세 개
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                feed['title'] ?? '',
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: filteredTags.contains(tag)
-                                      ? Colors.white
-                                      : Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
                                 ),
                               ),
-                              backgroundColor: filteredTags.contains(tag)
-                                  ? Colors.blueAccent
-                                  : Colors.grey.shade200,
-                              shape: StadiumBorder(),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 0,
-                              ),
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
                             ),
-                          ),
+                            if (feed['writeid'] != null &&
+                                feed['writeid'] == currentUserId)
+                              PopupMenuButton<String>(
+                                icon: Icon(Icons.more_vert, color: Colors.grey),
+                                onOpened: (){
+                                  FocusManager.instance.primaryFocus?.unfocus();
+                                },
+                                onSelected: (value) {
+                                  if (value == 'edit') {
+                                    openEditPostPage(context,feed['id']);
+                                  } else if (value == 'del') {
+                                    deleteFeed(feed['id']);
+                                  } else if (value == 'main') {
+                                    updateMainCoordiId(feed['id']);
+                                  }
+                                },
+                                itemBuilder: (BuildContext context) =>
+                                <PopupMenuEntry<String>>[
+                                  PopupMenuItem<String>(
+                                    value: 'edit',
+                                    child: Text('수정'),
+                                  ),
+                                  PopupMenuItem<String>(
+                                    value: 'del',
+                                    child: Text('삭제'),
+                                  ),
+                                  PopupMenuItem<String>(
+                                    value: 'main',
+                                    child: Text('대표설정'),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+
+                        SizedBox(height: 4),
+
+                        Row(
+                          children: [
+                            Icon(Icons.mood, size: 18, color: Colors.orangeAccent),
+                            SizedBox(width: 4),
+                            Text(
+                              feed['feeling'] ?? '',
+                              style: TextStyle(
+                                color: Colors.orangeAccent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Icon(
+                              Icons.thermostat,
+                              size: 18,
+                              color: Colors.redAccent,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              feed['temperature']?.toString() ?? '',
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: 12),
+                        // 이미지 (중앙, 카드 너비 90%, 좌하단+우상단 라운드)
+                        Stack(
+                          children: [
+                            Center(
+                              child: ImageCarouselCard(
+                                key: ValueKey(feed['id']),
+                                cardcolor : subColor,
+                                pointColor : pointColor,
+                                imageUrls:
+                                (feed['imageUrls'] as List<dynamic>)
+                                    .map((e) => e.toString())
+                                    .toList(),
+                                profileImageUrl:
+                                feed['writerInfo']?['profileImage'] ?? '',
+                                userName:
+                                feed['writerInfo']?['nickname'] ?? '닉네임',
+                                onUserTap: () {
+                                  final docId = feed['writerInfo']?['docId'] ?? '';
+                                  widget.onUserTap(docId);
+                                },
+                                onShareTap: () {
+                                  final feedId = feed['id']?.toString() ?? '';
+                                  showShareBottomSheet(context, feedId);
+                                },
+                                isLiked: likedStatus[feed['id']] ?? false,
+                                likeCount: likeCounts[feed['id']] ?? 0,
+                                onLikeToggle: () {
+                                  toggleLike(feed);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: 16),
+
+                        Text(feed['content'] ?? '', style: TextStyle(fontSize: 16)),
+                        SizedBox(height: 12),
+                        feed['tags'] != null && feed['tags'] is List
+                            ? Wrap(
+                          spacing: 6.0,
+                          runSpacing: 2.0,
+                          children: (feed['tags'] as List)
+                              .map(
+                                (tag) => GestureDetector(
+                              onTap: () {
+                                toggleTagFilter(tag.toString());
+                              },
+                              child: Chip(
+                                label: Text(
+                                  tag.toString(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: filteredTags.contains(tag)
+                                        ? Colors.white
+                                        : Colors.black87,
+                                  ),
+                                ),
+                                backgroundColor: filteredTags.contains(tag)
+                                    ? Colors.blueAccent
+                                    : Colors.grey.shade200,
+                                shape: StadiumBorder(),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 0,
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
+                          )
+                              .toList(),
                         )
-                            .toList(),
-                      )
-                          : SizedBox.shrink(),
-                      SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            feed['location'] ?? '',
-                            style: TextStyle(color: Colors.grey.shade500),
-                          ),
-                          Text(
-                            _formatDate(feed['cdatetime']),
-                            style: TextStyle(color: Colors.grey.shade500),
-                          ),
-                        ],
-                      ),
-            
-                      SizedBox(height: 16),
-            
-                      Divider(color: Colors.grey.shade300),
-            
-                      CommentSection(
-                        key: ValueKey("comment_${feed['id']}"),
-                        feedId: feed['id'],
-                        currentUserId: currentUserId,
-                      ),
-                    ],
+                            : SizedBox.shrink(),
+                        SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              feed['location'] ?? '',
+                              style: TextStyle(color: Colors.grey.shade500),
+                            ),
+                            Text(
+                              _formatDate(feed['cdatetime']),
+                              style: TextStyle(color: Colors.grey.shade500),
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: 16),
+
+                        Divider(color: Colors.grey.shade300),
+
+                        CommentSection(
+                          key: ValueKey("comment_${feed['id']}"),
+                          feedId: feed['id'],
+                          currentUserId: currentUserId,
+                          onUserTap: widget.onUserTap,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-                    },
-                  ),
-          ),
+              );
+                      },
+                    ),
+            ),
+      ),
     );
   }
 }

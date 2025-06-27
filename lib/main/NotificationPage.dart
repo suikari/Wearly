@@ -7,7 +7,7 @@ final Map<String, Map<String, dynamic>> userCache = {};
 
 class NotificationPage extends StatefulWidget {
   final String uid;
-  final Function? onUserTap;  // 파라미터/반환값 상관없이 받음
+  final Function? onUserTap; // 마이페이지 이동 콜백
 
   const NotificationPage({
     Key? key,
@@ -78,7 +78,7 @@ class _NotificationPageState extends State<NotificationPage> {
         .collection('notifications')
         .where('uid', isEqualTo: widget.uid)
         .orderBy('createdAt', descending: true)
-        .limit(pageSize * 5); // 넉넉하게 받아서 필터
+        .limit(pageSize * 5);
 
     if (lastDoc != null) {
       query = query.startAfterDocument(lastDoc!);
@@ -87,7 +87,6 @@ class _NotificationPageState extends State<NotificationPage> {
     final snap = await query.get();
 
     if (mounted) {
-      // 5분 중복 DM 필터링
       final docs = filterDuplicateDM(snap.docs);
 
       setState(() {
@@ -103,7 +102,6 @@ class _NotificationPageState extends State<NotificationPage> {
 
   /// 모두 읽기
   Future<void> markAllAsRead() async {
-    // 미확인 전체 (중복 DM 포함, 실제 DB에 읽음 처리)
     final unreadQuery = await FirebaseFirestore.instance
         .collection('notifications')
         .where('uid', isEqualTo: widget.uid)
@@ -117,7 +115,6 @@ class _NotificationPageState extends State<NotificationPage> {
     }
     await batch.commit();
 
-    // 0.2초 후 알림 새로고침 (즉시 반영)
     await Future.delayed(const Duration(milliseconds: 200));
     setState(() {
       notificationDocs.clear();
@@ -196,9 +193,11 @@ class _NotificationPageState extends State<NotificationPage> {
 
         return ListTile(
           leading: GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              widget.onUserTap!(fromUid);
+            onTap: () async {
+              // 마이페이지 이동 (팝 + 콜백)
+              Navigator.of(context).pop();
+              await Future.delayed(Duration(milliseconds: 50));
+              if (widget.onUserTap != null) widget.onUserTap!(fromUid);
             },
             child: CircleAvatar(
               backgroundColor: Colors.white,
@@ -212,9 +211,10 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           ),
           title: GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              widget.onUserTap!(fromUid);
+            onTap: () async {
+              Navigator.of(context).pop();
+              await Future.delayed(Duration(milliseconds: 50));
+              if (widget.onUserTap != null) widget.onUserTap!(fromUid);
             },
             child: Text(
               '${typeLabel(noti['type'])}$nickname',
@@ -231,8 +231,11 @@ class _NotificationPageState extends State<NotificationPage> {
           trailing: Text(dateStr, style: TextStyle(fontSize: 13, color: Colors.grey)),
           tileColor: isRead ? Colors.grey[100] : Colors.white,
           onTap: () async {
-            // DM이면 같은 fromUid, 5분 이내 isRead==false DM 전부 읽음 처리
-            if (noti['type'] == 'dm' && noti['fromUid'] != null && noti['createdAt'] != null) {
+            if (noti['type'] == 'dm' &&
+                noti['fromUid'] != null &&
+                noti['createdAt'] != null &&
+                noti['roomId'] != null) {
+              // DM이면 여러개 읽음 처리 후 채팅방 이동
               final fromUid = noti['fromUid'];
               final baseTime = (noti['createdAt'] as Timestamp).toDate();
               final lowerBound = baseTime.subtract(Duration(minutes: 5));
@@ -256,14 +259,28 @@ class _NotificationPageState extends State<NotificationPage> {
                 }
               }
               await batch.commit();
+
+              // 채팅방 이동 (pop 하지 않음)
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => ChatRoomPage(
+                  roomId: noti['roomId'],
+                  targetUid: noti['fromUid'],
+                  userName: nickname,
+                  profileUrl: profileImg,
+                ),
+              ));
             } else {
-              // 일반 알림 1개만
+              // 기타(팔로우/댓글/좋아요) → 읽음 처리 & 마이페이지 이동
               await FirebaseFirestore.instance
                   .collection('notifications')
                   .doc(doc.id)
                   .update({'isRead': true});
+              Navigator.of(context).pop();
+              await Future.delayed(Duration(milliseconds: 50));
+              if (widget.onUserTap != null) widget.onUserTap!(fromUid);
             }
 
+            // 새로고침
             setState(() {
               noti['isRead'] = true;
               notificationDocs.clear();
@@ -272,24 +289,6 @@ class _NotificationPageState extends State<NotificationPage> {
               isLoading = false;
             });
             await fetchNotifications();
-
-            // DM만 별도, 나머지는 전부 탭 전환만
-            if (noti['type'] == 'dm' && noti['roomId'] != null) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ChatRoomPage(
-                    roomId: noti['roomId'],
-                    targetUid: noti['fromUid'],
-                    userName: nickname,
-                    profileUrl: profileImg,
-                  ),
-                ),
-              );
-            } else {
-              Navigator.pop(context);
-              widget.onUserTap!(fromUid);
-            }
           },
         );
       },
