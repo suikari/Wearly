@@ -209,6 +209,12 @@ class _FindPasswordTabState extends State<_FindPasswordTab> {
       return;
     }
 
+    final emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
+    if (!emailRegex.hasMatch(email)) {
+      await showDialogMessage(context, "유효한 이메일 형식을 입력해주세요.");
+      return;
+    }
+
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       await showDialogMessage(context, "입력한 이메일로 비밀번호 재설정 메일이 전송되었습니다.");
