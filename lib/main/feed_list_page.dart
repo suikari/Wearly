@@ -172,10 +172,20 @@ class _FeedListPageState extends State<FeedListPage> {
         }
       }
 
-      interestFeeds.sort((a, b) =>
-          (b['interestScore'] as int).compareTo(a['interestScore'] as int));
-      followFeeds.sort((a, b) =>
-          (b['likeCount'] ?? 0).compareTo(a['likeCount'] ?? 0));
+      interestFeeds.sort((a, b) {
+        int interestCompare = (b['interestScore'] as int).compareTo(a['interestScore'] as int);
+        if (interestCompare != 0) return interestCompare;
+
+        return (b['cdatetime'] as Timestamp).compareTo(a['cdatetime'] as Timestamp);
+      });
+
+      followFeeds.sort((a, b) {
+        int likeCompare = (b['likeCount'] ?? 0).compareTo(a['likeCount'] ?? 0);
+        if (likeCompare != 0) return likeCompare;
+
+        return (b['cdatetime'] as Timestamp).compareTo(a['cdatetime'] as Timestamp);
+      });
+
       otherFeeds.sort((a, b) =>
           (b['cdatetime'] as Timestamp).compareTo(a['cdatetime'] as Timestamp));
 

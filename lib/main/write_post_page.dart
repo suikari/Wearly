@@ -12,12 +12,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_editor_plus/image_editor_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:ui' as ui;
 import 'package:intl/intl.dart';
 
 import '../provider/custom_colors.dart';
+import '../provider/theme_provider.dart';
 
 const String KMA_API_KEY = 'Wjb8zKkrrbUtY2pQXCNNv%2B5M2EqShPVq92B139bdclMwmJDylxQjPYUUF6cobHdRtf9Et%2Bq0MxDFn1Oh4tBLhg%3D%3D';
 class WritePostPage extends StatefulWidget {
@@ -369,6 +371,7 @@ class _WritePostPageState extends State<WritePostPage> {
     Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
     Color subColor = customColors?.subColor ?? Colors.white;
     Color pointColor = customColors?.pointColor ?? Colors.white;
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     final dateTimeFormat = DateFormat('yyyy-MM-dd HH:mm');
     return Scaffold(
@@ -386,7 +389,38 @@ class _WritePostPageState extends State<WritePostPage> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: selectedImages.isEmpty
-                  ? Center(child: Text('이미지를 선택해주세요.', style: TextStyle(color: Colors.grey)))
+                  ?
+                  GestureDetector(
+                    onTap: pickAndEditImages,
+                    behavior: HitTestBehavior.translucent, // 빈 공간도 터치 가능
+                    child: SizedBox.expand(  // 가능한 부모 최대 사이즈로 확장
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.image,
+                              size: 80,
+                              color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                  ? Colors.white
+                                  : null,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              '이미지를 선택해주세요.',
+                              style: TextStyle(
+                                color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                    ? Colors.white
+                                    : null,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
                   : Column(
                 children: [
                   Expanded(
@@ -452,7 +486,9 @@ class _WritePostPageState extends State<WritePostPage> {
               label: const Text('이미지 추가 및 편집'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: mainColor,
-                foregroundColor: Colors.black87,
+                foregroundColor: themeProvider.colorTheme != ColorTheme.blackTheme
+                ? Colors.white
+                : null,
               ),
             ),
             const SizedBox(height: 16),
@@ -484,7 +520,12 @@ class _WritePostPageState extends State<WritePostPage> {
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
                       child: ChoiceChip(
-                        label: Text('#$tag'),
+                        label: Text('#$tag',
+                            style: TextStyle(
+                            color: themeProvider.colorTheme != ColorTheme.blackTheme
+                              ? null
+                              : Colors.grey,
+                        )),
                         selected: isSelected,
                         onSelected: (selected) {
                           setState(() {
@@ -495,8 +536,8 @@ class _WritePostPageState extends State<WritePostPage> {
                             }
                           });
                         },
-                        selectedColor: mainColor,
-                        backgroundColor: Colors.grey.shade200,
+                        selectedColor: pointColor,
+                        backgroundColor: subColor,
                         shape: RoundedRectangleBorder(
                           side: BorderSide(color: mainColor),
                           borderRadius: BorderRadius.circular(16),

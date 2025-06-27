@@ -53,6 +53,8 @@ class ThemeProvider extends ChangeNotifier {
     switch (_colorTheme) {
       case ColorTheme.blueTheme:
         return ThemeData(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
           fontFamily: 'IM_Hyemin', // 기본 본문 폰트
           textTheme:
           TextTheme(
@@ -98,6 +100,8 @@ class ThemeProvider extends ChangeNotifier {
         );
       case ColorTheme.blackTheme:
         return ThemeData.dark().copyWith(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
           primaryColor: Colors.grey[900],
           scaffoldBackgroundColor: Color.fromRGBO(51, 51, 51, 1.0),
           textTheme: TextTheme(
@@ -142,6 +146,8 @@ class ThemeProvider extends ChangeNotifier {
       case ColorTheme.defaultTheme:
       default:
       return ThemeData(
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
         primarySwatch: defaultSwatch,
         scaffoldBackgroundColor: Colors.white,
         fontFamily: 'IM_Hyemin', // 기본 본문 폰트

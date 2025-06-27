@@ -5,6 +5,7 @@ import 'package:w2wproject/common/custom_app_bar.dart';
 import '../../home_page.dart';
 import '../../login_page.dart';
 import '../../page/notification_page.dart';
+import '../../provider/custom_colors.dart';
 import '../../provider/theme_provider.dart'; // ThemeProvider 경로 맞게 수정
 
 class SettingsPage extends StatefulWidget {
@@ -143,6 +144,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final customColors = Theme.of(context).extension<CustomColors>();
+    Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
+    Color subColor = customColors?.subColor ?? Colors.white;
+    Color pointColor = customColors?.pointColor ?? Colors.white70;
+    Color highlightColor = customColors?.highlightColor ?? Colors.orange;
+    Color Grey = customColors?.textGrey ?? Colors.grey;
+    Color White = customColors?.textWhite ?? Colors.white;
+    Color Black = customColors?.textBlack ?? Colors.black;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return WillPopScope(
         onWillPop: () async {
           Navigator.pushAndRemoveUntil(
@@ -161,7 +172,7 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle(Icons.notifications, '알림 설정'),
+              _buildSectionTitle(Icons.notifications, pointColor , '알림 설정'),
               Row(
                 children: [
                   // ElevatedButton(
@@ -181,9 +192,12 @@ class _SettingsPageState extends State<SettingsPage> {
                       _saveIsAlarmOn(true);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isAlarmOn ? Colors.pink : Colors.grey[300],
+                      backgroundColor: isAlarmOn ? pointColor : subColor,
                     ),
-                    child: const Text('숫자알림', style: TextStyle(color: Colors.white)),
+                    child: Text('숫자알림', style: TextStyle(
+                      color: themeProvider.colorTheme != ColorTheme.blackTheme
+                        ? Black
+                        : Grey,)),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
@@ -194,22 +208,25 @@ class _SettingsPageState extends State<SettingsPage> {
                       _saveIsAlarmOn(false);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: !isAlarmOn ? Colors.pink : Colors.grey[300],
+                      backgroundColor: !isAlarmOn ? pointColor : subColor,
                     ),
-                    child: const Text('알림안봄', style: TextStyle(color: Colors.white)),
+                    child: Text('알림안봄', style: TextStyle(
+                      color: themeProvider.colorTheme != ColorTheme.blackTheme
+                        ? Black
+                        : Grey,)),
                   ),
                 ],
               ),
               const Divider(height: 32),
-              _buildSectionTitle(Icons.mark_chat_unread, 'DM 설정'),
+              _buildSectionTitle(Icons.mark_chat_unread, pointColor, 'DM 설정'),
               Row(
                 children: [
-                  _toggleButton('숫자알림', dmAllowed, () {
+                  _toggleButton('숫자알림', dmAllowed, pointColor , subColor , themeProvider , () {
                     setState(() => dmAllowed = true);
                     _saveDmAllowed(true);
                   }),
                   const SizedBox(width: 8),
-                  _toggleButton('알림안봄', !dmAllowed, () {
+                  _toggleButton('알림안봄', !dmAllowed, pointColor , subColor ,themeProvider , () {
                     setState(() => dmAllowed = false);
                     _saveDmAllowed(false);
                   }),
@@ -238,7 +255,7 @@ class _SettingsPageState extends State<SettingsPage> {
               //   ),
               // ),
               const Divider(height: 32),
-              _buildSectionTitle(Icons.color_lens, '테마 설정'),
+              _buildSectionTitle(Icons.color_lens, pointColor, '테마 설정'),
               Row(
                 children: List.generate(themeColors.length, (index) {
                   return GestureDetector(
@@ -251,7 +268,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: themeColors[index],
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: selectedThemeIndex == index ? Colors.pink : Colors.transparent,
+                          color: selectedThemeIndex == index ? pointColor : Colors.transparent,
                           width: 3,
                         ),
                       ),
@@ -267,8 +284,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: const Icon(Icons.logout),
                   label: const Text('로그아웃'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.white,
+                    backgroundColor: highlightColor,
+                    foregroundColor: themeProvider.colorTheme != ColorTheme.blackTheme
+                    ? Black
+                      : Grey,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
                 ),
@@ -281,10 +300,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSectionTitle(IconData icon, String title) {
+  Widget _buildSectionTitle(IconData icon, Color point, String title) {
     return Row(
       children: [
-        Icon(icon, color: Colors.pink),
+        Icon(icon, color: point),
         const SizedBox(width: 8),
         Text(
           title,
@@ -294,12 +313,14 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _toggleButton(String label, bool selected, VoidCallback onPressed) {
+  Widget _toggleButton(String label, bool selected, Color point , Color sub , ThemeProvider themeProvider , VoidCallback onPressed) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: selected ? Colors.pink : Colors.grey[300],
-        foregroundColor: Colors.white,
+        backgroundColor: selected ? point : sub,
+        foregroundColor: themeProvider.colorTheme != ColorTheme.blackTheme
+          ? Colors.black87
+            : Colors.grey ,
       ),
       child: Text(label),
     );
