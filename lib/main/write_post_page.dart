@@ -402,16 +402,16 @@ class _WritePostPageState extends State<WritePostPage> {
                               Icons.image,
                               size: 80,
                               color: themeProvider.colorTheme != ColorTheme.blackTheme
-                                  ? Colors.white
-                                  : null,
+                                  ? null
+                                  : Colors.white,
                             ),
                             SizedBox(height: 16),
                             Text(
                               '이미지를 선택해주세요.',
                               style: TextStyle(
                                 color: themeProvider.colorTheme != ColorTheme.blackTheme
-                                    ? Colors.white
-                                    : null,
+                                    ? null
+                                    : Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w500,
                               ),

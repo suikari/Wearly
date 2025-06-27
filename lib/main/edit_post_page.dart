@@ -272,320 +272,283 @@ class _EditPostPageState extends State<EditPostPage> {
 
     final allImagesCount = existingImageUrls.length + selectedImages.length;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('게시글 수정')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 이미지 영역
-            Container(
-              height: 500,
-              decoration: BoxDecoration(
-                border: Border.all(color: mainColor),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: allImagesCount == 0
-                      ? GestureDetector(
-                    onTap: pickAndEditImages,
-                    behavior: HitTestBehavior.translucent, // 빈 공간도 터치 가능
-                    child: SizedBox.expand(  // 가능한 부모 최대 사이즈로 확장
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.image,
-                              size: 80,
-                              color: themeProvider.colorTheme != ColorTheme.blackTheme
-                                  ? Colors.white
-                                  : null,                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              '이미지를 선택해주세요.',
-                              style: TextStyle(
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('게시글 수정')),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 이미지 영역
+              Container(
+                height: 500,
+                decoration: BoxDecoration(
+                  border: Border.all(color: mainColor),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: allImagesCount == 0
+                        ? GestureDetector(
+                      onTap: pickAndEditImages,
+                      behavior: HitTestBehavior.translucent, // 빈 공간도 터치 가능
+                      child: SizedBox.expand(  // 가능한 부모 최대 사이즈로 확장
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.image,
+                                size: 80,
                                 color: themeProvider.colorTheme != ColorTheme.blackTheme
-                                    ? Colors.white
-                                    : null,                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  )
-                  : Column(
-                children: [
-                  Expanded(
-                    child: PageView.builder(
-                      itemCount: allImagesCount,
-                      onPageChanged: (index) =>
-                          setState(() => currentPageIndex = index),
-                      itemBuilder: (context, index) {
-                        if (index < existingImageUrls.length) {
-                          // Firestore 저장된 이미지 URL
-                          final url = existingImageUrls[index];
-                          return Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: SizedBox.expand(
-                                  child: Image.network(url, fit: BoxFit.cover),
-                                ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: GestureDetector(
-                                  onTap: () => removeExistingImageAt(index),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black45,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    padding: const EdgeInsets.all(6),
-                                    child: const Icon(
-                                        Icons.close, color: Colors.white),
-                                  ),
+                                    ? null
+                                    : Colors.white,                            ),
+                              SizedBox(height: 16),
+                              Text(
+                                '이미지를 선택해주세요.',
+                                style: TextStyle(
+                                  color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                      ? null
+                                      : Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
-                          );
-                        } else {
-                          // 새로 선택한 로컬 이미지
-                          final fileIndex = index - existingImageUrls.length;
-                          return Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: SizedBox.expand(
-                                  child: Image.file(selectedImages[fileIndex],
-                                      fit: BoxFit.cover),
-                                ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: GestureDetector(
-                                  onTap: () => removeSelectedImageAt(fileIndex),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black45,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    padding: const EdgeInsets.all(6),
-                                    child: const Icon(
-                                        Icons.close, color: Colors.white),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (allImagesCount > 1)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(allImagesCount, (index) {
-                        return Container(
-                          width: 8,
-                          height: 8,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: currentPageIndex == index
-                                ? mainColor
-                                : Colors.grey,
                           ),
-                        );
-                      }),
-                    ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: pickAndEditImages,
-              icon: const Icon(Icons.add_photo_alternate),
-              label: const Text('이미지 추가 및 편집'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: mainColor,
-                foregroundColor: themeProvider.colorTheme != ColorTheme.blackTheme
-                    ? Colors.white
-                    : null,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            TextField(
-              controller: titleController,
-              decoration: InputDecoration(
-                hintText: '제목을 입력해주세요...',
-                border: OutlineInputBorder(
-                    borderSide: BorderSide(color: mainColor)),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-            TextField(
-              controller: contentController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                hintText: '내용을 입력해주세요...',
-                border: OutlineInputBorder(
-                    borderSide: BorderSide(color: mainColor)),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            // 태그 선택 UI
-            for (var category in categoryTags.keys) ...[
-              Text('#$category',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: categoryTags[category]!.map((tag) {
-                    final isSelected = selectedTags.contains(tag);
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ChoiceChip(
-                        label: Text('#$tag',
-                          style: TextStyle(
-                          color: themeProvider.colorTheme != ColorTheme.blackTheme
-                          ? null
-                        : Colors.grey,
-                          )),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              selectedTags.add(tag);
-                            } else {
-                              selectedTags.remove(tag);
-                            }
-                          });
-                        },
-                        selectedColor: pointColor,
-                        backgroundColor: subColor,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: mainColor),
-                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                    );
-                  }).toList(),
+                    )
+                    : Column(
+                  children: [
+                    Expanded(
+                      child: PageView.builder(
+                        itemCount: allImagesCount,
+                        onPageChanged: (index) =>
+                            setState(() => currentPageIndex = index),
+                        itemBuilder: (context, index) {
+                          if (index < existingImageUrls.length) {
+                            // Firestore 저장된 이미지 URL
+                            final url = existingImageUrls[index];
+                            return Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: SizedBox.expand(
+                                    child: Image.network(url, fit: BoxFit.cover),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: GestureDetector(
+                                    onTap: () => removeExistingImageAt(index),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black45,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(6),
+                                      child: const Icon(
+                                          Icons.close, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          } else {
+                            // 새로 선택한 로컬 이미지
+                            final fileIndex = index - existingImageUrls.length;
+                            return Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: SizedBox.expand(
+                                    child: Image.file(selectedImages[fileIndex],
+                                        fit: BoxFit.cover),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: GestureDetector(
+                                    onTap: () => removeSelectedImageAt(fileIndex),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black45,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(6),
+                                      child: const Icon(
+                                          Icons.close, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (allImagesCount > 1)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(allImagesCount, (index) {
+                          return Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: currentPageIndex == index
+                                  ? mainColor
+                                  : Colors.grey,
+                            ),
+                          );
+                        }),
+                      ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
               ),
+      
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: pickAndEditImages,
+                icon: const Icon(Icons.add_photo_alternate),
+                label: const Text('이미지 추가 및 편집'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mainColor,
+                  foregroundColor: themeProvider.colorTheme != ColorTheme.blackTheme
+                      ? Colors.white
+                      : null,
+                ),
+              ),
+      
               const SizedBox(height: 16),
-            ],
-
-            // 날씨, 온도, 느낌, 공개여부 UI (기존과 동일)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  children: [
-                    Row(children: [
-                      Text("날씨"),
-                      SizedBox(width: 50,),
-                      Text("체감온도"),
-                      SizedBox(width: 150,),
-                    ],),
-
-                    Row(
-                      children: [
-                        const Icon(Icons.wb_sunny_outlined),
-                        const SizedBox(width: 8),
-                        DropdownButton<String>(
-                          value: selectedWeather,
-                          items: ['맑음', '흐림', '비', '눈']
-                              .map((w) =>
-                              DropdownMenuItem(value: w, child: Text(w)))
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => selectedWeather = val!),
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                  hintText: '제목을 입력해주세요...',
+                  border: OutlineInputBorder(
+                      borderSide: BorderSide(color: mainColor)),
+                ),
+              ),
+      
+              const SizedBox(height: 12),
+              TextField(
+                controller: contentController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: '내용을 입력해주세요...',
+                  border: OutlineInputBorder(
+                      borderSide: BorderSide(color: mainColor)),
+                ),
+              ),
+      
+              const SizedBox(height: 20),
+              // 태그 선택 UI
+              for (var category in categoryTags.keys) ...[
+                Text('#$category',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: categoryTags[category]!.map((tag) {
+                      final isSelected = selectedTags.contains(tag);
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ChoiceChip(
+                          label: Text('#$tag',
+                            style: TextStyle(
+                            color: themeProvider.colorTheme != ColorTheme.blackTheme
+                            ? null
+                          : Colors.grey,
+                            )),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                selectedTags.add(tag);
+                              } else {
+                                selectedTags.remove(tag);
+                              }
+                            });
+                          },
+                          selectedColor: pointColor,
+                          backgroundColor: subColor,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: mainColor),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.wb_sunny_outlined),
-                        const SizedBox(width: 8),
-                        DropdownButton<String>(
-                          value: selectedFeeling,
-                          items: ['적당해요', '추웠어요', '더웠어요']
-                              .map((w) =>
-                              DropdownMenuItem(value: w, child: Text(w)))
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => selectedFeeling = val!),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('공개 여부: '),
-                        Switch(
-                          value: isPublic,
-                          onChanged: (val) => setState(() => isPublic = val),
-                          activeColor: mainColor,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 20,),
-
-                    Row(
-                      children: [Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+      
+              // 날씨, 온도, 느낌, 공개여부 UI (기존과 동일)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    children: [
+                      Row(children: [
+                        Text("날씨"),
+                        SizedBox(width: 50,),
+                        Text("체감온도"),
+                        SizedBox(width: 150,),
+                      ],),
+      
+                      Row(
                         children: [
-                          if (selectedDateTime != null &&
-                              displayLocationName != null)
-                            const Text("위치"),
-                          const SizedBox(height: 8),
-                          if (selectedDateTime != null &&
-                              displayLocationName != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: pointColor,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.location_on_outlined ,
-                                      color: themeProvider.colorTheme != ColorTheme.blackTheme
-                                      ? null
-                                      : Colors.grey),
-                                  const SizedBox(width: 8),
-                                  if (selectedDateTime != null &&
-                                      displayLocationName != null)
-                                    Text("${displayLocationName?.isNotEmpty ==
-                                        true ? displayLocationName : ''}" ,
-                                     style: TextStyle(
-                                       color: themeProvider.colorTheme != ColorTheme.blackTheme
-                                           ? null
-                                           : Colors.grey,
-                                     ),),
-                                ],
-                              ),
-                            ),
+                          const Icon(Icons.wb_sunny_outlined),
+                          const SizedBox(width: 8),
+                          DropdownButton<String>(
+                            value: selectedWeather,
+                            items: ['맑음', '흐림', '비', '눈']
+                                .map((w) =>
+                                DropdownMenuItem(value: w, child: Text(w)))
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => selectedWeather = val!),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.wb_sunny_outlined),
+                          const SizedBox(width: 8),
+                          DropdownButton<String>(
+                            value: selectedFeeling,
+                            items: ['적당해요', '추웠어요', '더웠어요']
+                                .map((w) =>
+                                DropdownMenuItem(value: w, child: Text(w)))
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => selectedFeeling = val!),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text('공개 여부: '),
+                          Switch(
+                            value: isPublic,
+                            onChanged: (val) => setState(() => isPublic = val),
+                            activeColor: mainColor,
+                          ),
                         ],
                       ),
-                        SizedBox(width: 20,),
-
-                        Column(
+                      SizedBox(height: 20,),
+      
+                      Row(
+                        children: [Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (selectedDateTime != null &&
-                                selectedTemp != null)
-                              const Text("온도"),
+                                displayLocationName != null)
+                              const Text("위치"),
                             const SizedBox(height: 8),
                             if (selectedDateTime != null &&
-                                selectedTemp != null)
+                                displayLocationName != null)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 10),
@@ -595,140 +558,180 @@ class _EditPostPageState extends State<EditPostPage> {
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.thermostat_outlined, size: 20 ,
+                                    Icon(Icons.location_on_outlined ,
                                         color: themeProvider.colorTheme != ColorTheme.blackTheme
                                         ? null
-                                        : Colors.grey,),
-                                    SizedBox(width: 8),
-                                    Text("${selectedTemp.toString() ?? " "}°C"
-                                    , style: TextStyle(
-                                          color: themeProvider.colorTheme != ColorTheme.blackTheme
-                                              ? null
-                                              : Colors.grey,
-                                      ),),
+                                        : Colors.grey),
+                                    const SizedBox(width: 8),
+                                    if (selectedDateTime != null &&
+                                        displayLocationName != null)
+                                      Text("${displayLocationName?.isNotEmpty ==
+                                          true ? displayLocationName : ''}" ,
+                                       style: TextStyle(
+                                         color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                             ? null
+                                             : Colors.grey,
+                                       ),),
                                   ],
                                 ),
                               ),
                           ],
                         ),
-                      ],
-                    ),
-
-                    Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: _openDateClockPicker,
-                          child: selectedDateTime != null
-                              ? Text('선택된 시간: ${DateFormat('yyyy-MM-dd HH:mm')
-                              .format(selectedDateTime!)}')
-                              : const Text('시간 선택'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // 저장 버튼
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: isSubmitting ? null : () async {
-                    if (titleController.text
-                        .trim()
-                        .isEmpty && contentController.text
-                        .trim()
-                        .isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('제목과 내용을 모두 입력해주세요.'),
-                          backgroundColor: Colors.redAccent,
-                        ),
-                      );
-                      return;
-                    }
-
-                    if (existingImageUrls.isEmpty && selectedImages.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('최소 1장의 이미지를 추가해주세요.'),
-                          backgroundColor: Colors.redAccent,
-                        ),
-                      );
-                      return;
-                    }
-
-                    if (selectedTemp == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('날짜를 선택해주세요.'),
-                          backgroundColor: Colors.redAccent,
-                        ),
-                      );
-                      return;
-                    }
-
-                    showLoadingDialog(context);
-
-                    setState(() {
-                      isSubmitting = true;
-                    });
-
-                    // 새로 추가된 이미지 업로드
-                    List<String> newImageUrls = [];
-                    if (selectedImages.isNotEmpty) {
-                      newImageUrls = await uploadNewImages(selectedImages);
-                    }
-
-                    // 기존 firestore 이미지 + 새로 업로드한 이미지 합치기
-                    final allImageUrls = [
-                      ...existingImageUrls,
-                      ...newImageUrls
-                    ];
-
-                    // firestore update
-                    await fs.collection('feeds').doc(widget.feedId).update({
-                      'title': titleController.text,
-                      'content': contentController.text,
-                      'cdatetime': Timestamp.now(),
-                      'isPublic': isPublic,
-                      'temperature': selectedTemp,
-                      'feeling': selectedFeeling,
-                      'imageUrls': allImageUrls,
-                      'tags': selectedTags,
-                      'weather': selectedWeather,
-                      'writeid': userId,
-                      'location': displayLocationName,
-                    });
-
-                    Navigator.of(context).pop();
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('수정이 완료되었습니다.'),
-                        backgroundColor: Colors.green,
+                          SizedBox(width: 20,),
+      
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (selectedDateTime != null &&
+                                  selectedTemp != null)
+                                const Text("온도"),
+                              const SizedBox(height: 8),
+                              if (selectedDateTime != null &&
+                                  selectedTemp != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: pointColor,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.thermostat_outlined, size: 20 ,
+                                          color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                          ? null
+                                          : Colors.grey,),
+                                      SizedBox(width: 8),
+                                      Text("${selectedTemp.toString() ?? " "}°C"
+                                      , style: TextStyle(
+                                            color: themeProvider.colorTheme != ColorTheme.blackTheme
+                                                ? null
+                                                : Colors.grey,
+                                        ),),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
-                    );
 
-                    //widget.onUserTap();
-
-                    setState(() {
-                      isSubmitting = false;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: mainColor,
-                    foregroundColor: Colors.white,
+                      Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: _openDateClockPicker,
+                            child: selectedDateTime != null
+                                ? Text('선택된 시간: ${DateFormat('yyyy-MM-dd HH:mm')
+                                .format(selectedDateTime!)}')
+                                : const Text('시간 선택'),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  child: const Text('수정 완료'),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+      
+              const SizedBox(height: 24),
+      
+              // 저장 버튼
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: isSubmitting ? null : () async {
+                      if (titleController.text
+                          .trim()
+                          .isEmpty && contentController.text
+                          .trim()
+                          .isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('제목과 내용을 모두 입력해주세요.'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
+      
+                      if (existingImageUrls.isEmpty && selectedImages.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('최소 1장의 이미지를 추가해주세요.'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
+      
+                      if (selectedTemp == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('날짜를 선택해주세요.'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
+      
+                      showLoadingDialog(context);
+      
+                      setState(() {
+                        isSubmitting = true;
+                      });
+      
+                      // 새로 추가된 이미지 업로드
+                      List<String> newImageUrls = [];
+                      if (selectedImages.isNotEmpty) {
+                        newImageUrls = await uploadNewImages(selectedImages);
+                      }
+      
+                      // 기존 firestore 이미지 + 새로 업로드한 이미지 합치기
+                      final allImageUrls = [
+                        ...existingImageUrls,
+                        ...newImageUrls
+                      ];
+      
+                      // firestore update
+                      await fs.collection('feeds').doc(widget.feedId).update({
+                        'title': titleController.text,
+                        'content': contentController.text,
+                        'cdatetime': Timestamp.now(),
+                        'isPublic': isPublic,
+                        'temperature': selectedTemp,
+                        'feeling': selectedFeeling,
+                        'imageUrls': allImageUrls,
+                        'tags': selectedTags,
+                        'weather': selectedWeather,
+                        'writeid': userId,
+                        'location': displayLocationName,
+                      });
+      
+                      Navigator.of(context).pop();
+      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('수정이 완료되었습니다.'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+      
+                      //widget.onUserTap();
+      
+                      setState(() {
+                        isSubmitting = false;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('수정 완료'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
