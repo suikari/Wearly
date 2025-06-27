@@ -2,8 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../provider/theme_provider.dart';
 import 'AdItemAddPage.dart';
 import 'mypage_tab.dart';
 
@@ -123,6 +125,7 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
 
   @override
   Widget build(BuildContext context) {
+    var themeProvider = Provider.of<ThemeProvider>(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
       child: Column(
@@ -136,7 +139,9 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 17,
-                  color: Colors.black,
+                    color: themeProvider.colorTheme != ColorTheme.blackTheme
+                        ? Colors.black87
+                        : Colors.white
                 ),
               ),
             ),
@@ -146,7 +151,9 @@ class _TodayFeedSectionState extends State<TodayFeedSection> {
             child: Text(
               widget.tagList.join(' '),
               style: TextStyle(
-                color: Colors.grey[700],
+                color: themeProvider.colorTheme != ColorTheme.blackTheme
+                    ? Colors.grey[700]
+                    : Colors.white,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -756,46 +763,60 @@ class _WeeklyBestWidgetState extends State<WeeklyBestWidget> {
   }
 
   Future<void> loadWeeklyBest() async {
-    final feedsSnap =
-        await FirebaseFirestore.instance.collection('feeds').get();
+    final feedsSnap = await FirebaseFirestore.instance.collection('feeds').get();
 
     List<Map<String, dynamic>> feedList = [];
+
+    // 각 피드에 대해 비동기 작업을 묶음
+    List<Future<void>> futures = [];
+
     for (var doc in feedsSnap.docs) {
-      var feedData = doc.data();
-      var feedId = doc.id;
+      futures.add(() async {
+        var feedData = doc.data();
+        var feedId = doc.id;
+        var writeid = feedData['writeid'];
 
-      // 좋아요 수
-      var likesSnap =
-          await FirebaseFirestore.instance
-              .collection('feeds')
-              .doc(feedId)
-              .collection('likes')
-              .get();
-      int likeCount = likesSnap.docs.length;
+        // 좋아요 수 가져오기 (비동기)
+        final likesFuture = FirebaseFirestore.instance
+            .collection('feeds')
+            .doc(feedId)
+            .collection('likes')
+            .get();
 
-      var writeid = feedData['writeid'];
+        // 유저 정보 가져오기 (비동기)
+        final userFuture = FirebaseFirestore.instance
+            .collection('users')
+            .doc(writeid)
+            .get();
 
-      // 유저 정보 (UID로 Firestore에서 가져옴)
-      var userDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(writeid)
-              .get();
-      var userData = userDoc.data();
+        // 병렬로 실행 후 결과 받기
+        final results = await Future.wait([likesFuture, userFuture]);
 
-      // Firestore에서 가져온 프로필 이미지 URL이 없으면 기본 이미지 사용
-      var profileImgUrl = userData?['profileImage'] ?? '';
+        final likesSnap = results[0] as QuerySnapshot;
+        final userDoc = results[1] as DocumentSnapshot;
 
-      feedList.add({
-        ...feedData,
-        'feedId': feedId,
-        'likeCount': likeCount,
-        'profileImgUrl': profileImgUrl,
-        'nickname': userData?['nickname'] ?? '익명',
-        'writeid': writeid,
-      });
+        int likeCount = likesSnap.docs.length;
+        final userData = userDoc.data() as Map<String, dynamic>?;
+
+        final profileImgUrl = userData?['profileImage'] ?? '';
+        final nickname = userData?['nickname'] ?? '익명';
+
+        // 결과 저장 (setState 필요 시 외부로 빼야 함)
+        feedList.add({
+          ...feedData,
+          'feedId': feedId,
+          'likeCount': likeCount,
+          'profileImgUrl': profileImgUrl,
+          'nickname': nickname,
+          'writeid': writeid,
+        });
+      }());
     }
 
+    // 모든 피드 관련 작업 병렬로 실행
+    await Future.wait(futures);
+
+    // feedList 정렬 등 후처리 가능
     feedList.sort((a, b) => b['likeCount'].compareTo(a['likeCount']));
     setState(() {
       weeklyBest = feedList.take(3).toList();
