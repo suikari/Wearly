@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
+import 'package:w2wproject/main/widget/extended_image_editor_page.dart';
 import 'package:w2wproject/main/write_post_page.dart';
 
 import '../provider/custom_colors.dart';
@@ -179,6 +180,7 @@ class _EditPostPageState extends State<EditPostPage> {
   Future<void> pickAndEditImages() async {
     final maxImageCount = 10;
     int totalCount = existingImageUrls.length + selectedImages.length;
+
     if (totalCount >= maxImageCount) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('이미지는 최대 $maxImageCount장까지만 업로드할 수 있어요.')),
@@ -187,23 +189,31 @@ class _EditPostPageState extends State<EditPostPage> {
     }
 
     final result = await FilePicker.platform.pickFiles(
-        type: FileType.image, allowMultiple: true);
+      type: FileType.image,
+      allowMultiple: true,
+    );
+
     if (result != null && result.files.isNotEmpty) {
       final pickedPaths = result.paths.whereType<String>().toList();
 
       for (var path in pickedPaths) {
-        if (existingImageUrls.length + selectedImages.length >= maxImageCount)
-          break;
+        if (existingImageUrls.length + selectedImages.length >= maxImageCount) break;
+
         final bytes = await File(path).readAsBytes();
+
+        // ✅ extended_image 기반 에디터 페이지로 이동
         final editedBytes = await Navigator.of(context).push<Uint8List?>(
-          MaterialPageRoute(builder: (_) => ImageEditor(image: bytes)),
+          MaterialPageRoute(
+            builder: (_) => ExtendedImageEditorPage(imageBytes: bytes),
+          ),
         );
+
         if (editedBytes != null) {
           try {
             final dir = await getTemporaryDirectory();
             final fileName = const Uuid().v4();
             final tempFile = File('${dir.path}/$fileName.jpg');
-            await tempFile.writeAsBytes(editedBytes as List<int>);
+            await tempFile.writeAsBytes(editedBytes);
 
             setState(() {
               selectedImages.add(tempFile);
@@ -218,6 +228,7 @@ class _EditPostPageState extends State<EditPostPage> {
       }
     }
   }
+
 
   void showLoadingDialog(BuildContext context) {
     showDialog(

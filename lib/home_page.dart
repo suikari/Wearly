@@ -109,7 +109,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void openFeedPage() {
+  void openFeedPage(String tags ) {
     setState(() {
       _selectedIndex = 3; // FeedListPage 탭으로 전환
     });
@@ -155,8 +155,7 @@ class _HomePageState extends State<HomePage> {
         onUserTap: openUserPage,
         onFeedTap: _openDetailPage,
       ),
-      SearchTab(onUserTap: openUserPage),
-
+      SearchTab(key: ValueKey(DateTime.now().millisecondsSinceEpoch), onUserTap: openUserPage,  onFeedTap: openFeedPage),
       WritePostPage(key: ValueKey(DateTime.now().millisecondsSinceEpoch),
           onUserTap: openFeedPage),
 

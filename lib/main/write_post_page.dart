@@ -11,19 +11,21 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_editor_plus/image_editor_plus.dart';
+import 'package:image_editor_plus/options.dart' as iep;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:ui' as ui;
 import 'package:intl/intl.dart';
+import 'package:w2wproject/main/widget/extended_image_editor_page.dart';
 
 import '../provider/custom_colors.dart';
 import '../provider/theme_provider.dart';
 
 const String KMA_API_KEY = 'Wjb8zKkrrbUtY2pQXCNNv%2B5M2EqShPVq92B139bdclMwmJDylxQjPYUUF6cobHdRtf9Et%2Bq0MxDFn1Oh4tBLhg%3D%3D';
 class WritePostPage extends StatefulWidget {
-  final void Function() onUserTap;
+  final void Function(String tags) onUserTap;
   const WritePostPage({super.key, required this.onUserTap});
 
 
@@ -155,8 +157,11 @@ class _WritePostPageState extends State<WritePostPage> {
 
         final bytes = await File(path).readAsBytes();
 
+        // 편집 화면으로 이동해서 크롭 및 편집 처리
         final editedBytes = await Navigator.of(context).push<Uint8List?>(
-          MaterialPageRoute(builder: (_) => ImageEditor(image: bytes)),
+          MaterialPageRoute(
+            builder: (_) => ExtendedImageEditorPage(imageBytes: bytes),
+          ),
         );
 
         if (editedBytes != null) {
@@ -730,7 +735,7 @@ class _WritePostPageState extends State<WritePostPage> {
                         backgroundColor: Colors.green,
                       ),
                     );
-                    widget.onUserTap();
+                    widget.onUserTap('');
                     resetForm();
                     setState(() {
                       isSubmitting = false;
