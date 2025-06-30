@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'common/deep_link_handler.dart';
+import 'common/dialog_util.dart';
 import 'main/detail_page.dart';
 import 'main/feed_list_page.dart';
 import 'main/gemini_chat.dart'; // ⬅ 추가
@@ -175,7 +176,13 @@ class _HomePageState extends State<HomePage> {
           return false; // 뒤로가기 취소
         } else {
           // 종료 확인 다이얼로그 호출
-          return await showExitConfirmationDialog(context);
+          final bool result = (await showDialogMessage(
+            context,
+            '앱을 종료 하시겠습니까?',
+            confirmCancel: true,
+          )) ?? false;
+
+          return result;
         }
       },
       child: Scaffold(
@@ -198,24 +205,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-}
-
-Future<bool> showExitConfirmationDialog(BuildContext context) async {
-  return await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('앱 종료'),
-      content: const Text('앱을 종료하시겠습니까?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false), // 종료 안함
-          child: const Text('취소'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true), // 종료
-          child: const Text('종료'),
-        ),
-      ],
-    ),
-  ) ?? false; // 다이얼로그 닫혔을 경우 false
 }
