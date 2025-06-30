@@ -14,6 +14,7 @@ import 'package:w2wproject/main/widget/comment_list.dart';
 import 'package:w2wproject/main/widget/image_carousel_card.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../common/dialog_util.dart';
 import '../provider/custom_colors.dart';
 import '../provider/theme_provider.dart';
 import 'edit_post_page.dart';
@@ -172,10 +173,20 @@ class _FeedListPageState extends State<FeedListPage> {
         }
       }
 
-      interestFeeds.sort((a, b) =>
-          (b['interestScore'] as int).compareTo(a['interestScore'] as int));
-      followFeeds.sort((a, b) =>
-          (b['likeCount'] ?? 0).compareTo(a['likeCount'] ?? 0));
+      interestFeeds.sort((a, b) {
+        int interestCompare = (b['interestScore'] as int).compareTo(a['interestScore'] as int);
+        if (interestCompare != 0) return interestCompare;
+
+        return (b['cdatetime'] as Timestamp).compareTo(a['cdatetime'] as Timestamp);
+      });
+
+      followFeeds.sort((a, b) {
+        int likeCompare = (b['likeCount'] ?? 0).compareTo(a['likeCount'] ?? 0);
+        if (likeCompare != 0) return likeCompare;
+
+        return (b['cdatetime'] as Timestamp).compareTo(a['cdatetime'] as Timestamp);
+      });
+
       otherFeeds.sort((a, b) =>
           (b['cdatetime'] as Timestamp).compareTo(a['cdatetime'] as Timestamp));
 
@@ -402,22 +413,11 @@ class _FeedListPageState extends State<FeedListPage> {
   }
 
   Future<void> deleteFeed(String feedId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('피드 삭제'),
-        content: Text('정말 이 피드를 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('삭제', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+
+    final confirm = await showDialogMessage(
+      context,
+      '삭제 하시겠습니까?',
+      confirmCancel: true,
     );
 
     if (confirm != true) return;

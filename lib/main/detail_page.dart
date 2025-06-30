@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../common/dialog_util.dart';
 import '../provider/custom_colors.dart';
 import '../provider/theme_provider.dart';
 import 'edit_post_page.dart';
@@ -135,23 +136,13 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future<void> deleteFeed(String feedId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('피드 삭제'),
-        content: Text('정말 이 피드를 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('취소'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('삭제', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+
+    final confirm = await showDialogMessage(
+      context,
+      '삭제 하시겠습니까?',
+      confirmCancel: true,
     );
+
 
     if (confirm != true) return; // 사용자가 '삭제'를 누르지 않았다면 종료
 

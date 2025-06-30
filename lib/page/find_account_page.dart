@@ -105,7 +105,7 @@ class _FindEmailTabState extends State<_FindEmailTab> {
       final social = userData['socialAccount'] as String?;
 
       final isSocial = (social == 'kakao' || social == 'naver');
-      print(isSocial);
+      //print(isSocial);
       setState(() {
         maskedEmailResult = isSocial ? null : maskEmail(email ?? '');
         socialAccountType = social;
@@ -206,6 +206,12 @@ class _FindPasswordTabState extends State<_FindPasswordTab> {
     final email = emailController.text.trim();
     if (email.isEmpty) {
       await showDialogMessage(context, "이메일을 입력해주세요.");
+      return;
+    }
+
+    final emailRegex = RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
+    if (!emailRegex.hasMatch(email)) {
+      await showDialogMessage(context, "유효한 이메일 형식을 입력해주세요.");
       return;
     }
 

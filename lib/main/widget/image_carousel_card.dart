@@ -97,16 +97,24 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final calculatedHeight = screenWidth * 4 / 3;
+    final baseHeight = calculatedHeight < 460 ? 460.0 : calculatedHeight;
+    final containerHeight = baseHeight + 150; // 내부 내용물 높이보다 90 더 크게
+
     if (widget.imageUrls.isEmpty) {
       return Container(
-        height: 542,
+        height: containerHeight,
         decoration: _backgroundDecoration(),
         child: Column(
           children: [
             _buildHeader(),
             const Expanded(
               child: Center(
-                child: Text('이미지가 없습니다', style: TextStyle(color: Colors.black45)),
+                child: Text(
+                  '이미지가 없습니다',
+                  style: TextStyle(color: Colors.black45),
+                ),
               ),
             ),
           ],
@@ -114,12 +122,20 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
       );
     }
 
+    final cardHeight = calculatedHeight < 460 ? 460.0 : calculatedHeight;
+
+// headerHeight와 여백도 비율로 계산 (예: 가로 20% 정도를 header에 할당)
+    final headerHeight = screenWidth * 0.12; // 필요하면 조정
+    final bottomMargin = screenWidth * 0.1;// 고정값 또는 비율로도 가능
+
+    final pageViewHeight = cardHeight - headerHeight - bottomMargin;
+
     return Container(
-      height: 542,
+      height: cardHeight,
       decoration: _backgroundDecoration(),
       child: Column(
         children: [
-          _buildHeader(),
+          SizedBox(height: headerHeight, child: _buildHeader()),
           Stack(
             children: [
               ClipRRect(
@@ -130,7 +146,7 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
                   bottomRight: Radius.circular(10),
                 ),
                 child: SizedBox(
-                  height: 460,
+                  height: pageViewHeight,  // 전체 높이에서 헤더, 간격, 페이지 인디케이터 높이 뺀 값
                   child: PageView.builder(
                     controller: _pageController,
                     itemCount: widget.imageUrls.length,
@@ -154,7 +170,6 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
                   ),
                 ),
               ),
-              // ✅ 슬라이드 중일 때만 페이지 번호 보이기
               Positioned(
                 top: 12,
                 right: 16,
@@ -177,10 +192,14 @@ class _ImageCarouselCardState extends State<ImageCarouselCard> {
             ],
           ),
           const SizedBox(height: 8),
-          _buildPageIndicator(),
+          SizedBox(
+            height: 20, // _buildPageIndicator() 예상 높이 (필요시 조정)
+            child: _buildPageIndicator(),
+          ),
         ],
       ),
     );
+
   }
 
   BoxDecoration _backgroundDecoration() {

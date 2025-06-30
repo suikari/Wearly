@@ -37,12 +37,19 @@ class LocationHelper {
 
     if (placemarks.isNotEmpty) {
       final placemark = placemarks.first;
-      print('Placemark: ${placemark.toJson()}');
+      // print('Placemark: ${placemark.toJson()}');
       var street = placemark.street ?? '';
       street = street.replaceAll('대한민국', '').trim();
 
       final reg = RegExp(r'(?:(\S+(?:도|광역시)))?\s?(\S+시)?\s?(\S+구)?\s?(\S+동)?');
       final match = reg.firstMatch(street);
+
+      String road = '';
+      final regRoad = RegExp(r'(\S+(?:대로|길|로|가))');
+      final roadMatch = regRoad.firstMatch(street);
+      if (roadMatch != null) {
+        road = roadMatch.group(1) ?? '';
+      }
 
       if (match != null) {
         final doOrMetro = match.group(1) ?? '';
@@ -50,14 +57,15 @@ class LocationHelper {
         final gu = match.group(3) ?? '';
         final dong = match.group(4) ?? '';
 
-        print('doOrMetro: $doOrMetro');
-        print('city: $city');
-        print('gu: $gu');
-        print('dong: $dong');
+        // print('doOrMetro: $doOrMetro');
+        // print('city: $city');
+        // print('gu: $gu');
+        // print('dong: $dong');
+        // print('road: $road');
 
         final parts = <String>[
           city.isNotEmpty ? city.replaceAll('시', '') : doOrMetro.replaceAll(RegExp(r'(도|광역시)'), ''),
-          dong,
+          dong.isNotEmpty ? dong : road,
         ].where((e) => e.isNotEmpty).toList();
 
         return parts.join(', ');

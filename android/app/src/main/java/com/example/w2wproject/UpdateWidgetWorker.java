@@ -85,7 +85,7 @@ public class UpdateWidgetWorker extends Worker {
 
         } catch (Exception e) {
             Log.e(TAG, "날씨 정보 가져오기 실패", e);
-            return Result.retry();
+            return Result.success(); // 실패해도 종료
         }
 
         SharedPreferences prefs = getApplicationContext().getSharedPreferences("location_prefs", Context.MODE_PRIVATE);

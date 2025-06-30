@@ -81,7 +81,7 @@ class NotificationService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
-    print('예약된 알림 시간: $scheduled');
+    //print('예약된 알림 시간: $scheduled');
 
     await _plugin.zonedSchedule(
       id,
