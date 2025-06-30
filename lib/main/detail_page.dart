@@ -286,6 +286,34 @@ class _DetailPageState extends State<DetailPage> {
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                     ),
+                    SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.mood, size: 18, color: Colors.orangeAccent),
+                        SizedBox(width: 4),
+                        Text(
+                          feedData!['feeling'] ?? '',
+                          style: TextStyle(
+                            color: Colors.orangeAccent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Icon(
+                          Icons.thermostat,
+                          size: 18,
+                          color: Colors.redAccent,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          feedData!['temperature']?.toString() ?? '',
+                          style: TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                     if (feedData!['writeid'] == widget.currentUserId)
                       PopupMenuButton<String>(
                         onOpened: (){

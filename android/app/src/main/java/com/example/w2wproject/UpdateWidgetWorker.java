@@ -59,6 +59,7 @@ public class UpdateWidgetWorker extends Worker {
         try {
             String json = fetchWeatherJson();
             //Log.d(TAG, "API 응답 JSON: " + json);
+            Log.d(TAG, "API 응답: " + json); // 이 줄 추가
 
             JSONObject obj = new JSONObject(json);
             JSONObject response = obj.getJSONObject("response");

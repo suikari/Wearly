@@ -504,7 +504,7 @@ class _FeedListPageState extends State<FeedListPage> {
                 await fetchFeedsWithWriter();
               },
               child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),  // 이게 핵심!
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(12),
               itemCount: feeds.where((feed) => feed['isPublic'] != false).length,
               itemBuilder: (context, index) {
