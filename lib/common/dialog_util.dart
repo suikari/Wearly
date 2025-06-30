@@ -16,6 +16,7 @@ Future<bool?> showDialogMessage(
   final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
   final isBlackTheme = themeProvider.colorTheme == ColorTheme.blackTheme;
   final bgColor = isBlackTheme ? Color(0xFF333333) : Colors.white;
+  final textColor = isBlackTheme ? Colors.white : Colors.black;
 
   return showDialog<bool>(
     context: context,
@@ -76,7 +77,7 @@ Future<bool?> showDialogMessage(
                                     Navigator.of(context).pop(true);
                                     if (onConfirm != null) onConfirm();
                                   },
-                                  child: const Text("확인", style: TextStyle(color: Colors.black),),
+                                  child: Text("확인", style: TextStyle(color: textColor),),
                                 ),
                               ],
                             )
