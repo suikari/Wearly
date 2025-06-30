@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:w2wproject/common/custom_app_bar.dart';
 import 'package:w2wproject/main.dart';
+import '../../common/dialog_util.dart';
 import '../../home_page.dart';
 import '../../login_page.dart';
 import '../../page/notification_page.dart';
@@ -105,29 +106,6 @@ class _SettingsPageState extends State<SettingsPage> {
         selectedTime = picked;
       });
     }
-  }
-
-  void _confirmLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('로그아웃'),
-        content: Text('로그아웃 하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(), // 취소
-            child: Text('취소'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop(); // 다이얼로그 먼저 닫기
-              await _logout(context); // 로그아웃 처리
-            },
-            child: Text('확인'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -281,7 +259,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
               Center(
                 child: ElevatedButton.icon(
-                  onPressed: () => _confirmLogout(context),
+                  onPressed: () => showDialogMessage(
+                      context ,
+                      '로그아웃 하시겠습니까?' ,
+                      confirmCancel: true,
+                      onConfirm: () async {
+                        await _logout(context); // 로그아웃 처리
+                      }
+                  ),
                   icon: const Icon(Icons.logout),
                   label: const Text('로그아웃'),
                   style: ElevatedButton.styleFrom(
