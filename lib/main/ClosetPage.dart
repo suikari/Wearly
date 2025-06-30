@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 
+// 예: 이미 있는 실제 상세페이지 import
+import 'detail_page.dart'; // ← 네가 사용하는 DetailPage 경로/이름으로 수정!
+
 // 날씨 상태별 아이콘 반환 함수 (기본값은 sunny)
 IconData getWeatherIcon(String? weather) {
   if (weather == null) return Icons.wb_sunny;
@@ -26,7 +29,7 @@ IconData getWeatherIcon(String? weather) {
     case 'shower':
       return Icons.grain;
     default:
-      return Icons.wb_sunny; // 기본값
+      return Icons.wb_sunny;
   }
 }
 
@@ -56,8 +59,6 @@ class _ClosetPageState extends State<ClosetPage> {
   String _selectedFeeling = '적당해요';
 
   late List<Map<String, dynamic>> _hourlyWeather;
-
-  // 추가: 현재 선택된 시간 인덱스 및 선택된 시간
   int _selectedHourIndex = 0;
 
   @override
@@ -72,7 +73,6 @@ class _ClosetPageState extends State<ClosetPage> {
     final now = DateTime.now();
     setState(() {
       currentHour = now.hour;
-      // 최초 진입 시 현재 시간 기준 첫 인덱스로 초기화
       if (_selectedHourIndex == 0) _selectedHourIndex = 0;
     });
   }
@@ -88,7 +88,6 @@ class _ClosetPageState extends State<ClosetPage> {
     return List.generate(8, (i) => (hour + i) % 24);
   }
 
-  // 시간별 item 찾기
   Map<String, dynamic>? getClosestWeatherItemForHour(int targetHour) {
     int minDiff = 25;
     Map<String, dynamic>? found;
@@ -110,13 +109,10 @@ class _ClosetPageState extends State<ClosetPage> {
   }
 
   int get displayTemperature {
-    // 선택된 시간 인덱스의 온도를 사용!
     final hourList = getHourList();
     final selectedHour = hourList[_selectedHourIndex];
     final temp = getClosestTempForHour(selectedHour);
-    return temp?.round() ??
-        widget.currentTemperature ??
-        22; // 데이터 없으면 22 기본값
+    return temp?.round() ?? widget.currentTemperature ?? 22;
   }
 
   Future<void> _onRefresh(BuildContext context) async {
@@ -200,8 +196,7 @@ class _ClosetPageState extends State<ClosetPage> {
                                   color: Theme.of(context).colorScheme.primary, width: 2)
                                   : null,
                             ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -317,7 +312,11 @@ class _ClosetPageState extends State<ClosetPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => FeedDetailPage(feedId: feedId),
+                      builder: (_) => DetailPage(
+                        feedId: feedId,
+                        onBack: () => Navigator.of(context).pop(),
+                        currentUserId: '',
+                      ),
                     ),
                   );
                 },
@@ -338,7 +337,7 @@ class FeedGrid extends StatefulWidget {
   final bool isMine;
   final String currentUserId;
   final int temperature;
-  final void Function(String feedId)? onFeedTap; // ★ 추가
+  final void Function(String feedId)? onFeedTap;
 
   const FeedGrid({
     super.key,
@@ -451,7 +450,7 @@ class _FeedGridState extends State<FeedGrid> {
             imageUrl: (images != null && images.isNotEmpty) ? images[0] : null,
             tags: tags,
             content: content,
-            onTap: () => widget.onFeedTap?.call(data['id']), // ★ 상세 진입 콜백
+            onTap: () => widget.onFeedTap?.call(data['id']),
           );
         },
       ),
@@ -478,7 +477,7 @@ class FeedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap, // ★ 피드 상세 진입 콜백
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
@@ -529,52 +528,6 @@ class FeedCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// =========== 피드 상세페이지 예시 ===========
-class FeedDetailPage extends StatelessWidget {
-  final String feedId;
-  const FeedDetailPage({super.key, required this.feedId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('피드 상세')),
-      body: FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('feeds').doc(feedId).get(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
-          }
-          final data = snapshot.data?.data() as Map<String, dynamic>?;
-          if (data == null) {
-            return Center(child: Text('피드를 찾을 수 없습니다.'));
-          }
-          final images = (data['imageUrls'] as List?) ?? [];
-          final tags = (data['tags'] as List?)?.cast<String>() ?? [];
-          return Padding(
-            padding: const EdgeInsets.all(18.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                images.isNotEmpty
-                    ? Image.network(images[0], width: double.infinity, height: 230, fit: BoxFit.cover)
-                    : Container(height: 230, color: Colors.grey[300]),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 6,
-                  children: tags.map((t) => Chip(label: Text('#$t'))).toList(),
-                ),
-                const SizedBox(height: 10),
-                Text(data['content'] ?? '', style: TextStyle(fontSize: 16)),
-                // 필요한 정보 더 추가
-              ],
-            ),
-          );
-        },
       ),
     );
   }
