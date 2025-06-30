@@ -346,71 +346,88 @@ class _FeedListPageState extends State<FeedListPage> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // 키보드, 시스템 바 등 고려 위해 꼭 필요
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      backgroundColor: Colors.white,
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('피드 공유하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              SizedBox(height: 20),
-              RepaintBoundary(
-                key: qrKey,
-                child: QrImageView(
-                  data: url,
-                  size: 200,
-                  backgroundColor: Colors.white,
+        return SafeArea(
+          bottom: true, // 하단 시스템 영역 안전하게 피함
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20, // 키보드와 시스템 바 고려
+              left: 16,
+              right: 16,
+              top: 16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '피드 공유하기',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-              SizedBox(height: 20),
-              SelectableText(url, maxLines: 3),
-              SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        await Future.delayed(Duration(milliseconds: 300));
-
-                        RenderRepaintBoundary boundary =
-                        qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-                        ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-                        ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-                        Uint8List pngBytes = byteData!.buffer.asUint8List();
-
-                        final tempDir = await getTemporaryDirectory();
-                        final file = await File('${tempDir.path}/qr.png').create();
-                        await file.writeAsBytes(pngBytes);
-
-                        await Share.shareXFiles([XFile(file.path)], text: 'QR 코드로 공유된 피드입니다');
-                      } catch (e) {
-                        print('QR 공유 실패: $e');
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('QR 공유 중 오류 발생')));
-                      }
-                    },
-                    child: Text('QR 공유'),
+                SizedBox(height: 20),
+                RepaintBoundary(
+                  key: qrKey,
+                  child: QrImageView(
+                    data: url,
+                    size: 200,
+                    backgroundColor: Colors.white,
                   ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: url));
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text('링크가 복사되었습니다')));
-                    },
-                    child: Text('링크 복사'),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10),
-            ],
+                ),
+                SizedBox(height: 20),
+                SelectableText(url, maxLines: 3),
+                SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        try {
+                          await Future.delayed(Duration(milliseconds: 300));
+
+                          RenderRepaintBoundary boundary =
+                          qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+                          ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+                          ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+                          Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+                          final tempDir = await getTemporaryDirectory();
+                          final file = await File('${tempDir.path}/qr.png').create();
+                          await file.writeAsBytes(pngBytes);
+
+                          await Share.shareXFiles([XFile(file.path)], text: 'QR 코드로 공유된 피드입니다');
+                        } catch (e) {
+                          print('QR 공유 실패: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('QR 공유 중 오류 발생')),
+                          );
+                        }
+                      },
+                      child: Text('QR 공유'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: url));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('링크가 복사되었습니다')),
+                        );
+                      },
+                      child: Text('링크 복사'),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10),
+              ],
+            ),
           ),
         );
       },
     );
   }
+
 
   Future<void> deleteFeed(String feedId) async {
 
