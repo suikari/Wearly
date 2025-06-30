@@ -1,9 +1,11 @@
 # Wearly ⛅ 
 > 날씨에 따라 입었던 내 코디와 체감 기록을 남기고, 다른 사람의 코디도 참고할 수 있는 날씨 기반 코디 SNS 앱 
 
+---
+
 ##  📑발표 PPT
 
-
+---
 
 ## 💻 기술 스택
 <div>
@@ -18,6 +20,8 @@
   <img src="https://img.shields.io/badge/figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white">
 
 </div>
+
+---
 
 ## 🗓 개발 기간
 
@@ -95,8 +99,6 @@
 - 온도, 태그로 피드, 유저 검색
 - 다른 사람 코디 한 눈에 보기
 - 내 코디 모아보기
-- 
-- 
 
 ---
 
