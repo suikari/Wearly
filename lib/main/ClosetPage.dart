@@ -57,6 +57,9 @@ class _ClosetPageState extends State<ClosetPage> {
 
   late List<Map<String, dynamic>> _hourlyWeather;
 
+  // 추가: 현재 선택된 시간 인덱스 및 선택된 시간
+  int _selectedHourIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +72,8 @@ class _ClosetPageState extends State<ClosetPage> {
     final now = DateTime.now();
     setState(() {
       currentHour = now.hour;
+      // 최초 진입 시 현재 시간 기준 첫 인덱스로 초기화
+      if (_selectedHourIndex == 0) _selectedHourIndex = 0;
     });
   }
 
@@ -105,13 +110,13 @@ class _ClosetPageState extends State<ClosetPage> {
   }
 
   int get displayTemperature {
-    if (widget.currentTemperature != null && widget.currentTemperature != 0) {
-      return widget.currentTemperature!;
-    } else {
-      final nowHour = DateTime.now().hour;
-      final nowTemp = getClosestTempForHour(nowHour);
-      return nowTemp?.round() ?? 22;
-    }
+    // 선택된 시간 인덱스의 온도를 사용!
+    final hourList = getHourList();
+    final selectedHour = hourList[_selectedHourIndex];
+    final temp = getClosestTempForHour(selectedHour);
+    return temp?.round() ??
+        widget.currentTemperature ??
+        22; // 데이터 없으면 22 기본값
   }
 
   Future<void> _onRefresh(BuildContext context) async {
@@ -173,21 +178,55 @@ class _ClosetPageState extends State<ClosetPage> {
                       final hour = hourList[idx];
                       final item = getClosestWeatherItemForHour(hour);
                       final temp = item?['temp'];
-                      final weather = item?['weather']; // 예: '맑음', '흐림', '비' 등
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 14),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('${hour.toString().padLeft(2, '0')}시'),
-                            const SizedBox(height: 2),
-                            Icon(getWeatherIcon(weather), size: 22),
-                            const SizedBox(height: 2),
-                            Text(
-                              temp != null ? '${temp.toString()}°' : '-',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                      final weather = item?['weather'];
+                      final isSelected = _selectedHourIndex == idx;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedHourIndex = idx;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 14),
+                          child: AnimatedContainer(
+                            duration: Duration(milliseconds: 150),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.13)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              border: isSelected
+                                  ? Border.all(
+                                  color: Theme.of(context).colorScheme.primary, width: 2)
+                                  : null,
                             ),
-                          ],
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 7),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('${hour.toString().padLeft(2, '0')}시',
+                                    style: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    )),
+                                const SizedBox(height: 2),
+                                Icon(getWeatherIcon(weather), size: 22,
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : null),
+                                const SizedBox(height: 2),
+                                Text(
+                                  temp != null ? '${temp.toString()}°' : '-',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -274,6 +313,14 @@ class _ClosetPageState extends State<ClosetPage> {
                 isMine: _tabIndex == 0,
                 currentUserId: widget.currentUserId,
                 temperature: displayTemperature,
+                onFeedTap: (feedId) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FeedDetailPage(feedId: feedId),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
             ],
@@ -291,12 +338,15 @@ class FeedGrid extends StatefulWidget {
   final bool isMine;
   final String currentUserId;
   final int temperature;
+  final void Function(String feedId)? onFeedTap; // ★ 추가
+
   const FeedGrid({
     super.key,
     required this.feeling,
     required this.isMine,
     required this.currentUserId,
     required this.temperature,
+    this.onFeedTap,
   });
 
   @override
@@ -314,7 +364,9 @@ class _FeedGridState extends State<FeedGrid> {
   }
 
   Future<void> fetchFeeds() async {
-    setState(() { isLoading = true; });
+    setState(() {
+      isLoading = true;
+    });
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('feeds')
@@ -333,7 +385,8 @@ class _FeedGridState extends State<FeedGrid> {
             : int.tryParse(tempRaw.toString().split('.').first ?? '');
 
         final writeid = data['writeid'];
-        final bool tempMatch = temp != null && (temp - widget.temperature).abs() <= 2;
+        final bool tempMatch =
+            temp != null && (temp - widget.temperature).abs() <= 2;
         final bool idMatch = widget.isMine
             ? writeid == widget.currentUserId
             : writeid != widget.currentUserId;
@@ -398,6 +451,7 @@ class _FeedGridState extends State<FeedGrid> {
             imageUrl: (images != null && images.isNotEmpty) ? images[0] : null,
             tags: tags,
             content: content,
+            onTap: () => widget.onFeedTap?.call(data['id']), // ★ 상세 진입 콜백
           );
         },
       ),
@@ -411,60 +465,116 @@ class FeedCard extends StatelessWidget {
   final String? imageUrl;
   final List<String> tags;
   final String content;
+  final VoidCallback? onTap;
 
-  const FeedCard({super.key, this.imageUrl, required this.tags, required this.content});
+  const FeedCard({
+    super.key,
+    this.imageUrl,
+    required this.tags,
+    required this.content,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).shadowColor.withOpacity(0.08),
-            blurRadius: 3,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(9),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: imageUrl != null
-                  ? Image.network(
-                imageUrl!,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              )
-                  : Container(),
+    return GestureDetector(
+      onTap: onTap, // ★ 피드 상세 진입 콜백
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).shadowColor.withOpacity(0.08),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
             ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 4,
-            children: tags
-                .map((tag) => Text(
-              "#$tag",
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+          ],
+        ),
+        padding: const EdgeInsets.all(9),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: imageUrl != null
+                    ? Image.network(
+                  imageUrl!,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                )
+                    : Container(),
               ),
-            ))
-                .toList(),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            content,
-            style: const TextStyle(fontSize: 13),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              children: tags
+                  .map((tag) => Text(
+                "#$tag",
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ))
+                  .toList(),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              content,
+              style: const TextStyle(fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =========== 피드 상세페이지 예시 ===========
+class FeedDetailPage extends StatelessWidget {
+  final String feedId;
+  const FeedDetailPage({super.key, required this.feedId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('피드 상세')),
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('feeds').doc(feedId).get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return Center(child: CircularProgressIndicator());
+          }
+          final data = snapshot.data?.data() as Map<String, dynamic>?;
+          if (data == null) {
+            return Center(child: Text('피드를 찾을 수 없습니다.'));
+          }
+          final images = (data['imageUrls'] as List?) ?? [];
+          final tags = (data['tags'] as List?)?.cast<String>() ?? [];
+          return Padding(
+            padding: const EdgeInsets.all(18.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                images.isNotEmpty
+                    ? Image.network(images[0], width: double.infinity, height: 230, fit: BoxFit.cover)
+                    : Container(height: 230, color: Colors.grey[300]),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 6,
+                  children: tags.map((t) => Chip(label: Text('#$t'))).toList(),
+                ),
+                const SizedBox(height: 10),
+                Text(data['content'] ?? '', style: TextStyle(fontSize: 16)),
+                // 필요한 정보 더 추가
+              ],
+            ),
+          );
+        },
       ),
     );
   }
