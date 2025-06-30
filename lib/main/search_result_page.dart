@@ -11,8 +11,9 @@ class SearchResultPage extends StatefulWidget {
   final double minTemp;
   final double maxTemp;
   final List<String> selectedTags;
+  final void Function(String userId) onUserTap;
 
-  const SearchResultPage({super.key, required this.keyword, required this.minTemp, required this.maxTemp, required this.selectedTags});
+  const SearchResultPage({super.key, required this.keyword, required this.minTemp, required this.maxTemp, required this.selectedTags , required this.onUserTap});
   @override
   State<SearchResultPage> createState() => _SearchResultPageState();
 }
@@ -33,7 +34,10 @@ class _SearchResultPageState extends State<SearchResultPage>
     _tabController = TabController(length: tabs.length, vsync: this)
       ..addListener(() {
         if (_tabController.index != _selectedIndex) {
-          setState(() => _selectedIndex = _tabController.index);
+          setState(() {
+            _tabIndex = _tabController.index;
+            _selectedIndex = _tabController.index;
+          });
         }
       });
   }
@@ -48,7 +52,7 @@ class _SearchResultPageState extends State<SearchResultPage>
         return 'cdatetime';
     }
   }
-
+  int _tabIndex = 0;
   @override
   Widget build(BuildContext context) {
     final fs = FirebaseFirestore.instance;
@@ -68,9 +72,25 @@ class _SearchResultPageState extends State<SearchResultPage>
           // 검색어 안내
           Padding(
             padding: const EdgeInsets.all(12.0),
-            child: Text(
-              '"${widget.keyword}"에 대한 검색 결과입니다. 온도 범위 : $minTemp℃~$maxTemp℃',
-              style: const TextStyle(fontSize: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.keyword.trim().isEmpty
+                      ? '전체 검색 결과입니다.'
+                      : '"${widget.keyword}"에 대한 검색 결과입니다.',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+
+                // tabIndex가 3이 아닐 때만 온도/태그 문구 출력
+                if (_tabIndex != 3)
+                  Text(
+                    '온도 범위: $minTemp℃ ~ $maxTemp℃'
+                        '${widget.selectedTags.isNotEmpty ? ' · 선택된 태그: ${widget.selectedTags.join(", ")}' : ''}',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+              ],
             ),
           ),
 
@@ -134,6 +154,7 @@ class _SearchResultPageState extends State<SearchResultPage>
     Color subColor = customColors?.subColor ?? Colors.white;
     Color pointColor = customColors?.pointColor ?? Colors.white;
     late Stream<QuerySnapshot> stream;
+
     switch (tabIndex) {
       case 0:
         stream = fs.collection("feeds").orderBy(getSortField(selectedSort), descending: true).snapshots();
@@ -162,73 +183,56 @@ class _SearchResultPageState extends State<SearchResultPage>
         final docs = snapshot.data!.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
 
-          final temp = data['temperature'];
-
-          if (temp is num) {
-            if (temp < widget.minTemp || temp > widget.maxTemp) {
-              return false;
-            }
-          }
-
-          switch (tabIndex) {
-            case 0:
-              final tags = data['tags'];
-              if (tags is! List) return false;
-
-              final tagStrings = tags.map((e) => e.toString().toLowerCase()).toList();
-              final keywordMatched = tagStrings.any((tag) => tag.contains(kw));
-              if (!keywordMatched) return false;
-
-              if (widget.selectedTags.isNotEmpty) {
-                final hasSelectedTag = widget.selectedTags.any(
-                        (selected) => tagStrings.contains(selected.toLowerCase()));
-                if (!hasSelectedTag) return false;
-              }
-
-              return true;
-            case 1:
-              final tags = data['tags'];
-              if (tags is! List) return false;
-
-              final tagStrings = tags.map((e) => e.toString().toLowerCase()).toList();
-
-              // 선택된 태그 필터
-              if (widget.selectedTags.isNotEmpty) {
-                final hasSelectedTag = widget.selectedTags.any(
-                        (selected) => tagStrings.contains(selected.toLowerCase()));
-                if (!hasSelectedTag) return false;
-              }
-
-              // 키워드가 지역에 포함되어야 함
-              final location = (data['location'] ?? '').toString().toLowerCase();
-              return location.contains(kw);
-
-            case 2:
-              final tags = data['tags'];
-              if (tags is! List) return false;
-
-              final tagStrings = tags.map((e) => e.toString().toLowerCase()).toList();
-
-              // 선택된 태그 필터
-              if (widget.selectedTags.isNotEmpty) {
-                final hasSelectedTag = widget.selectedTags.any(
-                        (selected) => tagStrings.contains(selected.toLowerCase()));
-                if (!hasSelectedTag) return false;
-              }
-
-              // 키워드가 title 또는 content에 포함되어야 함
-              final title = (data['title'] ?? '').toString().toLowerCase();
-              final content = (data['content'] ?? '').toString().toLowerCase();
-
-              return title.contains(kw) || content.contains(kw);
-
-            case 3:
+          if (tabIndex == 3) {
+            // 유저 탭: 온도, 태그 필터 무시
+            if (kw.isNotEmpty) {
               final nickname = (data['nickname'] ?? '').toString().toLowerCase();
-              return nickname.contains(kw);
+              if (!nickname.contains(kw)) return false;
+            }
+            return true; // 필터 통과
+          } else {
+            // feeds 탭 (0,1,2) 공통 필터
+            final temp = data['temperature'];
+            if (temp is num) {
+              if (temp < widget.minTemp || temp > widget.maxTemp) {
+                return false;
+              }
+            }
 
-            default:
-              return false;
+            final tags = data['tags'];
+            if (tags is! List) return false;
+
+            final tagStrings = tags.map((e) => e.toString().toLowerCase()).toList();
+
+            if (widget.selectedTags.isNotEmpty) {
+              final hasSelectedTag = widget.selectedTags.any(
+                      (selected) => tagStrings.contains(selected.toLowerCase()));
+              if (!hasSelectedTag) return false;
+            }
+
+            if (kw.isNotEmpty) {
+              switch (tabIndex) {
+                case 0:
+                  final keywordMatched = tagStrings.any((tag) => tag.contains(kw));
+                  if (!keywordMatched) return false;
+                  break;
+                case 1:
+                  final location = (data['location'] ?? '').toString().toLowerCase();
+                  if (!location.contains(kw)) return false;
+                  break;
+                case 2:
+                  final title = (data['title'] ?? '').toString().toLowerCase();
+                  final content = (data['content'] ?? '').toString().toLowerCase();
+                  if (!(title.contains(kw) || content.contains(kw))) return false;
+                  break;
+                default:
+                  return false;
+              }
+            }
+
+            return true;
           }
+
         }).toList();
 
         if (docs.isEmpty) {
@@ -242,6 +246,7 @@ class _SearchResultPageState extends State<SearchResultPage>
             final customColors = Theme.of(context).extension<CustomColors>();
             Color mainColor = customColors?.mainColor ?? Theme.of(context).primaryColor;
             Color subColor = customColors?.subColor ?? Colors.white;
+
             return ListTile(
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,7 +516,7 @@ class _SearchResultPageState extends State<SearchResultPage>
                                         if (userSnapshot.hasData && userSnapshot.data!.exists) {
                                           final userData = userSnapshot.data!.data() as Map<String, dynamic>;
                                           nickname = userData['nickname'] ?? nickname;
-                                          profileUrl = userData['profileImageUrl'] ?? '';
+                                          profileUrl = userData['profileImage'] ?? '';
                                         }
 
                                         return Padding(
@@ -750,66 +755,73 @@ class _SearchResultPageState extends State<SearchResultPage>
                       ),
                     )
                   ] else if (tabIndex == 3) ...[
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 28,
-                        backgroundImage: (data['profileImageUrl'] != null && data['profileImageUrl'].toString().isNotEmpty)
-                            ? NetworkImage(data['profileImageUrl'])
-                            : const AssetImage('assets/profile2.jpg') as ImageProvider,
-                        backgroundColor: Colors.transparent,
-                      ),
-                      title: Row(
-                        children: [
-                          Text(
-                            data['nickname'] ?? '닉네임 없음',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 6),
-                          if (data['interest'] != null && data['interest'] is List && data['interest'].isNotEmpty)
-                            Flexible(
-                              child: Text(
-                                "#${(data['interest'] as List).join(', ')}",
-                                style: const TextStyle(color: Colors.grey, fontSize: 12),
-                                overflow: TextOverflow.ellipsis,
+                    InkWell(
+                      onTap: () {
+                        widget.onUserTap(docs[index].id);
+                        Navigator.pop(context);
+                      }, // 전체 클릭 시 실행
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          radius: 28,
+                          backgroundImage: (data['profileImage'] != null && data['profileImage'].toString().isNotEmpty)
+                              ? NetworkImage(data['profileImage'])
+                              : const AssetImage('assets/profile2.jpg') as ImageProvider,
+                          backgroundColor: Colors.transparent,
+                        ),
+                        title: Row(
+                          children: [
+                            Text(
+                              data['nickname'] ?? '닉네임 없음',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 6),
+                            if (data['interest'] != null && data['interest'] is List && data['interest'].isNotEmpty)
+                              Flexible(
+                                child: Text(
+                                  "#${(data['interest'] as List).join(', ')}",
+                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        data['bio'] ?? '자기소개 없음',
-                        style: const TextStyle(fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Builder(
-                        builder: (context) {
-                          final followers = (data['follower'] ?? []) as List<dynamic>;
-                          final isFollowing = followers.contains(myUid);
+                          ],
+                        ),
+                        subtitle: Text(
+                          data['bio'] ?? '자기소개 없음',
+                          style: const TextStyle(fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Builder(
+                          builder: (context) {
+                            final followers = (data['follower'] ?? []) as List<dynamic>;
+                            final isFollowing = followers.contains(myUid);
 
-                          return ElevatedButton(
-                            onPressed: isFollowing ? null
-                               : () async {
-                              followUser(
-                                targetUid: docs[index].id,
-                                onComplete: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('팔로우 완료')),
-                                  );
-                                  setState(() {}); // UI 갱신
-                                },
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: mainColor,
-                              foregroundColor: subColor,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              textStyle: const TextStyle(fontSize: 12),
-                            ),
-                            child: Text(isFollowing ? '팔로우 중' : '팔로우'),
-                          );
-                        }
+                            return ElevatedButton(
+                              onPressed: isFollowing
+                                  ? null
+                                  : () async {
+                                followUser(
+                                  targetUid: docs[index].id,
+                                  onComplete: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('팔로우 완료')),
+                                    );
+                                    setState(() {});
+                                  },
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: mainColor,
+                                foregroundColor: subColor,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                              child: Text(isFollowing ? '팔로우 중' : '팔로우'),
+                            );
+                          },
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     ),
                   ],
                 ],

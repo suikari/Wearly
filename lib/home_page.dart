@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'common/deep_link_handler.dart';
+import 'common/dialog_util.dart';
 import 'main/detail_page.dart';
 import 'main/feed_list_page.dart';
 import 'main/gemini_chat.dart'; // ⬅ 추가
@@ -109,7 +110,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void openFeedPage() {
+  void openFeedPage(String tags ) {
     setState(() {
       _selectedIndex = 3; // FeedListPage 탭으로 전환
     });
@@ -147,36 +148,6 @@ class _HomePageState extends State<HomePage> {
       onUserTap: onUserTap,
     );
   }
-
-  Future<bool> _onWillPop() async {
-    if (_selectedIndex != 0) {
-      setState(() {
-        _selectedIndex = 0; // 홈 탭으로 이동
-      });
-      return false; // 뒤로가기 이벤트 취소
-    } else {
-      // 홈 탭에서 종료 확인 다이얼로그 띄우기
-      final shouldExit = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('앱 종료'),
-          content: const Text('앱을 종료하시겠습니까?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('취소'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('종료'),
-            ),
-          ],
-        ),
-      );
-      return shouldExit ?? false; // true면 앱 종료, false면 종료 취소
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final List<Widget> _pages = [
@@ -185,8 +156,7 @@ class _HomePageState extends State<HomePage> {
         onUserTap: openUserPage,
         onFeedTap: _openDetailPage,
       ),
-      SearchTab(onUserTap: openUserPage),
-
+      SearchTab(key: ValueKey(DateTime.now().millisecondsSinceEpoch), onUserTap: openUserPage,  onFeedTap: openFeedPage),
       WritePostPage(key: ValueKey(DateTime.now().millisecondsSinceEpoch),
           onUserTap: openFeedPage),
 
@@ -198,7 +168,23 @@ class _HomePageState extends State<HomePage> {
     ];
 
     return WillPopScope(
-      onWillPop: _onWillPop,
+      onWillPop: () async {
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0; // 홈 탭으로 이동
+          });
+          return false; // 뒤로가기 취소
+        } else {
+          // 종료 확인 다이얼로그 호출
+          final bool result = (await showDialogMessage(
+            context,
+            '앱을 종료 하시겠습니까?',
+            confirmCancel: true,
+          )) ?? false;
+
+          return result;
+        }
+      },
       child: Scaffold(
         appBar: CustomAppBar(onUserTap: openUserPage,),
         body: IndexedStack(

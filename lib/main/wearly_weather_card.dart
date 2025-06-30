@@ -107,7 +107,8 @@ class WearlyWeatherCard extends StatelessWidget {
   Widget build(BuildContext context) {
     var themeProvider = Provider.of<ThemeProvider>(context);
 
-    int tempDiff = (data['maxTemp'] ?? 0) - (data['minTemp'] ?? 0);
+    int tempDiff = (data['maxTemp'] is int ? data['maxTemp'] : int.tryParse("${data['maxTemp']}") ?? 0)
+        - (data['minTemp'] is int ? data['minTemp'] : int.tryParse("${data['minTemp']}") ?? 0);
 
     return Card(
       margin: const EdgeInsets.all(16),
@@ -265,29 +266,27 @@ class WearlyWeatherCard extends StatelessWidget {
                     ),
                     _centerInfoColumn(
                       "미세먼지",
-                      pm10Grade(data['fineDust']),
+                      pm10Grade(data['fineDust'] ?? 0),
                       valueStyle: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
-                        color: pm10Color(data['fineDust']),
+                        color: pm10Color(data['fineDust'] ?? 0),
                       ),
                       isDust: true,
-                      dustValue: data['fineDust'],
-                        context: context
-
+                      dustValue: data['fineDust'] ?? 0,
+                      context: context,
                     ),
                     _centerInfoColumn(
                       "초미세먼지",
-                      pm25Grade(data['ultraFineDust']),
+                      pm25Grade(data['ultraFineDust'] ?? 0),
                       valueStyle: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
-                        color: pm25Color(data['ultraFineDust']),
+                        color: pm25Color(data['ultraFineDust'] ?? 0),
                       ),
                       isDust: true,
-                      dustValue: data['ultraFineDust'],
-                        context: context
-
+                      dustValue: data['ultraFineDust'] ?? 0,
+                      context: context,
                     ),
                   ],
                 ),

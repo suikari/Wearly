@@ -243,7 +243,7 @@ class _ChatListPageState extends State<ChatListPage> {
 
               // 예외 처리: take에서 음수 방지!
               final int recommendTakeCount =
-              (8 - followingDocs.length).clamp(0, recommendDocs.length);
+              (12 - followingDocs.length).clamp(0, recommendDocs.length);
               final List<QueryDocumentSnapshot> finalDocs = [
                 ...followingDocs,
                 ...recommendDocs.take(recommendTakeCount),
