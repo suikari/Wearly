@@ -1,39 +1,137 @@
-// lib/pages/home_page.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'common/deep_link_handler.dart';
+import 'common/dialog_util.dart';
+import 'main/detail_page.dart';
+import 'main/feed_list_page.dart';
 import 'main/gemini_chat.dart'; // ⬅ 추가
 import 'common/custom_app_bar.dart';
 import 'common/custom_bottom_navbar.dart';
 import 'main/home_content.dart';
 import 'main/mypage_tab.dart';
 import 'main/search_tab.dart';
-import 'main/weather_tab.dart';
 import 'main/write_post_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final int initialIndex;
+
+  const HomePage({super.key, int? initialIndex})
+      : initialIndex = initialIndex ?? 0; // null이면 0으로 설정
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  final FirebaseFirestore fs = FirebaseFirestore.instance;
-
   int _selectedIndex = 0;
+  String? _selectedUserId;
+  String? _nickname;
+  String? _profileImageUrl;
 
-  static final List<Widget> _pages = [
-    HomeContent(),
-    SearchTab(),
-    WritePostPage(),
-    WeatherTab(),
-    MyPageTab(),
-  ];
+  Key _myPageKey = ValueKey('initial');
+
+  final DeepLinkHandler _deepLinkHandler = DeepLinkHandler();
+
+  bool _hasProcessedDeepLink = false; // 딥링크 중복 처리 방지 플래그
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+
+    _loadUserInfo();
+
+    _handleInitialDeepLink();
+
+    // 딥링크 실시간 처리 콜백 등록 및 초기화
+    _deepLinkHandler.onFeedIdReceived = (feedId) {
+      if (!_hasProcessedDeepLink) {
+        _hasProcessedDeepLink = true;
+        _openDetailPage(feedId);(feedId);
+      }
+    };
+    _deepLinkHandler.init();
+  }
+
+  Future<void> _handleInitialDeepLink() async {
+    final uri = await _deepLinkHandler.getInitialUri();
+    if (!_hasProcessedDeepLink &&
+        uri != null &&
+        uri.scheme == 'wearly' &&
+        uri.host == 'deeplink' &&
+        uri.path == '/feedid' &&
+        uri.queryParameters.containsKey('id')) {
+      _hasProcessedDeepLink = true;
+      final feedId = uri.queryParameters['id']!;
+      _openDetailPage(feedId);
+    }
+  }
+
+  Future<void> _loadUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final uid = prefs.getString('userId');
+
+    if (uid != null) {
+      setState(() {
+        _selectedUserId = uid;
+      });
+
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      if (userDoc.exists) {
+        setState(() {
+          _nickname = userDoc['nickname'] ?? '';
+          _profileImageUrl = userDoc['profileImage'] ?? null;
+          prefs.setString('nickname', userDoc['nickname'] ?? '');
+          prefs.setString('profileImage', userDoc['profileImage'] ?? '');
+        });
+      }
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
+      if (index == 4) {
+        _selectedUserId = null;
+        _myPageKey = ValueKey(DateTime.now().millisecondsSinceEpoch.toString());
+      }
       _selectedIndex = index;
     });
+  }
+
+  void openUserPage(String userId) {
+    setState(() {
+      _selectedUserId = userId;
+      _myPageKey = ValueKey(userId + DateTime.now().millisecondsSinceEpoch.toString());
+      _selectedIndex = 4; // MyPageTab 탭으로 전환
+    });
+  }
+
+  void openFeedPage(String tags ) {
+    setState(() {
+      _selectedIndex = 3; // FeedListPage 탭으로 전환
+    });
+  }
+
+  void _openDetailPage(String feedId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => DetailPage(
+          feedId: feedId,
+          currentUserId: _selectedUserId ?? '',
+          showAppBar: true,
+          onBack: () {
+            Navigator.of(context).pop();
+            // 상세페이지에서 뒤로가면 딥링크 처리 플래그 리셋
+            _deepLinkHandler.resetProcessedFlag();
+            _hasProcessedDeepLink = false;
+          },
+        ),
+      ),
+    );
   }
 
   void _goToGeminiPage() {
@@ -43,22 +141,67 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget buildMyPageTab({String? userId, required Function(String) onUserTap}) {
+    return MyPageTab(
+      key: ValueKey(userId ?? _myPageKey),
+      userId: userId,
+      onUserTap: onUserTap,
+    );
+  }
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: CustomAppBar(),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
+    final List<Widget> _pages = [
+      HomeContent(
+        key: ValueKey(DateTime.now().millisecondsSinceEpoch),
+        onUserTap: openUserPage,
+        onFeedTap: _openDetailPage,
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+      SearchTab(key: ValueKey(DateTime.now().millisecondsSinceEpoch), onUserTap: openUserPage,  onFeedTap: openFeedPage),
+      WritePostPage(key: ValueKey(DateTime.now().millisecondsSinceEpoch),
+          onUserTap: openFeedPage),
+
+      FeedListPage(
+        key: ValueKey(DateTime.now().millisecondsSinceEpoch),
+        onUserTap: openUserPage,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _goToGeminiPage,
-        child: const Icon(Icons.headset_mic),
-        tooltip: 'Gemini 테스트',
+      buildMyPageTab(userId: _selectedUserId, onUserTap: openUserPage),
+    ];
+
+    return WillPopScope(
+      onWillPop: () async {
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0; // 홈 탭으로 이동
+          });
+          return false; // 뒤로가기 취소
+        } else {
+          // 종료 확인 다이얼로그 호출
+          final bool result = (await showDialogMessage(
+            context,
+            '앱을 종료 하시겠습니까?',
+            confirmCancel: true,
+          )) ?? false;
+
+          return result;
+        }
+      },
+      child: Scaffold(
+        appBar: CustomAppBar(onUserTap: openUserPage,),
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: _pages,
+        ),
+        bottomNavigationBar: CustomBottomNavBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          nickname: _nickname,
+          profileImageUrl: _profileImageUrl,
+        ),
+        // floatingActionButton: FloatingActionButton(
+        //   onPressed: _goToGeminiPage,
+        //   child: const Icon(Icons.headset_mic),
+        //   tooltip: 'Gemini 테스트',
+        // ),
       ),
     );
   }

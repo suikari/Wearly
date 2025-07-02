@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 class CustomBottomNavBar extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final String? nickname;
+  final String? profileImageUrl;
 
   CustomBottomNavBar({
     Key? key,
     required this.currentIndex,
     required this.onTap,
+    required this.nickname,
+    required this.profileImageUrl,
   }) : super(key: key);
 
   @override
@@ -22,6 +26,10 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
     final selectedItemColor = bottomNavTheme.selectedItemColor ?? Colors.white;
     final unselectedItemColor = bottomNavTheme.unselectedItemColor ?? Colors.white70;
     final scaffoldBackgroundColor = Theme.of(context).scaffoldBackgroundColor ?? Colors.white70;
+
+
+
+    //print("widget.profileImageUrl>>>>${widget.profileImageUrl}");
     // Column(
     //   mainAxisSize: MainAxisSize.min,
     //   children: [
@@ -66,12 +74,19 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
               label: '추가',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.wb_sunny), // 날씨 아이콘
-              label: '날씨',
+              icon: Icon(Icons.article),
+              label: '코디',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: '마이페이지',
+              icon: (widget.profileImageUrl != null && widget.profileImageUrl!.isNotEmpty)
+                  ? CircleAvatar(
+                radius: 12,
+                backgroundImage: NetworkImage(widget.profileImageUrl!),
+              )
+                  : Icon(Icons.person),
+              label: (widget.nickname != null && widget.nickname!.isNotEmpty)
+                  ? widget.nickname!
+                  : '마이페이지',
             ),
           ],
     );

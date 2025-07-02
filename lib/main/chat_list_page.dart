@@ -1,54 +1,340 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:w2wproject/common/custom_app_bar.dart';
 
-import '../common/custom_app_bar.dart';
 import 'chat_room_page.dart';
 
-class ChatListPage extends StatelessWidget {
-  final List<ChatItem> chatItems = [
-    ChatItem("김하나", "안녕하세요", "25.06.09", "assets/images/user1.jpg"),
-    ChatItem("이두나", "안녕하세요", "25.05.22", "assets/images/user2.jpg"),
-    ChatItem("서세나", "안녕하세요", "25.05.22", "assets/images/user3.jpg"),
-    ChatItem("윤사나", "안녕하세요", "25.05.22", "assets/images/user4.jpg"),
-    ChatItem("차오나", "안녕하세요", "25.05.22", "assets/images/user5.jpg"),
-  ];
+
+Future<void> sendFollowNotification({
+  required String fromUid,
+  required String fromNickname,
+  required String fromProfileImg,
+  required String toUid,
+}) async {
+  await FirebaseFirestore.instance.collection('notifications').add({
+    'uid': toUid,
+    'type': 'follow',
+    'fromUid': fromUid,
+    'fromNickname': fromNickname,
+    'fromProfileImg': fromProfileImg,
+    'content': '회원님을 팔로우 합니다.',
+    'createdAt': FieldValue.serverTimestamp(),
+    'isRead': false,
+  });
+}
+
+class ChatListPage extends StatefulWidget {
+  @override
+  State<ChatListPage> createState() => _ChatListPageState();
+}
+
+class _ChatListPageState extends State<ChatListPage> {
+  String searchText = '';
+  String get myUid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:  CustomAppBar(title: '다이렉트 메세지'),
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        itemCount: chatItems.length,
-        separatorBuilder: (context, index) => const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0),
-          child: DottedLine(),
-        ),
-        itemBuilder: (context, index) {
-          final chat = chatItems[index];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundImage: AssetImage(chat.imagePath),
-              radius: 25,
-            ),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(chat.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(chat.date,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[700])),
-              ],
-            ),
-            subtitle: Text(chat.message),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatRoomPage(
-                    userName: chat.name,
-                    imagePath: chat.imagePath,
-                  ),
+      appBar: CustomAppBar(title:'채팅 리스트' , MessageIcon : false),
+      body: Column(
+        children: [
+          buildRecommendedUsersBar(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            // color 제거
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: "유저 닉네임/ID 검색...",
+                prefixIcon: Icon(Icons.search),
+                filled: true,
+                // fillColor: ... 제거 (theme에서 따름)
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+              ),
+              onChanged: (v) => setState(() => searchText = v),
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chatRooms')
+                  .where('uids', arrayContains: myUid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                List<QueryDocumentSnapshot> rooms = snapshot.data!.docs;
+
+                // 최근 메시지순 정렬
+                rooms.sort((a, b) {
+                  final at = (a.data() as Map<String, dynamic>)['lastMessageTime'] as Timestamp?;
+                  final bt = (b.data() as Map<String, dynamic>)['lastMessageTime'] as Timestamp?;
+                  if (at == null && bt == null) return 0;
+                  if (at == null) return 1;
+                  if (bt == null) return -1;
+                  return bt.toDate().compareTo(at.toDate());
+                });
+
+                if (rooms.isEmpty) {
+                  return const Center(child: Text("채팅방이 없습니다."));
+                }
+
+                return ListView.separated(
+                  itemCount: rooms.length,
+                  separatorBuilder: (context, index) {
+                    // 예외 처리: separator는 최소 2개 이상일 때만
+                    if (rooms.length <= 1) return SizedBox.shrink();
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Divider(),
+                    );
+                  },
+                  itemBuilder: (context, idx) {
+                    final data = rooms[idx].data() as Map<String, dynamic>;
+                    final uidsRaw = data['uids'];
+                    final List<dynamic> uids = (uidsRaw is List) ? uidsRaw : [];
+                    final targetUid = uids.firstWhere((e) => e != myUid, orElse: () => '');
+
+                    final lastMessage = data['lastMessage'] ?? '';
+                    final lastMessageTime = data['lastMessageTime'] as Timestamp?;
+
+                    String timeText = '';
+                    if (lastMessageTime != null) {
+                      final dt = lastMessageTime.toDate();
+                      final now = DateTime.now();
+                      if (now.difference(dt).inDays == 0) {
+                        timeText = DateFormat('a h:mm', 'ko').format(dt);
+                      } else {
+                        timeText = DateFormat('MM/dd').format(dt);
+                      }
+                    }
+
+                    final unreadCount = data['unreadCount_$myUid'] ?? 0;
+
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(targetUid)
+                          .get(),
+                      builder: (context, userSnap) {
+                        String nickname = '';
+                        String profileUrl = '';
+                        if (userSnap.hasData && userSnap.data!.exists) {
+                          final userData = userSnap.data!.data() as Map<String, dynamic>;
+                          nickname = userData['nickname'] ?? '닉네임없음';
+                          profileUrl = userData['profileImage'] ?? '';
+                        }
+
+                        if (searchText.isNotEmpty &&
+                            !nickname.toLowerCase().contains(searchText.toLowerCase()) &&
+                            !targetUid.toLowerCase().contains(searchText.toLowerCase())) {
+                          return SizedBox.shrink();
+                        }
+
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          leading: buildProfileAvatar(profileUrl, 22),
+                          title: Text(
+                            nickname,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          subtitle: Text(
+                            lastMessage,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (unreadCount > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  margin: const EdgeInsets.only(bottom: 2),
+                                  decoration: BoxDecoration(
+                                    // 색 직접 지정 필요시 theme 활용
+                                    color: Theme.of(context).colorScheme.error,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Theme.of(context).colorScheme.error.withOpacity(0.15),
+                                        blurRadius: 2,
+                                        spreadRadius: 1,
+                                      )
+                                    ],
+                                  ),
+                                  child: Text(
+                                    unreadCount > 99 ? '99+' : '$unreadCount',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onError,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              Text(
+                                timeText,
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatRoomPage(
+                                  roomId: rooms[idx].id,
+                                  targetUid: targetUid,
+                                  userName: nickname,
+                                  profileUrl: profileUrl,
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 추천 팔로우(스토리 스타일) 바
+  Widget buildRecommendedUsersBar() {
+    return SizedBox(
+      height: 90,
+      child: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('users').doc(myUid).get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return SizedBox.shrink();
+          }
+          final userData = snapshot.data!.data() as Map<String, dynamic>;
+          final following = userData['following'] is List ? userData['following'] as List : [];
+          final myUid_ = myUid;
+
+          return FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance.collection('users').get(),
+            builder: (context, userSnap) {
+              if (!userSnap.hasData) return SizedBox.shrink();
+              List<QueryDocumentSnapshot> docs = userSnap.data!.docs;
+
+              docs.removeWhere((doc) => doc.id == myUid_);
+              docs.shuffle();
+
+              List<QueryDocumentSnapshot> followingDocs = [];
+              List<QueryDocumentSnapshot> recommendDocs = [];
+              for (var doc in docs) {
+                if (following.contains(doc.id)) {
+                  followingDocs.add(doc);
+                } else {
+                  recommendDocs.add(doc);
+                }
+              }
+
+              // 예외 처리: take에서 음수 방지!
+              final int recommendTakeCount =
+              (12 - followingDocs.length).clamp(0, recommendDocs.length);
+              final List<QueryDocumentSnapshot> finalDocs = [
+                ...followingDocs,
+                ...recommendDocs.take(recommendTakeCount),
+              ];
+
+              if (finalDocs.isEmpty) {
+                return SizedBox.shrink();
+              }
+
+              return ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                itemCount: finalDocs.length,
+                separatorBuilder: (_, __) => SizedBox(width: 12),
+                itemBuilder: (context, idx) {
+                  final doc = finalDocs[idx];
+                  final user = doc.data() as Map<String, dynamic>;
+                  final uid = doc.id;
+                  final profileUrl = user['profileImage'] ?? '';
+                  final nickname = user['nickname'] ?? '닉네임없음';
+                  final isFollowing = following.contains(uid);
+
+                  return GestureDetector(
+                    onTap: isFollowing
+                        ? () => openChatRoomWith(uid, nickname, profileUrl)
+                        : null,
+                    child: Column(
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            buildProfileAvatar(profileUrl, 26),
+                            if (!isFollowing)
+                              Positioned(
+                                bottom: -4, right: -4,
+                                child: GestureDetector(
+                                  onTap: () => followUser(uid),
+                                  child: Container(
+                                    padding: EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Theme.of(context).scaffoldBackgroundColor,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Icon(Icons.person_add, color: Theme.of(context).colorScheme.onPrimary, size: 17),
+                                  ),
+                                ),
+                              ),
+                            if (isFollowing)
+                              Positioned(
+                                bottom: -8, right: -6,
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.secondary,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Theme.of(context).scaffoldBackgroundColor,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "팔로잉",
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSecondary,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        SizedBox(height: 4),
+                        SizedBox(
+                          width: 54,
+                          child: Text(
+                            nickname,
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           );
@@ -56,40 +342,118 @@ class ChatListPage extends StatelessWidget {
       ),
     );
   }
-}
 
-class ChatItem {
-  final String name;
-  final String message;
-  final String date;
-  final String imagePath;
+  /// 프로필 이미지를 안전하게 그려주는 함수
+  Widget buildProfileAvatar(String? url, double radius) {
+    if (url == null || url.trim().isEmpty || url == 'null') {
+      return CircleAvatar(
+        // 색상 직접지정 안 함, 기본값만 사용
+        radius: radius,
+        child: Icon(Icons.person, size: radius),
+      );
+    } else if (url.startsWith('http')) {
+      return CircleAvatar(
+        backgroundImage: NetworkImage(url),
+        radius: radius,
+      );
+    } else {
+      // asset 경로인데 없을 수 있으니 그냥 빈 원형만
+      return CircleAvatar(
+        radius: radius,
+        child: Icon(Icons.person, size: radius),
+      );
+    }
+  }
 
-  ChatItem(this.name, this.message, this.date, this.imagePath);
-}
+  /// 팔로우 함수 + 알림
+  void followUser(String targetUid) async {
+    if (targetUid == myUid) return;
 
-/// 점선 구분선 컴포넌트
-class DottedLine extends StatelessWidget {
-  const DottedLine({super.key});
+    final userRef = FirebaseFirestore.instance.collection('users').doc(myUid);
+    final targetRef = FirebaseFirestore.instance.collection('users').doc(targetUid);
 
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const dashWidth = 5.0;
-        final dashCount = (constraints.maxWidth / (dashWidth * 2)).floor();
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(dashCount, (_) {
-            return const SizedBox(
-              width: dashWidth,
-              height: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Colors.redAccent),
-              ),
-            );
-          }),
-        );
-      },
+    await FirebaseFirestore.instance.runTransaction((txn) async {
+      final mySnap = await txn.get(userRef);
+      final targetSnap = await txn.get(targetRef);
+
+      List<dynamic> following;
+      if (mySnap.exists && mySnap.data() != null && mySnap.data()!.containsKey('following') && mySnap['following'] is List) {
+        following = List.from(mySnap['following']);
+      } else {
+        following = [];
+      }
+
+      List<dynamic> followers;
+      if (targetSnap.exists && targetSnap.data() != null && targetSnap.data()!.containsKey('follower') && targetSnap['follower'] is List) {
+        followers = List.from(targetSnap['follower']);
+      } else {
+        followers = [];
+      }
+
+      if (!following.contains(targetUid)) following.add(targetUid);
+      if (!followers.contains(myUid)) followers.add(myUid);
+
+      txn.update(userRef, {'following': following});
+      txn.update(targetRef, {'follower': followers});
+    }).catchError((e) {});
+
+    // 팔로우 알림 전송
+    final mySnap = await FirebaseFirestore.instance.collection('users').doc(myUid).get();
+    final myData = mySnap.data() as Map<String, dynamic>? ?? {};
+    final fromNickname = myData['nickname'] ?? '';
+    final fromProfileImg = myData['profileImage'] ?? '';
+
+    await sendFollowNotification(
+      fromUid: myUid,
+      fromNickname: fromNickname,
+      fromProfileImg: fromProfileImg,
+      toUid: targetUid,
+    );
+
+    setState(() {});
+  }
+
+  /// 채팅방 생성/이동 함수
+  void openChatRoomWith(String targetUid, String nickname, String profileUrl) async {
+    String myUid_ = myUid;
+    QuerySnapshot chatRoomSnap = await FirebaseFirestore.instance
+        .collection('chatRooms')
+        .where('uids', arrayContains: myUid_)
+        .get();
+
+    DocumentSnapshot? foundRoom;
+    for (var doc in chatRoomSnap.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      if ((data['uids'] as List).contains(targetUid)) {
+        foundRoom = doc;
+        break;
+      }
+    }
+
+    String roomId;
+    if (foundRoom != null) {
+      roomId = foundRoom.id;
+    } else {
+      final newRoom = await FirebaseFirestore.instance.collection('chatRooms').add({
+        'uids': [myUid_, targetUid],
+        'lastMessage': '',
+        'lastMessageTime': FieldValue.serverTimestamp(),
+        'unreadCount_$myUid': 0,
+        'unreadCount_$targetUid': 0,
+      });
+      roomId = newRoom.id;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatRoomPage(
+          roomId: roomId,
+          targetUid: targetUid,
+          userName: nickname,
+          profileUrl: profileUrl,
+        ),
+      ),
     );
   }
 }

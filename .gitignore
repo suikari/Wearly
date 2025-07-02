@@ -48,3 +48,7 @@ app.*.map.json
 firebase.json
 /android/app/google-services.json
 /lib/firebase_options.dart
+/pubspec.lock
+
+/android/app/src/main/res/values/strings.xml
+/assets/.env
